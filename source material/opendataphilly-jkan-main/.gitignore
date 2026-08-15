@@ -1,0 +1,13 @@
+_site
+.sass-cache
+.jekyll-metadata
+_config.dev.yml
+node_modules
+*.map
+_config.ci.yml
+.parcel-cache
+vendor
+linters_logs/
+megalinter-reports/
+*.code-workspace
+.claude

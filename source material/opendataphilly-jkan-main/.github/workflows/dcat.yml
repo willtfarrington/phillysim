@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  dcat:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@4a9ddd6f338a97768b8006bf671dfbad383215f4 # v1.207.0
+        with:
+          bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+          cache-version: 0 # Increment this number if you need to re-download cached gems
+      - name: Write metadata to a file Jekyll can use
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          echo "branch: $BRANCH" > _config.ci.yml
+      - name: Build with Jekyll
+        # Outputs to the './_site' directory by default
+        run: bundle exec jekyll build --baseurl "https://opendataphilly.org" --config _config.ci.yml,_config.yml
+        env:
+          JEKYLL_ENV: production
+          PAGES_REPO_NWO: ${{ github.repository }}
+          JEKYLL_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.2"
+
+      - name: Clone DCATUS-Validator repository
+        run: git clone https://github.com/nasa/DCATUS-Validator.git
+
+      - name: Install packages with uv
+        working-directory: ./DCATUS-Validator
+        run: uv sync
+
+      - name: Modify DCATUS-Validator schema
+        run: |
+          mv .github/dcat-workflow-non-federal-schema.json ./DCATUS-Validator/schemas/gsa-dcat.json
+
+      - name: Run dcat-validator
+        working-directory: ./DCATUS-Validator
+        run: |
+          source .venv/bin/activate
+          python validate.py  ../_site/data.json
+          if [ -f "./invalid_datasets.json" ]; then
+              cat ./invalid_datasets.json
+              exit 1
+          else
+              exit 0
+          fi

@@ -9,7 +9,7 @@
 | OQ-E | "Philadelphia Food Access Collaborative" exact org name | author of community-context doc | before any public prose names it | Omit the name; describe the hospital collaboration generically |
 | OQ-F | PMTiles-on-Pages range-request behavior | v1.x enhancement packet | at that packet | Enhancement stays unpursued; ADR-0005 default stands |
 | OQ-G | Spanish localization scope | owner | v2 gate | Stays a v2 candidate (human-reviewed translation required) |
-| OQ-H | Whether to deploy work-in-progress slice page (EP-08) publicly before M7 | owner | EP-08 | Defaults to not deployed |
+| OQ-H | Whether to deploy work-in-progress slice page (EP-8) publicly before M7 | owner | EP-8 | Defaults to not deployed |
 
 Deferred-by-design (not open): police/crime data (v2 gate with justification
 requirement); pharmacy/telehealth modules (five promotion criteria);

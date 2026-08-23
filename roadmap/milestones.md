@@ -2,7 +2,7 @@
 
 Estimates are ranges in **agent sessions** with confidence; totals are
 medium-confidence. No calendar promises. Milestones M0–M2 are decomposed into
-issue-ready packets (packets.md); M3+ carry a **mandatory refinement gate**
+issue-ready packets (EP-1 … EP-8, one file per packet); M3+ carry a **mandatory refinement gate**
 (decompose to packet standard before implementation begins).
 
 ## Dependency graph
@@ -49,8 +49,10 @@ routing determinism remediation (M3).
   KILLED-BY-EVIDENCE vs TIMEBOX-EXHAUSTED (one owner-approved extension
   allowed before fallback).
 - **PMTiles smoke test**: only if the v1.x basemap enhancement is pursued.
-- **Checkpoint packets**: every ~5 packets, an integration/docs/license/
-  performance checkpoint (also re-plan trigger).
+- **Checkpoint packets**: every ~5 packets, a recurring S-sized checkpoint:
+  integration re-run on fixtures (+ real spine once it exists), docs/data-
+  dictionary sync, license-label sweep, performance vs budgets, estimate-
+  accuracy review; re-plan if triggers hit.
 
 ## Risks & contingencies
 
@@ -68,7 +70,7 @@ routing determinism remediation (M3).
 ## Session model
 
 One packet per session; session ends tests-green, committed, pushed, with the
-handoff payload (packets.md template). Trunk-based; short-lived branches for
+handoff payload (_TEMPLATE.md). Trunk-based; short-lived branches for
 risky packets; ADR for hard-to-reverse choices. Blocked → record blocker in
 the packet, stop at a coherent state, surface to owner. Re-plan triggers:
 any kill criterion fires; checkpoint packet finds drift; two consecutive

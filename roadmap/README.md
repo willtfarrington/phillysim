@@ -16,9 +16,11 @@ were all resolved before this roadmap was drafted.
 
 - Milestones **M0–M8** are listed in [milestones.md](milestones.md). Each ends
   in a demonstrable increment with a go/no-go criterion.
-- Near-horizon work is decomposed into issue-ready **work packets (EP-N)** in
-  [packets.md](packets.md), sized for one bounded coding-agent session each.
-  Later milestones stay at outcome level until their **refinement gate**.
+- Near-horizon work is decomposed into issue-ready **work packets**, one file
+  per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), sized for
+  one bounded coding-agent session each. EP-1–EP-8 cover M0–M2; later
+  milestones stay at outcome level until their **refinement gate**, where new
+  EP files are authored.
 - Estimates use **agent sessions** (one focused, tested, committed sitting)
   with S/M/L labels: S ≈ ≤1 session, M ≈ 1–2, L ≈ must be split.
 - Architecture-level or hard-to-reverse choices are recorded in [adr/](adr/).
@@ -36,7 +38,7 @@ were all resolved before this roadmap was drafted.
 | [governance.md](governance.md) | Privacy, security, community safety, clinical boundaries, accessibility, maintenance |
 | [quality.md](quality.md) | Versioning axes, test matrix, release gates, reproducibility procedure |
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up |
-| [packets.md](packets.md) | Issue-ready near-horizon work packets (EP-01 …) |
+| [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2); later EPs authored at refinement gates |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
 
 ## Phase overview

@@ -55,7 +55,9 @@ routing determinism remediation (M3).
 - **Checkpoint packets**: every ~5 packets, a recurring S-sized checkpoint:
   integration re-run on fixtures (+ real spine once it exists), docs/data-
   dictionary sync, license-label sweep, performance vs budgets, estimate-
-  accuracy review; re-plan if triggers hit.
+  accuracy review; re-plan if triggers hit. Tracked in the README's
+  "Checkpoints" table; the first is [EP-9](EP-9-checkpoint-1.md), after
+  EP-4b (M1 done) and before EP-5.
 
 ## Refinement-gate carry-ins
 

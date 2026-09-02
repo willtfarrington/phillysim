@@ -69,6 +69,7 @@ were all resolved before this roadmap was drafted.
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
 | [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md)); later EPs authored at refinement gates |
+| [EP-9](EP-9-checkpoint-1.md) | First checkpoint packet (after M1, before EP-5); later checkpoints take the next free integer |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
 
 ## Milestones and work packets
@@ -103,22 +104,28 @@ the curated outputs equal the golden tables.
 | EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [x] 361b1eb |
 | EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [x] 9a0a3dc |
 
-The first **checkpoint packet** ([milestones.md](milestones.md) "Spikes &
-gates": every ~5 packets, S-sized) fell due with EP-4b. Owner decision
-2026-09-02: it is the next packet, **EP-9**, to be authored from
-[_TEMPLATE.md](_TEMPLATE.md) (integration re-run on the fixture,
-docs/data-dictionary sync, license-label sweep, budgets, estimate-accuracy
-review) and added to this table before EP-5 starts.
+### Checkpoints · `[ ]`
+
+Recurring S-sized checkpoint packets ([milestones.md](milestones.md)
+"Spikes & gates": every ~5 packets): integration re-run on fixtures (plus
+the real spine once it exists), docs/data-dictionary sync, license-label
+sweep, performance vs budgets, estimate-accuracy review, re-plan if a
+trigger fires. They belong to no milestone; the packet that follows one
+depends on it. The first fell due with EP-4b (owner decision 2026-09-02).
+
+| # | Packet | Size | Depends on | Status |
+|---|---|---|---|---|
+| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [ ] |
 
 ### M2 — Spine + first source end-to-end · `[ ]`
 
 Go/no-go: slice reproducible from a fresh clone; license buckets applied.
 Each M-sized packet is read at pickup and split (convention above) if it
-will not fit one session.
+will not fit one session; EP-9 does that pre-read for EP-5.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
-| EP-5 | [Geography spine adapters: TIGER + CenPop + ACS](EP-5-spine-adapters.md) | M | EP-4b | [ ] |
+| EP-5 | [Geography spine adapters: TIGER + CenPop + ACS](EP-5-spine-adapters.md) | M | EP-9 (checkpoint), EP-4b | [ ] |
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 | [ ] |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [ ] |
 | EP-8 | [Minimal slice page](EP-8-slice-page.md) | M | EP-7 | [ ] |

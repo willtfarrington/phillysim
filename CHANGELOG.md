@@ -10,6 +10,13 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- Roadmap: first checkpoint packet authored as
+  `roadmap/EP-9-checkpoint-1.md` (owner decisions, 2026-09-02): the five
+  milestones.md checkpoint items plus the EP-5 pre-read and split decision;
+  a "Checkpoints" table in `roadmap/README.md` between M1 and M2, EP-5 now
+  depends on EP-9; the estimate-accuracy record will live in a new
+  milestones.md table; the CI performance-smoke test is deferred to the M3
+  spike, baselines only for now.
 - tinycity: tract polygon corners are rounded to six decimals like every
   other fixture coordinate, so the spine stage's output read back from the
   GeoJSON snapshot equals the golden geometry exactly. Only

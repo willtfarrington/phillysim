@@ -1,0 +1,4 @@
+stop_id,stop_name,stop_lat,stop_lon
+STOP1,Tract 1 Center,38.004,-69.995
+STOP2,Tract 2 Center,38.004,-69.985
+STOP3,Tract 3 Center,38.004,-69.975

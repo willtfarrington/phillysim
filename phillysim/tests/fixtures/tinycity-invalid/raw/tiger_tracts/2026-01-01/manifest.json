@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/tiger_tracts",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "ef38f431fb8c70e9f1db5fe19973bdd20aaffe16c91603093abacf6f13f14f10",
+    "tracts.geojson": "152f83beafefaa2b98ab51adc7494454b9862735b4657ed439b88c5695a6de71"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "tiger_tracts",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

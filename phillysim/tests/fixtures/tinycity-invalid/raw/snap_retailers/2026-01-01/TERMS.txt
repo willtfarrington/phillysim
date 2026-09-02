@@ -1,0 +1,1 @@
+tinycity synthetic source 'snap_retailers': wholly synthetic fixture; no real data; MIT (repository license).

@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/osm_network",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "492a185eb2ec0cdb66551ed2511edec23e10aa77eb8076eaa1e87c2fef78dc60",
+    "edges.geojson": "168ca5c8097d9c0e585fbb4158e5ea50e8c1efa61b6f6fa3870cd633e88d7c57"
+  },
+  "license_bucket": "B",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license); stands in for ODbL-derived content",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "osm_network",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

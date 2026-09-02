@@ -9,11 +9,14 @@ tested before any pipeline logic exists.
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from phillysim import __version__
 from phillysim.config import ENV_DATA_ROOT, Settings
+from phillysim.fixtures.tinycity import Variant, write_fixture
 
 app = typer.Typer(
     name="phillysim",
@@ -57,3 +60,15 @@ def paths(
     typer.echo(f"  override with: {ENV_DATA_ROOT}=<path>")
     for name, path in settings.zones().items():
         typer.echo(f"  {name:<13}{path}")
+
+
+@app.command("gen-tinycity")
+def gen_tinycity(
+    out: Annotated[Path, typer.Option("--out", help="Directory to write the fixture into.")],
+    variant: Annotated[
+        Variant, typer.Option("--variant", help="'valid' (golden) or 'invalid' (injected faults).")
+    ] = Variant.VALID,
+) -> None:
+    """Regenerate the tinycity synthetic fixture (deterministic; see tests/fixtures/tinycity/)."""
+    digests = write_fixture(out, variant)
+    typer.echo(f"wrote {len(digests)} files ({variant.value}) under {out}")

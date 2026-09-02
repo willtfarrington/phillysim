@@ -1,0 +1,1 @@
+tinycity synthetic source 'meal_sites': wholly synthetic fixture; no real data; MIT (repository license).

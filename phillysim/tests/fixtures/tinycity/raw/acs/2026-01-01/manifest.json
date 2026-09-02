@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/acs",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "773c0c25c8425459f57a26990b0eb3cd095661eb5270d6661ad6ac60fb25235a",
+    "acs.csv": "567aeebb68847152544d07394a999b21c0110a77902b26434374457d188a67b3"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "acs",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

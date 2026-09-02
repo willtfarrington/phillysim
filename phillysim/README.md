@@ -31,11 +31,30 @@ phillysim/
   src/phillysim/
     cli.py                Typer entry point: `phillysim <command>`
     config.py             data-root resolution and zone paths
+    contracts.py          source-contract harness (schema/license/geometry) + the
+                          locked analytic-table contract
+    fixtures/tinycity.py  deterministic synthetic fixture generator (EP-3)
+    fixtures/tinycity_contracts.py   contracts for the eight fake sources
   tests/
+    conftest.py           fixture-directory paths
     test_smoke.py         package import + CLI help/version/paths
     test_config.py        data-root resolution rules
     test_dependency_policy.py   GDAL/fiona ban, with built-in negative checks
+    test_tinycity_fixture.py    determinism + committed-golden checks
+    contracts/            harness unit tests; tinycity sources positive/negative
+    fixtures/tinycity/    golden fixture (README explains the layout)
+    fixtures/tinycity-invalid/  injected-fault variant for negative tests
 ```
+
+## The tinycity fixture
+
+CI is offline by policy, so every pipeline stage is exercised on a synthetic
+mini-geography instead of real data. `phillysim gen-tinycity --out DIR`
+regenerates it deterministically; the committed copy under
+`tests/fixtures/tinycity/` is checked against a fresh generation on every test
+run. See [tests/fixtures/tinycity/README.md](tests/fixtures/tinycity/README.md)
+for what it contains and [docs/data-dictionary.md](../docs/data-dictionary.md)
+for the columns.
 
 ## Data root
 

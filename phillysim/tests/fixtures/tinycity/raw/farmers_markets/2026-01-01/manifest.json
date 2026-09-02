@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/farmers_markets",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "61a469ddb849343a063081eb9cbda627842027b872137c7f44a640c2be6a7ec3",
+    "markets.geojson": "676732b193a6b41bf0e932bcfd273fe3f1bb4f378e61d8d202ab73193bab52d0"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "farmers_markets",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

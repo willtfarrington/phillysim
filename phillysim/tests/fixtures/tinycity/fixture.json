@@ -1,0 +1,46 @@
+{
+  "analysis_weeks": {
+    "in_season_start": "2026-06-01",
+    "off_season_start": "2026-02-02"
+  },
+  "bounds": [
+    -70.0,
+    38.0,
+    -69.97,
+    38.02
+  ],
+  "categories": [
+    "supermarket_format",
+    "farmers_market",
+    "meal_site"
+  ],
+  "crs": "EPSG:4326",
+  "cv_tier_edges_pct": [
+    12.0,
+    40.0
+  ],
+  "fixture": "tinycity",
+  "grid": {
+    "cell_deg": 0.01,
+    "cols": 3,
+    "rows": 2
+  },
+  "injected_faults": [],
+  "methods_version": "tinycity-fixture-1",
+  "modes": [
+    "walk",
+    "walk_transit"
+  ],
+  "moe_to_se": 1.645,
+  "schema_version": 1,
+  "travel_model": {
+    "censor_min": 120.0,
+    "transit_factor": 0.6,
+    "transit_p85_factor": 1.25,
+    "transit_wait_min": 5.0,
+    "walk_access_min": 1.0,
+    "walk_m_per_min": 80.0,
+    "walk_p85_factor": 1.15
+  },
+  "variant": "valid"
+}

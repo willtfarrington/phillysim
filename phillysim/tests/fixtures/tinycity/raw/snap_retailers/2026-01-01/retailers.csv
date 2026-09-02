@@ -1,0 +1,5 @@
+record_id,store_name,store_type,street_address,city,state,zip,longitude,latitude
+R1,Tinycity Supermarket,Supermarket,100 Grid St,Tinycity,ZZ,00000,-69.995,38.005
+R2,Corner Market,Convenience Store,500 Grid St,Tinycity,ZZ,00000,-69.987,38.017
+R3,Grid Grocery,Large Grocery Store,300 Grid St,Tinycity,ZZ,00000,-69.974,38.004
+R4,Harbor Superstore,Super Store,600 Grid St,Tinycity,ZZ,00000,-69.972,38.012

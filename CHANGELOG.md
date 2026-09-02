@@ -20,6 +20,27 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-3 — tinycity synthetic fixture + source-contract harness** (Planning
+  Baseline v1.0):
+  - `phillysim gen-tinycity`: deterministic generator for a wholly synthetic
+    mini-geography (six fake tracts in the open Atlantic, thirteen destination
+    points across all three v1 categories, fake ACS with margins of error
+    covering all three CV tiers, tiny GTFS and street-network stubs, a
+    precomputed travel-time matrix standing in for routing until M3, and
+    golden expected tables). Committed under
+    `phillysim/tests/fixtures/tinycity/` with `CHECKSUMS.txt`; an
+    `--variant invalid` copy with eight injected faults under
+    `tinycity-invalid/`.
+  - Hours edge cases from methodology.md Tier 2 (weekend-only, seasonal,
+    missing, malformed) with hand-derived open/closed answers for the pinned
+    analysis weeks.
+  - `phillysim.contracts`: adapter-agnostic source-contract harness (schema,
+    key, row-count, license bucket + schema version, geometry type / CRS /
+    validity / bounds) and the locked analytic-table contract
+    `{estimate, moe, cv_tier, reliability_action}`.
+  - Tests: two-run byte determinism, committed-fixture currency, harness
+    negative tests for every check kind, every injected fault caught.
+  - `docs/data-dictionary.md` seeded at schema version 1.
 - **EP-2 — Python scaffold + offline CI skeleton** (Planning Baseline v1.0):
   - `phillysim/` uv project: `pyproject.toml` declaring the locked stack
     (typer, geopandas, pyogrio, shapely, pyproj, duckdb, pyarrow), committed

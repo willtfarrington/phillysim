@@ -49,8 +49,9 @@ lives in [docs/CLAIMS.md](docs/CLAIMS.md) and
 
 Early stage. The project is governed before it is built: the accepted planning
 baseline and work packets live in [roadmap/](roadmap/). This repository
-currently contains the governance documents and the package scaffold (CLI
-entry point, configuration, tests, CI); no pipeline logic exists yet.
+currently contains the governance documents, the package scaffold (CLI
+entry point, configuration, tests, CI), a deterministic synthetic test
+fixture, and the source-contract test harness; no pipeline logic exists yet.
 Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the packet files
 (`roadmap/EP-*.md`).
 
@@ -78,6 +79,7 @@ lint) is in [CONTRIBUTING.md](CONTRIBUTING.md).
 | [roadmap/](roadmap/) | Charter, scope, sources, methodology, architecture, governance, quality, milestones, work packets, ADRs |
 | [phillysim/README.md](phillysim/README.md) | The Python package: setup, layout, data-root configuration, locked stack |
 | [docs/CLAIMS.md](docs/CLAIMS.md) | Claims matrix: what the project may and may not say, mapped to evidence |
+| [docs/data-dictionary.md](docs/data-dictionary.md) | Table shapes and column meanings (schema version 1, seeded from the synthetic fixture) |
 | [docs/DATA-LICENSES.md](docs/DATA-LICENSES.md) | Per-source data licensing, the City-license caveat, and output license buckets |
 | [docs/policies.md](docs/policies.md) | Correction/feedback channel and delisting/takedown policy |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to report issues and propose changes |

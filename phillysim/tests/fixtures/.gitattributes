@@ -1,0 +1,4 @@
+# Golden fixture files are byte-exact: never convert line endings on checkout
+# (the generator writes LF and the determinism test compares bytes).
+* -text
+*.parquet binary

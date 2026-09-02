@@ -1,0 +1,1 @@
+tinycity synthetic source 'acs': wholly synthetic fixture; no real data; MIT (repository license).

@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/cenpop",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "a656d132651935249fcc352e76104cdff4c8b86e2d84680c184080ee85f8a485",
+    "centroids.csv": "8d6aecb3c337f90561213a7d627ba3a677b0cba9084d9de76a339a365c5f8f27"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "cenpop",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

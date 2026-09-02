@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/snap_retailers",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "c64fd504e7f3dd6c95ba8dd4047bc60368d97665d7bba09ddb46a35bc3c0261d",
+    "retailers.csv": "630ca83c10b895c6ab16586f92d211255905895e8b3bf2deff0b61a92d2261b1"
+  },
+  "license_bucket": "Z",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "snap_retailers",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

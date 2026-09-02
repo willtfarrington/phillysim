@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/meal_sites",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "ff602d8ec320c1f5d162bde623b83e85610854e7922563baf06e81d3e8482e07",
+    "meal_sites.geojson": "a55b431e78049bb7fdc7330ffdf2c9f8e87712545ebba199445408d48694225a"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license)",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "meal_sites",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

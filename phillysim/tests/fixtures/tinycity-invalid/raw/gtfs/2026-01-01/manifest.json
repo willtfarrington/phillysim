@@ -1,0 +1,21 @@
+{
+  "acquired_at": "2026-01-01T00:00:00Z",
+  "acquisition_url": "https://example.invalid/tinycity/gtfs",
+  "acquisition_url_alt": null,
+  "files": {
+    "TERMS.txt": "ca08e40428eb25f0a7cea86b2a56d4d89c0bec2882e40d5bef8fe8212a5acf3f",
+    "agency.txt": "b94e1a9c3650d8d36575d93c525174ad203298ec8a218517a1a178b7ee848503",
+    "calendar.txt": "088778524e2641534310184e5d3f2f676d88da5e951eee068eb2138e1623aaad",
+    "routes.txt": "780092e6987d27e13cb4da05b1b7805c64922d2a6d188cecd707114e3a3d43d9",
+    "stop_times.txt": "b50bdb03489636f29847424d5ee844f4ec86bd8a69c6e7dc96d1b06f4915de9d",
+    "stops.txt": "0f205a1e64270635d52509b560941bab13f769b5ecd492ac8fe28f1cc8d4a5c0",
+    "trips.txt": "dce328a9e72a52a877c3ab9e64d2f5ebe74235074c710c2eea417e11add098f2"
+  },
+  "license_bucket": "A",
+  "license_note": "wholly synthetic fixture; no real data; MIT (repository license); raw feed never republished",
+  "schema_version": 1,
+  "snapshot_id": "2026-01-01",
+  "source": "gtfs",
+  "synthetic": true,
+  "terms_archive": "TERMS.txt"
+}

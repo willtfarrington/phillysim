@@ -1,0 +1,90 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          -69.985,
+          38.006
+        ],
+        "type": "Point"
+      },
+      "id": "M1",
+      "properties": {
+        "hours": "Saturday 9:00 AM - 1:00 PM",
+        "market_id": "M1",
+        "months": "Year-round",
+        "name": "Weekend Green Market"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.996,
+          38.013
+        ],
+        "type": "Point"
+      },
+      "id": "M2",
+      "properties": {
+        "hours": "Tuesdays 2:00 PM - 6:00 PM",
+        "market_id": "M2",
+        "months": "May - November",
+        "name": "Seasonal Square Market"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.978,
+          38.018
+        ],
+        "type": "Point"
+      },
+      "id": "M3",
+      "properties": {
+        "hours": null,
+        "market_id": "M3",
+        "months": null,
+        "name": "Quiet Corner Market"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.991,
+          38.009
+        ],
+        "type": "Point"
+      },
+      "id": "M4",
+      "properties": {
+        "hours": "9-1 sat&sun / call ahead ###",
+        "market_id": "M4",
+        "months": "??",
+        "name": "Riverside Stand"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.984,
+          38.015
+        ],
+        "type": "Point"
+      },
+      "id": "M5",
+      "properties": {
+        "hours": "Wednesday 10:00 AM - 2:00 PM",
+        "market_id": "M5",
+        "months": "Year-round",
+        "name": "Midweek Market"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

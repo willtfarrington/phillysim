@@ -1,0 +1,121 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          -69.978,
+          38.002
+        ],
+        "type": "Point"
+      },
+      "id": "S1",
+      "properties": {
+        "fri_close": "13:00",
+        "fri_open": "11:30",
+        "mon_close": "13:00",
+        "mon_open": "11:30",
+        "name": "Central Kitchen",
+        "sat_close": null,
+        "sat_open": null,
+        "site_id": "S1",
+        "sun_close": null,
+        "sun_open": null,
+        "thu_close": "13:00",
+        "thu_open": "11:30",
+        "tue_close": "13:00",
+        "tue_open": "11:30",
+        "wed_close": "13:00",
+        "wed_open": "11:30"
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.983,
+          38.003
+        ],
+        "type": "Point"
+      },
+      "id": "S2",
+      "properties": {
+        "fri_close": null,
+        "fri_open": null,
+        "mon_close": null,
+        "mon_open": null,
+        "name": "Weekend Breakfast",
+        "sat_close": "10:00",
+        "sat_open": "08:00",
+        "site_id": "S2",
+        "sun_close": "10:00",
+        "sun_open": "08:00",
+        "thu_close": null,
+        "thu_open": null,
+        "tue_close": null,
+        "tue_open": null,
+        "wed_close": null,
+        "wed_open": null
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.992,
+          38.017
+        ],
+        "type": "Point"
+      },
+      "id": "S3",
+      "properties": {
+        "fri_close": null,
+        "fri_open": null,
+        "mon_close": null,
+        "mon_open": null,
+        "name": "Unlisted Pantry",
+        "sat_close": null,
+        "sat_open": null,
+        "site_id": "S3",
+        "sun_close": null,
+        "sun_open": null,
+        "thu_close": null,
+        "thu_open": null,
+        "tue_close": null,
+        "tue_open": null,
+        "wed_close": null,
+        "wed_open": null
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          -69.999,
+          38.006
+        ],
+        "type": "Point"
+      },
+      "id": "S4",
+      "properties": {
+        "fri_close": null,
+        "fri_open": null,
+        "mon_close": "13:00",
+        "mon_open": "25:00",
+        "name": "Typo Table",
+        "sat_close": null,
+        "sat_open": null,
+        "site_id": "S4",
+        "sun_close": null,
+        "sun_open": null,
+        "thu_close": null,
+        "thu_open": null,
+        "tue_close": null,
+        "tue_open": null,
+        "wed_close": null,
+        "wed_open": null
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

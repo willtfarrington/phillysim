@@ -1,0 +1,37 @@
+# pre-commit hooks for phillysim (EP-2).
+#
+# Install once per clone (uses the uv project's CPython; nothing touches a system Python):
+#     cd phillysim && uv run pre-commit install
+# Run on demand from the repository root:
+#     uv run --project phillysim pre-commit run --all-files
+#
+# The ruff hooks shell out through `uv run --project phillysim` so they use the
+# lockfile-pinned ruff, the same one CI runs. `source material/` is vendored
+# upstream reference material and is never touched by any hook.
+exclude: ^source material/
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project phillysim ruff check --force-exclude
+        language: system
+        types_or: [python]
+      - id: ruff-format
+        name: ruff format --check
+        entry: uv run --project phillysim ruff format --check --force-exclude
+        language: system
+        types_or: [python]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=5000]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: detect-private-key

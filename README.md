@@ -48,16 +48,35 @@ lives in [docs/CLAIMS.md](docs/CLAIMS.md) and
 ## Status
 
 Early stage. The project is governed before it is built: the accepted planning
-baseline and work packets live in [roadmap/](roadmap/), and this repository
-currently contains governance documents, not pipeline code. Progress is
-tracked in [CHANGELOG.md](CHANGELOG.md) and the packet files
+baseline and work packets live in [roadmap/](roadmap/). This repository
+currently contains the governance documents and the package scaffold (CLI
+entry point, configuration, tests, CI); no pipeline logic exists yet.
+Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the packet files
 (`roadmap/EP-*.md`).
+
+## Setup
+
+Requires [uv](https://docs.astral.sh/uv/). It installs the pinned CPython on
+first sync, so no system Python is needed or used. Windows-native is the
+primary path; the CI matrix also runs on Linux.
+
+```
+cd phillysim
+uv sync --locked
+uv run phillysim --help
+uv run pytest
+```
+
+Full instructions, the package layout, and the data-root rules are in
+[phillysim/README.md](phillysim/README.md). Contributor tooling (pre-commit,
+lint) is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Documents
 
 | Document | Contents |
 |---|---|
 | [roadmap/](roadmap/) | Charter, scope, sources, methodology, architecture, governance, quality, milestones, work packets, ADRs |
+| [phillysim/README.md](phillysim/README.md) | The Python package: setup, layout, data-root configuration, locked stack |
 | [docs/CLAIMS.md](docs/CLAIMS.md) | Claims matrix: what the project may and may not say, mapped to evidence |
 | [docs/DATA-LICENSES.md](docs/DATA-LICENSES.md) | Per-source data licensing, the City-license caveat, and output license buckets |
 | [docs/policies.md](docs/policies.md) | Correction/feedback channel and delisting/takedown policy |

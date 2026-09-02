@@ -1,0 +1,57 @@
+[project]
+name = "phillysim"
+version = "0.1.0"
+description = "Measures access to health-relevant community resources across Philadelphia at the 2020 census-tract level. Descriptive access measurement only."
+readme = "README.md"
+license = "MIT"
+license-files = ["../LICENSE"]
+requires-python = ">=3.12"
+authors = [{ name = "W. Taylor Farrington" }]
+# Stack is locked by ADR-0001 / ADR-0002 (roadmap/adr/). Geo I/O goes through
+# pyogrio only; the `GDAL` and `fiona` PyPI packages are banned from the tree
+# and tests/test_dependency_policy.py fails the build if either appears.
+# r5py + the pinned JDK arrive with the M3 routing spike, not before.
+dependencies = [
+  "typer>=0.27",
+  "geopandas>=1.1",
+  "pyogrio>=0.13",
+  "shapely>=2.1",
+  "pyproj>=3.7",
+  "duckdb>=1.5",
+  "pyarrow>=25",
+]
+
+[project.scripts]
+phillysim = "phillysim.cli:app"
+
+[project.urls]
+Repository = "https://github.com/willtfarrington/phillysim"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.14",
+  "pre-commit>=4.3",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phillysim"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "N"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

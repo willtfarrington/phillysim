@@ -1,6 +1,6 @@
 # EP-2 — Python scaffold + offline CI skeleton
 
-**Status:** [ ] planned · **Milestone:** M0 · **Effort:** M (1–2 sessions, high confidence) · **Parallel with:** —
+**Status:** [~] in progress (2026-09-02) · **Milestone:** M0 · **Effort:** M (1–2 sessions, high confidence) · **Parallel with:** —
 
 ## Outcome & value
 A `uv`-managed package `phillysim` under `phillysim/` with pinned Python

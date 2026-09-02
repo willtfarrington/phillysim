@@ -1,0 +1,15 @@
+# Dependabot (EP-2; roadmap/governance.md "Maintenance": uv lock + Dependabot,
+# roughly quarterly review). Version-update PRs are batched monthly; security
+# alerts are immediate once enabled in repository settings.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/phillysim"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5

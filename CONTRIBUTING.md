@@ -36,10 +36,24 @@ maintainer.
 
 ## Development setup
 
-Pipeline code does not exist yet; environment and test instructions will land
-with the first scaffold packet (EP-2) and be documented here. The stack is
-locked in [roadmap/architecture.md](roadmap/architecture.md) (Python 3.12+ /
-uv on native Windows, GeoPandas with pyogrio, DuckDB, r5py).
+The code lives in the `phillysim/` uv project; full instructions are in
+[phillysim/README.md](phillysim/README.md). Short form:
+
+```
+cd phillysim
+uv sync --locked
+uv run pre-commit install
+uv run pytest
+uv run ruff check . && uv run ruff format --check .
+```
+
+CI runs the same lint and tests on Windows and Linux, offline (fixtures only,
+no data-source calls), with SHA-pinned actions and a read-only token. The
+stack is locked in [roadmap/architecture.md](roadmap/architecture.md)
+(Python 3.12+ / uv on native Windows, GeoPandas with pyogrio, DuckDB, r5py);
+the `GDAL` and `fiona` PyPI packages are banned and a test enforces the ban
+([ADR-0001](roadmap/adr/0001-language-and-stack.md)). Pull requests must
+pass the pre-commit hooks and CI.
 
 ## Licensing of contributions
 

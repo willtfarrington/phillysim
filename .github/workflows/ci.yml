@@ -1,0 +1,44 @@
+# phillysim CI (EP-2; roadmap/quality.md "Test matrix").
+#
+# Offline by policy: no job may call a data source, use a secret, or reach any
+# host other than GitHub (checkout, action downloads) and PyPI (`uv sync
+# --locked`, resolved strictly from the committed lockfile). Live-API
+# acquisition happens only in the controlled refresh workflow, never here.
+# Actions are SHA-pinned; the token is read-only.
+
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: phillysim
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: false
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest
+      - run: uv run phillysim --help
+      - run: uv run phillysim paths

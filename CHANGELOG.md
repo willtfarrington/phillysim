@@ -10,6 +10,22 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-2 — Python scaffold + offline CI skeleton** (Planning Baseline v1.0):
+  - `phillysim/` uv project: `pyproject.toml` declaring the locked stack
+    (typer, geopandas, pyogrio, shapely, pyproj, duckdb, pyarrow), committed
+    `uv.lock`, CPython pinned to 3.13 (`>=3.12` declared). Every dependency
+    installs from wheels on Windows.
+  - Typer CLI entry point: `phillysim --help`, `version`, `paths`.
+  - Config module resolving the app-owned `data/` root (env override, then
+    repo root, then working directory); no absolute paths anywhere.
+  - Tests: smoke, config, and dependency policy (GDAL/fiona ban, ADR-0001,
+    with built-in negative checks so the guard is proven on every run).
+  - `.pre-commit-config.yaml` (ruff via uv; pre-commit-hooks v6.0.0).
+  - `.github/workflows/ci.yml` (SHA-pinned actions, read-only token,
+    Windows + Linux matrix, fixtures only) and `.github/dependabot.yml`
+    (uv + GitHub Actions ecosystems, monthly).
+  - Package README with setup commands; setup sections in the root README
+    and CONTRIBUTING.
 - **EP-1 — repository governance bootstrap** (Planning Baseline v1.0):
   - README rewritten to the charter framing: measuring access, not modeling
     outcomes; the "sim" name explained; AI disclosure; non-endorsement.

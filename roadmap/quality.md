@@ -19,16 +19,16 @@ Windows environment; canonicalized-value hashes cross-platform.
 
 ## Test matrix
 
-| Layer | Contents | Runs |
-|---|---|---|
-| Source contracts | schema/license/geometry expectations per adapter, on offline fixtures | CI |
-| Golden math | metric formulas, MOE propagation, bin edges vs hand-computed answers | CI |
-| Geospatial invariants | CRS, geometry validity, county bounds, join cardinality, GEOID integrity | CI |
-| Integration | tinycity synthetic fixture through all 11 stages | CI |
-| UI E2E | Playwright: map/table sync, panel focus flow, deep links, exports | CI |
-| Accessibility (automated) | axe-core on built site | CI |
-| Performance smoke | stage runtimes/memory vs budgets on fixture | CI |
-| Manual release checklist | below | per release |
+| Layer | Contents | Runs | Exists at EP-9 (2026-09-02) |
+|---|---|---|---|
+| Source contracts | schema/license/geometry expectations per adapter, on offline fixtures | CI | yes for the eight tinycity sources (`tests/contracts/`, EP-3); real adapters add theirs from EP-5a |
+| Golden math | metric formulas, MOE propagation, bin edges vs hand-computed answers | CI | partly: the CV-tier rule is pinned (`test_cv_tier_rule`); MOE propagation and bin edges arrive with M5 |
+| Geospatial invariants | CRS, geometry validity, county bounds, join cardinality, GEOID integrity | CI | not yet (EP-5b) |
+| Integration | tinycity synthetic fixture through all 11 stages | CI | yes (`tests/integration/`, plus the `run` / `status` / `verify --fixture` CI steps, EP-4b) |
+| UI E2E | Playwright: map/table sync, panel focus flow, deep links, exports | CI | not yet (M6) |
+| Accessibility (automated) | axe-core on built site | CI | not yet (M6) |
+| Performance smoke | stage runtimes/memory vs budgets on fixture | CI | not yet; baselines recorded in `phillysim/README.md` (EP-9); the CI test lands with the M3 spike |
+| Manual release checklist | below | per release | M7 |
 
 CI: GitHub Actions, fully offline (fixtures only), SHA-pinned actions,
 minimal token permissions. Live-API acquisition happens only in the

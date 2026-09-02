@@ -51,6 +51,17 @@ Public-domain inputs impose nothing; carrying ACS columns inside an ODbL file
 creates no conflict. CI validates per-file license labels at the publish
 gate.
 
+**Labeling status (EP-9 checkpoint, 2026-09-02).** Nothing has been
+published. The only `public/` file that exists today is the fixture
+pipeline's placeholder export, `public/tract_metrics.csv` under the
+gitignored fixture data root: it is **unlabeled** (no bucket label, no
+attribution notice, no CSV escaping) until EP-7 builds the publish gate, and
+it is not a published output. No file under any `public/` zone is tracked in
+the repository. The eight synthetic tinycity manifests do carry bucket
+labels (seven Bucket A; `osm_network` Bucket B, as OSM-shaped content), and
+each source's contract pins its bucket: the contract suite checks them on
+every test run and the `validate` stage on every `phillysim run --fixture`.
+
 **SEPTA-derived aggregates:** computed travel times are facts; published
 matrices contain no GTFS feed contents. The raw feed is never republished,
 and SEPTA's terms are re-read and archived at every refresh.
@@ -77,7 +88,14 @@ republication.
 
 ## What ships with each snapshot
 
-For every acquired snapshot the manifest records: acquisition URL (dual URLs
-where a provider is mid-migration), an archived copy of the terms page in
-force, schema version, checksum, and license bucket. This file gains a dated
-entry per source as snapshots land.
+For every acquired snapshot the manifest
+(`raw/<source>/<snapshot-id>/manifest.json`, owned by the manifest engine
+since EP-4a; field rules in [docs/data-dictionary.md](data-dictionary.md))
+records: `acquisition_url` and `acquisition_url_alt` (dual URLs where a
+provider is mid-migration); `terms_archive`, the file name of the archived
+copy of the terms page in force, which must be one of the snapshot's
+checksummed files; `license_bucket` (`A` or `B`, ADR-0003); `license_note`,
+a human-readable summary of the terms; `schema_version`; and a SHA-256
+digest per file. A manifest missing any of these is rejected and the
+snapshot quarantined; `phillysim verify` re-checks every digest. This file
+gains a dated entry per source as snapshots land.

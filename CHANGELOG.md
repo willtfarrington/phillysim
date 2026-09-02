@@ -10,6 +10,31 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- **EP-9 — checkpoint 1** (after M1, before M2; 2026-09-02). Fresh clone of
+  `main` at `a72d318` re-run green: `uv sync --locked`, 240 tests,
+  `phillysim run --fixture` (11 ran, then 0 ran / 11 skipped), `status`
+  (11 fresh), `verify` (8 of 8 snapshots, 11 of 11 stages). Documentation
+  synced to the code: `roadmap/architecture.md` names the eleven stages
+  under "Data flow"; `docs/data-dictionary.md` lists the five intermediate
+  files as undocumented by policy and describes the placeholder public
+  export; `docs/DATA-LICENSES.md` names the manifest fields the engine owns
+  and flags the placeholder `publish` output as unlabeled until EP-7;
+  `roadmap/quality.md`'s test matrix says which rows exist today; the root
+  README's status paragraph ("no pipeline logic exists yet") and the
+  fixture README's description of `verify --fixture` were corrected.
+  License-label sweep clean (no tracked file under any `public/` zone;
+  fixture buckets agree with their contracts). Resource baselines recorded
+  in `phillysim/README.md`. `roadmap/milestones.md` gains an "Estimate
+  accuracy" table (EP-1–EP-4b, all one session) and the re-plan trigger
+  evaluation (none fired). One setup finding: a Windows fresh clone in a
+  deep directory fails with "Filename too long" on two vendored
+  `source material/` file names; both READMEs now say to clone with
+  `core.longpaths=true`. EP-5 pre-read: does not fit one session; split
+  into `EP-5a-spine-acquisition.md` (download path, TIGER / CenPop / ACS
+  adapters, contracts, samples, real pipeline registration) and
+  `EP-5b-spine-curated.md` (curated spine, invariant tests, ADR-0007
+  analysis CRS, data cards); the bare EP-5 file now describes the set; M2
+  table rows updated.
 - Roadmap: first checkpoint packet authored as
   `roadmap/EP-9-checkpoint-1.md` (owner decisions, 2026-09-02): the five
   milestones.md checkpoint items plus the EP-5 pre-read and split decision;

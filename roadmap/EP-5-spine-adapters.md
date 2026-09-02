@@ -1,6 +1,18 @@
 # EP-5 — Geography spine adapters: TIGER + CenPop + ACS
 
-**Status:** [ ] planned · **Milestone:** M2 · **Effort:** M (1–2 sessions, high confidence) · **Parallel with:** —
+**Status:** split 2026-09-02 into [EP-5a](EP-5a-spine-acquisition.md) and [EP-5b](EP-5b-spine-curated.md) · **Milestone:** M2 · **Effort:** M (1–2 sessions, high confidence), as authored · **Parallel with:** —
+
+> **This file names the set, not a packet.** The EP-9 checkpoint's pickup
+> pre-read (README "Packet sizing and splitting") found that this brief
+> holds two first-time subsystems, the outbound acquisition path with three
+> adapters and the real-data spine with its invariants and CRS decision,
+> each comparable to one of the EP-4 halves that filled a session. It was
+> split at the boundary the implementation notes allow: **EP-5a** acquires
+> (download path, TIGER / CenPop / ACS adapters, contracts, samples, real
+> pipeline registration) and **EP-5b** curates (spine, invariant tests,
+> ADR-0007 analysis CRS, data cards) and carries this set's milestone-level
+> evidence below. References to "EP-5" elsewhere mean both parts; the text
+> below is the brief as authored on 2026-08-23.
 
 ## Outcome & value
 Real acquisition scripts (manifest-recorded, checksummed, bbox-filtered at

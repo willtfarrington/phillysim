@@ -40,6 +40,26 @@ cancellable; early Philadelphia bounding-box filtering at ingest; preflight
 checks (disk ≥150 GB free, RAM budget, dependency versions) before large
 jobs.
 
+The eleven stages, as registered by the fixture pipeline
+(`phillysim.fixtures.pipeline`, EP-4b) and to be reused by name by the real
+pipeline from EP-5a on (recorded at the EP-9 checkpoint, 2026-09-02):
+
+| # | Stage | Data-flow step above | Output (zone) | Logic at EP-9 |
+|---|---|---|---|---|
+| 1 | `acquire` | authorized source adapters → immutable snapshots | `raw/<source>/<snapshot-id>/` | fixture: tinycity generated and admitted through the guards; real adapters from EP-5a |
+| 2 | `validate` | schema + license validation | `intermediate/validation.json` | source contracts (EP-3) |
+| 3 | `spine` | normalization to the 2020-tract spine | `curated/tracts_spine.parquet` | computed |
+| 4 | `demographics` | normalization (ACS estimates + MOE on the spine) | `intermediate/acs_tracts.parquet` | computed |
+| 5 | `destinations` | normalization (destination points assigned to tracts) | `intermediate/destinations.parquet` | computed |
+| 6 | `conflate` | destination-layer conflation | `intermediate/sites_conflated.parquet` | identity stub until M4 |
+| 7 | `hours` | hours parsing | `curated/sites.parquet` | oracle stub until M4 |
+| 8 | `network` | routing inputs (GTFS + street network) | `intermediate/network.json` | computed summary |
+| 9 | `travel_times` | travel-time matrices | `curated/travel_times.parquet` | precomputed stub until M3 |
+| 10 | `metrics` | transparent metrics + MOE propagation → analytic table | `curated/tract_metrics.parquet` | computed (CV tiers, time to nearest) |
+| 11 | `publish` | public-safe aggregates | `public/tract_metrics.csv` | placeholder until EP-7 (no license labels, no CSV escaping) |
+
+The static site is built from the public zone and is not a pipeline stage.
+
 ## Zones & identifiers
 
 `data/raw/<source>/<snapshot-id>/` (immutable) → `data/intermediate/` →

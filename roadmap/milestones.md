@@ -110,6 +110,42 @@ revised before the first published metric exists.
    tier-to-action mapping. Update their expected values in the same commit
    as the convention change, never separately, so any later drift fails CI.
 
+## Estimate accuracy
+
+Kept by the checkpoint packets (first entry EP-9, 2026-09-02; every later
+checkpoint appends). "Actual" is sessions to the handoff commit, from the
+packet handoffs; the ratio is actual ÷ estimate midpoint.
+
+| Packet | Estimate (sessions) | Actual | Ratio | Note |
+|---|---|---|---|---|
+| EP-1 | S, 1 | 1 | 1.0 | Documentation only (2026-08-23) |
+| EP-2 | M, 1–2 | 1 | 0.67 | Scaffold + CI; first packet under the interactive owner-review rule |
+| EP-3 | M, 1–2 | 1 | 0.67 | Generator, contracts, 52 tests |
+| EP-4a | S, 1 (split from the L packet EP-4 at pickup) | 1 | 1.0 | Plus a one-line Linux CI fix in the same session |
+| EP-4b | S, 1 (the other half of EP-4) | 1 | 1.0 | M1 go/no-go met |
+| M0 | 3–4 | 2 | 0.57 | Both packets one session each |
+| M1 | 4–6 | 3 | 0.60 | Both halves of the split L packet one session each |
+
+**What this implies (EP-9).** Five of five packets, including both M-sized
+ones, landed in one session, and both milestones came in under their low
+bound. The M-sized estimates that remain (EP-6–EP-8; M2 total 4–6) are
+therefore more likely to sit at their low end than their high end, but they
+are not re-sized here: the M2 packets are the first with real data, network
+acquisition, and (EP-8) a browser page, none of which the record so far
+covers. The pickup pre-read stays the sizing instrument (EP-9's pre-read
+split EP-5 into EP-5a/EP-5b on the evidence in its handoff), and the next
+checkpoint re-evaluates with real-data actuals.
+
+**Re-plan trigger evaluation (EP-9, 2026-09-02).** (1) Kill criterion
+fired: none exists before the M3 spike; not fired. (2) Checkpoint finds
+drift: the fresh-clone re-run was green (240 tests; 11 ran, then 11
+skipped; 11 fresh; 8 of 8 snapshots and 11 of 11 stages verified); two
+documentation statements contradicted the code (the root README's "no
+pipeline logic exists yet" and the fixture README's description of `verify
+--fixture`) and were fixed in the packet; no code contradicted a document;
+not fired. (3) Two consecutive packets over estimate by more than 2×: no
+packet has exceeded its estimate; not fired.
+
 ## Risks & contingencies
 
 | Risk | Likelihood | Contingency |

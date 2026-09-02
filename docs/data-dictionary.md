@@ -11,7 +11,7 @@
 
 Conventions: `geoid` is the eleven-digit 2020 census-tract GEOID (state +
 county + tract). Coordinates are WGS 84 (EPSG:4326) at every boundary shown
-here; the analysis CRS is chosen in EP-5 and will be recorded in this file.
+here; the analysis CRS is chosen in EP-5b and will be recorded in this file.
 Times are minutes. Nullable columns say so; everything else is required.
 
 ## Snapshot manifest (`raw/<source>/<snapshot-id>/manifest.json`)
@@ -153,6 +153,32 @@ One row per tract × metric (× category × mode where applicable). This is the
 
 Class bins for map, table, and CSV are computed at build time from this table
 and are not stored in it.
+
+## Intermediate files (undocumented by policy)
+
+Files under `intermediate/` are working products between stages. Their shape
+is owned by the stage that writes them, may change without a schema-version
+bump, is never published, and is read by nothing outside the pipeline. They
+are listed here so that every file the pipeline writes is accounted for (EP-9
+checkpoint, 2026-09-02); their columns are deliberately not documented.
+
+| File | Written by | Read by | Contents |
+|---|---|---|---|
+| `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, violations |
+| `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract |
+| `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
+| `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
+| `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
+
+## Placeholder public export (`public/tract_metrics.csv`)
+
+Written by the `publish` stage of the fixture pipeline (EP-4b): the analytic
+table above as plain CSV, one row per record, same columns. It carries **no
+license label and no CSV formula-injection escaping**, exists only in the
+gitignored fixture data root, and is not a published output; the publish
+gate in EP-7 replaces it with per-file license-bucket labels and escaping
+([docs/DATA-LICENSES.md](DATA-LICENSES.md)). No file under any `public/`
+zone is tracked in the repository.
 
 ## Raw fake sources (fixture only)
 

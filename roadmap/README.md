@@ -38,10 +38,11 @@ were all resolved before this roadmap was drafted.
 - **S** — fits one session. Every packet authored from 2026-09-02 on is S:
   refinement gates decompose a milestone's outcome into S packets rather
   than authoring anything larger.
-- **M** (1–2 sessions) survives only in the four M2 packets written before
-  this rule (EP-5–EP-8). At pickup, the session reads the packet and decides
+- **M** (1–2 sessions) survives only in the M2 packets written before this
+  rule (EP-5–EP-8). At pickup, the session reads the packet and decides
   whether it fits one session; if not, it is **split before any work
-  starts**, using the convention below.
+  starts**, using the convention below. EP-5 was split into EP-5a / EP-5b
+  by the EP-9 pre-read on 2026-09-02; EP-6–EP-8 are still M.
 - **L** is no longer a valid packet size. The one L packet, EP-4, was split
   on 2026-09-02 into EP-4a and EP-4b at the engine/runner boundary its own
   brief allowed.
@@ -68,7 +69,7 @@ were all resolved before this roadmap was drafted.
 | [quality.md](quality.md) | Versioning axes, test matrix, release gates, reproducibility procedure |
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
-| [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md)); later EPs authored at refinement gates |
+| [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md); EP-5 split into [EP-5a](EP-5a-spine-acquisition.md) / [EP-5b](EP-5b-spine-curated.md)); later EPs authored at refinement gates |
 | [EP-9](EP-9-checkpoint-1.md) | First checkpoint packet (after M1, before EP-5); later checkpoints take the next free integer |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
 
@@ -115,18 +116,21 @@ depends on it. The first fell due with EP-4b (owner decision 2026-09-02).
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
-| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [ ] |
+| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [~] |
 
 ### M2 — Spine + first source end-to-end · `[ ]`
 
 Go/no-go: slice reproducible from a fresh clone; license buckets applied.
 Each M-sized packet is read at pickup and split (convention above) if it
-will not fit one session; EP-9 does that pre-read for EP-5.
+will not fit one session. EP-9 did that pre-read for EP-5 on 2026-09-02 and
+split it into EP-5a / EP-5b; [EP-5](EP-5-spine-adapters.md) now names the
+set.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
-| EP-5 | [Geography spine adapters: TIGER + CenPop + ACS](EP-5-spine-adapters.md) | M | EP-9 (checkpoint), EP-4b | [ ] |
-| EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 | [ ] |
+| EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | [ ] |
+| EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | [ ] |
+| EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [ ] |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [ ] |
 | EP-8 | [Minimal slice page](EP-8-slice-page.md) | M | EP-7 | [ ] |
 

@@ -22,6 +22,13 @@ uv run pre-commit install        # once per clone; hooks live in ../.pre-commit-
 Every runtime dependency installs from binary wheels on Windows (ADR-0001).
 WSL2 is a documented fallback only; the CI matrix also runs the suite on Linux.
 
+On Windows, clone with `git clone -c core.longpaths=true …` (or set
+`git config --global core.longpaths true` first). Two file names under the
+repository's vendored `source material/` tree exceed the default
+260-character path limit once the clone sits in a directory path longer
+than about 130 characters; the checkout fails otherwise (found at the EP-9
+checkpoint's fresh-clone re-run).
+
 ## Layout
 
 ```
@@ -168,6 +175,28 @@ asserts. CI runs `run`, `status`, and `verify --fixture` on Windows and Linux
 (the M1 go/no-go). No real pipeline stages are registered yet: `run` and
 `status` without `--fixture` say so and exit 1 until EP-5 adds the first
 adapters.
+
+## Resource baselines
+
+Recorded at the EP-9 checkpoint (2026-09-02) from a fresh clone of `main`
+at `a72d318` on the development machine (Windows 11), as the reference for
+later checkpoints. Every number is trivially within the architecture.md
+budgets at fixture scale.
+
+| Measure | Baseline | Budget (architecture.md) |
+|---|---|---|
+| `git clone` | about 2 s | — |
+| `uv sync --locked` | about 6 s with a warm uv cache; `.venv` 363 MB | — |
+| `uv run pytest` (240 tests) | about 10 s | — |
+| `phillysim run --fixture`, first run | 1.5 s wall including preflight; `acquire` and `validate` about 0.1 s each, every other stage under 0.05 s | routine peak RAM ≤24 GB (not measured yet) |
+| second run (0 ran, 11 skipped) | about 1.0 s | — |
+| `status --fixture`, `verify --fixture` | under 1 s each | — |
+| fixture data root after a run | 148 KB (raw 55 KB, curated 44 KB, intermediate 29 KB, state file 12 KB, public 4 KB) | workspace ≤50 GB |
+| preflight report | 429 GB free disk, 68.1 GB physical RAM, Python 3.13.15, all six locked packages present | real run needs ≥150 GB free and 24 GB RAM (would pass on this machine) |
+
+Peak RSS is not measured yet: process-tree RSS sampling starts with the M3
+spike harness, which is also where the CI performance-smoke test in
+[roadmap/quality.md](../roadmap/quality.md) lands.
 
 ## Decisions this package honors
 

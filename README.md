@@ -49,11 +49,14 @@ lives in [docs/CLAIMS.md](docs/CLAIMS.md) and
 
 Early stage. The project is governed before it is built: the accepted planning
 baseline and work packets live in [roadmap/](roadmap/). This repository
-currently contains the governance documents, the package scaffold (CLI
-entry point, configuration, tests, CI), a deterministic synthetic test
-fixture, and the source-contract test harness; no pipeline logic exists yet.
-Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the packet files
-(`roadmap/EP-*.md`).
+currently contains the governance documents, the Python package (CLI,
+configuration, offline CI), a deterministic synthetic test fixture with its
+source-contract harness, the manifest/snapshot engine with download guards
+and quarantine, and the stage runner that carries the fixture through all
+eleven pipeline stages (`phillysim run --fixture`; milestones M0 and M1
+done). No real data source has been acquired yet; the first adapters arrive
+with M2. Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the packet
+tables in [roadmap/README.md](roadmap/README.md).
 
 ## Setup
 
@@ -67,6 +70,12 @@ uv sync --locked
 uv run phillysim --help
 uv run pytest
 ```
+
+On Windows, clone with `git clone -c core.longpaths=true …` (or set
+`git config --global core.longpaths true` first): two file names under the
+vendored `source material/` tree exceed the default 260-character path
+limit once the clone sits in a directory path longer than about 130
+characters, and the checkout fails otherwise.
 
 Full instructions, the package layout, and the data-root rules are in
 [phillysim/README.md](phillysim/README.md). Contributor tooling (pre-commit,

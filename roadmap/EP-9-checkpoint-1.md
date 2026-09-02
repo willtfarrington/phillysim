@@ -1,6 +1,6 @@
 # EP-9 — Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy
 
-**Status:** [ ] planned · **Milestone:** — (checkpoint after M1, before M2) · **Effort:** S (1 session, high confidence) · **Parallel with:** —
+**Status:** [~] in progress · **Milestone:** — (checkpoint after M1, before M2) · **Effort:** S (1 session, high confidence) · **Parallel with:** —
 
 ## Outcome & value
 The first recurring checkpoint packet ([milestones.md](milestones.md)

@@ -131,7 +131,7 @@ set.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
-| EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | [ ] |
+| EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | [x] 39a6828 |
 | EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | [ ] |
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [ ] |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [ ] |

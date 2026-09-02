@@ -1,24 +1,34 @@
 """Command-line entry point (``phillysim``).
 
-Pipeline stages arrive as plain Typer commands, ``phillysim <stage>``, from the
-stage-runner packet (EP-4b) onward. Today the shell carries inspection commands
-(``version``, ``paths``), the fixture generator (``gen-tinycity``), and the
-snapshot-level ``verify`` from the manifest engine (EP-4a).
+Plain Typer commands over idempotent, fingerprint-checked stage functions; no
+orchestrator (architecture.md, B3-07). Inspection commands (``version``,
+``paths``), the fixture generator (``gen-tinycity``), and the pipeline verbs
+from the stage runner (EP-4b): ``run`` brings a pipeline up to date (skipping
+fresh stages), ``status`` reports every stage as fresh / stale / missing /
+incomplete, and ``verify`` checks the raw zone against its manifests (EP-4a)
+and the stage state against the zones.
+
+``--fixture`` selects the tinycity fixture pipeline and its own data root,
+``<data root>/fixture/``; ``--data-root DIR`` points any verb at an explicit
+root. Only ``run`` ever creates directories.
 """
 
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from phillysim import __version__
+from phillysim import __version__, runner
 from phillysim.config import ENV_DATA_ROOT, Settings
+from phillysim.fixtures.pipeline import FIXTURE_ROOT_NAME, fixture_pipeline
 from phillysim.fixtures.tinycity import Variant, write_fixture
 from phillysim.manifest import verify_raw_zone
+from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
+from phillysim.runner import StateError, load_state, verify_state
+from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
 
 app = typer.Typer(
     name="phillysim",
@@ -26,6 +36,15 @@ app = typer.Typer(
     add_completion=False,
     rich_markup_mode=None,
 )
+
+FixtureOption = Annotated[
+    bool,
+    typer.Option("--fixture", help="Use the tinycity fixture pipeline and its own data root."),
+]
+DataRootOption = Annotated[
+    Path | None,
+    typer.Option("--data-root", help="Use this data root instead of the resolved one."),
+]
 
 
 @app.callback()
@@ -76,40 +95,164 @@ def gen_tinycity(
     typer.echo(f"wrote {len(digests)} files ({variant.value}) under {out}")
 
 
+# --- pipeline verbs --------------------------------------------------------------------------
+
+
+def _resolve_root(fixture: bool, data_root: Path | None) -> tuple[Path, str]:
+    """The data root a verb operates on, and a label for messages."""
+    if data_root is not None:
+        return data_root.expanduser().resolve(), str(data_root)
+    base = Settings.load().data_root
+    if fixture:
+        return base / FIXTURE_ROOT_NAME, "fixture data root"
+    return base, "data root"
+
+
+def _pipeline(fixture: bool) -> Pipeline | None:
+    """The pipeline for this root: the fixture's, or none until real stages exist (EP-5+)."""
+    return fixture_pipeline() if fixture else None
+
+
 @app.command()
-def verify(
-    fixture: Annotated[
-        bool,
+def run(
+    fixture: FixtureOption = False,
+    data_root: DataRootOption = None,
+    stage: Annotated[
+        str | None,
+        typer.Option("--stage", help="Run through this stage only (its predecessors first)."),
+    ] = None,
+    param: Annotated[
+        list[str] | None,
         typer.Option(
-            "--fixture",
-            help="Verify a freshly generated tinycity fixture instead of the data root.",
+            "--param",
+            help="Override a stage parameter: stage.key=value (JSON or string); repeatable.",
         ),
-    ] = False,
-    raw: Annotated[
-        Path | None,
-        typer.Option("--raw", help="Verify this raw-zone directory instead of the data root's."),
     ] = None,
 ) -> None:
-    """Verify every raw snapshot against its manifest (snapshot level; EP-4b adds stage state).
+    """Run the pipeline: preflight, then every stage whose inputs or parameters changed.
 
-    Exit status 1 if any snapshot fails or the raw zone holds an entry no manifest vouches for.
+    Fresh stages are skipped; a failed or cancelled stage is recorded and re-run next time.
+    Exit status 1 if preflight refuses or a stage fails.
+    """
+    pipeline = _pipeline(fixture)
+    if pipeline is None:
+        typer.echo("no real pipeline stages are registered yet (EP-5 onward); use --fixture")
+        raise typer.Exit(code=1)
+    try:
+        pipeline = pipeline.with_params(parse_params(param or []))
+        if stage is not None:
+            pipeline.through(stage)
+    except PipelineError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    root, label = _resolve_root(fixture, data_root)
+    typer.echo(f"pipeline {pipeline.name!r} at {label}: {root}")
+    preflight = run_preflight(root, FIXTURE_SCALE if fixture else REAL_RUN)
+    for line in preflight.lines():
+        typer.echo(line)
+    if not preflight.ok:
+        typer.echo("refusing to run: preflight failed")
+        raise typer.Exit(code=1)
+    try:
+        report = runner.run(root, pipeline, through=stage, echo=typer.echo)
+    except (StageError, StateError) as exc:
+        typer.echo(f"FAIL {exc}")
+        typer.echo(
+            "the stage is recorded as incomplete; `phillysim verify` names it and the next "
+            "`phillysim run` resumes from it"
+        )
+        raise typer.Exit(code=1) from exc
+    except CancelledError as exc:
+        typer.echo(
+            "cancelled; the stage is recorded as incomplete and the next run resumes from it"
+        )
+        raise typer.Exit(code=130) from exc
+    typer.echo(f"{len(report.ran)} stage(s) ran, {len(report.skipped)} skipped (fresh)")
+
+
+@app.command()
+def status(
+    fixture: FixtureOption = False,
+    data_root: DataRootOption = None,
+) -> None:
+    """Report every stage as fresh, stale, missing, or incomplete. Creates nothing."""
+    pipeline = _pipeline(fixture)
+    if pipeline is None:
+        typer.echo("no real pipeline stages are registered yet (EP-5 onward); use --fixture")
+        raise typer.Exit(code=1)
+    root, label = _resolve_root(fixture, data_root)
+    typer.echo(f"pipeline {pipeline.name!r} at {label}: {root}")
+    if not root.is_dir():
+        typer.echo("data root does not exist: every stage is missing (run `phillysim run` first)")
+        raise typer.Exit(code=1)
+    try:
+        rows = runner.status(root, pipeline)
+    except StateError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for row in rows:
+        typer.echo(f"{row.status:<11}{row.name:<14}{row.detail}")
+    counts = {
+        kind: sum(1 for r in rows if r.status == kind)
+        for kind in ("fresh", "stale", "missing", "incomplete")
+    }
+    typer.echo(", ".join(f"{n} {kind}" for kind, n in counts.items()))
+
+
+@app.command()
+def verify(
+    fixture: FixtureOption = False,
+    raw: Annotated[
+        Path | None,
+        typer.Option("--raw", help="Verify this raw-zone directory only (snapshot level)."),
+    ] = None,
+    data_root: DataRootOption = None,
+) -> None:
+    """Verify raw snapshots against their manifests and the stage state against the zones.
+
+    Exit status 1 if any snapshot fails, the raw zone holds a stray entry, a recorded stage's
+    outputs are missing or altered, or any stage is incomplete. Creates nothing.
     """
     if fixture and raw is not None:
         raise typer.BadParameter("--fixture and --raw are mutually exclusive")
-    if fixture:
-        with tempfile.TemporaryDirectory(prefix="phillysim-tinycity-") as scratch:
-            write_fixture(Path(scratch), Variant.VALID)
-            report = verify_raw_zone(Path(scratch) / "raw")
-        label = "tinycity fixture (fresh generation)"
-    else:
-        raw_zone = raw if raw is not None else Settings.load().zone("raw")
-        report = verify_raw_zone(raw_zone)
-        label = "data root" if raw is None else str(raw)
-        if not raw_zone.is_dir():
-            typer.echo(f"raw zone not found for {label}: nothing to verify")
+    if raw is not None:
+        if not raw.is_dir():
+            typer.echo(f"raw zone not found: {raw}: nothing to verify")
             raise typer.Exit(code=1)
-    typer.echo(f"verifying raw zone: {label}")
-    for line in report.lines():
+        report = verify_raw_zone(raw)
+        typer.echo(f"verifying raw zone: {raw}")
+        for line in report.lines():
+            typer.echo(line)
+        raise typer.Exit(code=0 if report.ok else 1)
+
+    root, label = _resolve_root(fixture, data_root)
+    pipeline = _pipeline(fixture)
+    raw_zone = root / "raw"
+    if not raw_zone.is_dir():
+        hint = " (run `phillysim run --fixture` first)" if fixture else ""
+        typer.echo(f"raw zone not found for {label}: nothing to verify{hint}")
+        raise typer.Exit(code=1)
+    typer.echo(f"verifying raw zone: {label}: {raw_zone}")
+    zone_report = verify_raw_zone(raw_zone)
+    for line in zone_report.lines():
         typer.echo(line)
-    if not report.ok:
+    ok = zone_report.ok
+    if pipeline is not None:
+        typer.echo(f"verifying stage state: pipeline {pipeline.name!r}")
+        state_report = verify_state(root, pipeline)
+        for line in state_report.lines():
+            typer.echo(line)
+        ok = ok and state_report.ok
+    else:
+        try:
+            state = load_state(root)
+        except StateError as exc:
+            typer.echo(f"FAIL {exc}")
+            state = None
+            ok = False
+        if state is not None:
+            typer.echo(
+                f"stage state present for pipeline {state.pipeline!r}, but no real pipeline "
+                "is registered yet (EP-5 onward); stage coherence not checked"
+            )
+    if not ok:
         raise typer.Exit(code=1)

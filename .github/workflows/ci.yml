@@ -42,3 +42,7 @@ jobs:
       - run: uv run pytest
       - run: uv run phillysim --help
       - run: uv run phillysim paths
+      # M1 go/no-go (roadmap/milestones.md): the fixture pipeline end to end, offline.
+      - run: uv run phillysim run --fixture
+      - run: uv run phillysim status --fixture
+      - run: uv run phillysim verify --fixture

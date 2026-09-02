@@ -239,10 +239,8 @@ def test_snapshot_without_manifest_fails(tmp_path: Path) -> None:
 # --- CLI -----------------------------------------------------------------------------------
 
 
-def test_cli_verify_fixture_is_green() -> None:
-    result = CliRunner().invoke(app, ["verify", "--fixture"])
-    assert result.exit_code == 0, result.output
-    assert "8 of 8 snapshot(s) verified" in result.output
+# `verify --fixture` now targets the fixture pipeline's data root (EP-4b) and is
+# covered by tests/integration/test_fixture_pipeline.py.
 
 
 def test_cli_verify_raw_names_the_tampered_file(tinycity_dir: Path, tmp_path: Path) -> None:

@@ -35,20 +35,27 @@ phillysim/
     manifest.py           snapshot manifest model, canonical reader/writer, verify (EP-4a)
     guards.py             download guards: allowlist, size cap, zip-slip, bomb (EP-4a)
     quarantine.py         default-deny admission; failed snapshots move to quarantine/ (EP-4a)
+    stages.py             stage registry: Stage / Pipeline declarations, cancel token (EP-4b)
+    runner.py             fingerprints, state file, skip / resume / cancel, status, verify (EP-4b)
+    preflight.py          disk / RAM / dependency / writable-root checks before a run (EP-4b)
     contracts.py          source-contract harness (schema/license/geometry) + the
                           locked analytic-table contract
     fixtures/tinycity.py  deterministic synthetic fixture generator (EP-3)
     fixtures/tinycity_contracts.py   contracts for the eight fake sources
+    fixtures/pipeline.py  the eleven fixture stages behind `phillysim run --fixture` (EP-4b)
   tests/
     conftest.py           fixture-directory paths
     test_smoke.py         package import + CLI help/version/paths
     test_config.py        data-root resolution rules
     test_zones.py         snapshot-ID / source-name rules, layout creation, listing
-    test_manifest.py      round-trip, field rules, snapshot + zone verification, `verify` CLI
+    test_manifest.py      round-trip, field rules, snapshot + zone verification, `verify --raw`
     test_guards.py        one crafted malicious input per guard; admission + quarantine
+    test_runner.py        registry rules, fingerprints, skip / resume / cancel, status, verify
+    test_preflight.py     every check reported in one pass; simulated failures refuse the run
     test_dependency_policy.py   GDAL/fiona ban, with built-in negative checks
     test_tinycity_fixture.py    determinism + committed-golden checks
     contracts/            harness unit tests; tinycity sources positive/negative
+    integration/          tinycity through all eleven stages via the CLI (M1 evidence)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
 ```
@@ -95,9 +102,72 @@ inputs; no test or command in this package reaches the network.
 
 `phillysim verify` checks every snapshot in the data root's raw zone against
 its manifest and exits non-zero on the first tampered byte, missing or
-unlisted file, or stray entry. `phillysim verify --fixture` runs the same
-check on a freshly generated tinycity; `--raw DIR` checks any raw-zone
-directory. EP-4b extends `verify` with stage-state coherence.
+unlisted file, or stray entry; `--raw DIR` checks any raw-zone directory on
+its own. `verify` also checks the stage state (next section).
+
+## Pipeline: stages, fingerprints, state, resume (EP-4b)
+
+The pipeline is a fixed sequence of idempotent stages
+(`phillysim.stages.Pipeline`), each a plain function that declares its inputs
+and outputs as data-root-relative paths (`raw/<source>/<snapshot-id>`,
+`curated/tracts_spine.parquet`, …) and a mapping of parameters. There is no
+orchestrator. The runner (`phillysim.runner`) computes each stage's
+**fingerprint** as the SHA-256 of its inputs' content digests plus its
+parameters, nothing more, and records it in the state file
+`<data root>/pipeline_state.json` ([shape](../docs/data-dictionary.md)).
+
+- `phillysim run [--fixture] [--data-root DIR] [--stage NAME] [--param stage.key=value …]`
+  runs preflight, then every stage in order, **skipping** any stage whose
+  recorded fingerprint equals the current one and whose outputs are still on
+  disk unaltered. A stage writes into `cache/staging/<stage>/` and the runner
+  installs each output into its zone with an atomic rename only after the
+  stage has finished, so a crash or cancellation never leaves a partially
+  written file in a zone. `--stage NAME` stops after that stage; `--param`
+  overrides a declared parameter (JSON value or string; unknown keys are
+  refused) and, because parameters are part of the fingerprint, re-runs that
+  stage and any downstream stage whose inputs then change in content.
+- `phillysim status [--fixture]` prints each stage as **fresh** (fingerprint
+  unchanged, outputs intact), **stale** (an input, a parameter, or an output
+  changed), **missing** (never run, or an output is gone), or **incomplete**
+  (the last attempt failed or was cancelled). Creates nothing.
+- `phillysim verify [--fixture]` runs the EP-4a snapshot check on the raw zone
+  and then checks the state file against the zones: every `done` stage's
+  outputs present with their recorded digests, no stage left running,
+  failed, or cancelled, no leftover staging, no unknown records. A failed
+  stage is reported as *incomplete* by name; the next `run` resumes from it.
+  Exit status 1 on any incomplete or broken stage. Creates nothing.
+
+Cancellation is cooperative: the runner checks a `CancelToken` between
+stages and a stage calls `ctx.checkpoint()` at its own safe points. A stage
+cancelled mid-way is recorded as `cancelled`, its staging discarded, and its
+previous outputs (if any) are no longer vouched for. Nothing in the state
+file is machine-specific: relative paths, digests, parameters, UTC
+timestamps; error text has the data root replaced by `<data-root>`.
+
+**Preflight** (`phillysim.preflight`) runs before every `run` and reports all
+checks in one pass: free disk under the data root, physical RAM, Python
+version, the locked packages (geopandas, pyogrio, shapely, pyproj, duckdb,
+pyarrow), and a writable root. A real run applies the architecture.md
+budgets (≥150 GB free disk, 24 GB RAM); `--fixture` applies fixture-scale
+thresholds (1 GiB each) and the report says so. Any failed check refuses
+the run without touching the data root.
+
+### The fixture pipeline
+
+`phillysim run --fixture` runs the eleven-stage fixture pipeline
+(`phillysim.fixtures.pipeline`) in its own data root, `<data root>/fixture/`
+(gitignored): `acquire` generates tinycity and admits each of the eight raw
+snapshots through `quarantine.admit`; `validate` checks every source against
+its contract; `spine`, `demographics`, `destinations`, `conflate`, `network`,
+`metrics`, and `publish` compute their outputs from the raw files; `hours`
+and `travel_times` are explicit **stubs** that take their answers from the
+generator's oracle until M4 (hours parsing) and M3 (routing) supply the real
+logic. The four curated outputs equal the committed golden tables
+(`tests/fixtures/tinycity/expected/`) by content, which the integration suite
+asserts. CI runs `run`, `status`, and `verify --fixture` on Windows and Linux
+(the M1 go/no-go). No real pipeline stages are registered yet: `run` and
+`status` without `--fixture` say so and exit 1 until EP-5 adds the first
+adapters.
 
 ## Decisions this package honors
 

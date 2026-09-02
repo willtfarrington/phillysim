@@ -10,6 +10,11 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- tinycity: tract polygon corners are rounded to six decimals like every
+  other fixture coordinate, so the spine stage's output read back from the
+  GeoJSON snapshot equals the golden geometry exactly. Only
+  `expected/tracts_spine.parquet` (content) and its `CHECKSUMS.txt` line
+  changed; the raw snapshots are byte-identical (EP-4b).
 - Delisting window in `docs/policies.md` is now two-tier: 7 days for standard
   requests, 72 hours for safety-motivated requests (owner decision,
   2026-09-02; resolves the EP-1 carry-over).
@@ -51,6 +56,50 @@ recorded separately in manifests once the pipeline exists.
   locked-decision text, baseline check, apply list, and regression guard.
 
 ### Added
+
+- **EP-4b — stage runner: fingerprints, resume/cancel, preflight,
+  `phillysim run/status/verify`** (Planning Baseline v1.0; completes M1):
+  - `phillysim.stages`: the stage registry. A `Stage` declares inputs and
+    outputs as data-root-relative paths plus JSON parameters; a `Pipeline`
+    validates the wiring as a DAG (every input external under `raw/` or
+    produced by an earlier stage; every output produced once). Cooperative
+    `CancelToken` with checkpoints inside stages.
+  - `phillysim.runner`: fingerprint = SHA-256 of the inputs' content digests
+    plus the parameters, recorded per stage in `<data root>/pipeline_state.json`
+    (shape in `docs/data-dictionary.md`); a stage is skipped while its
+    fingerprint is unchanged and its outputs are intact. Outputs are written
+    to `cache/staging/<stage>/` and installed by atomic rename, so a failed
+    or cancelled stage never leaves a partial file in a zone; it is recorded
+    as incomplete and the next run resumes from it. `status` (fresh / stale /
+    missing / incomplete) and `verify_state` (state file vs. zones: outputs
+    present and unaltered, no incomplete stage, no leftover staging, no
+    unknown record). The raw zone stays immutable under the runner.
+  - `phillysim.preflight`: free disk, physical RAM, Python version, the six
+    locked packages, writable root; every check reported in one pass and any
+    failure refuses the run. Real-run thresholds from architecture.md
+    (≥150 GB free disk, 24 GB RAM); fixture-scale thresholds for `--fixture`,
+    labelled as such. No new dependency (RAM via Win32 / `/proc/meminfo` /
+    `sysconf`).
+  - `phillysim.fixtures.pipeline`: the eleven fixture stages (`acquire`,
+    `validate`, `spine`, `demographics`, `destinations`, `conflate`, `hours`,
+    `network`, `travel_times`, `metrics`, `publish`) carrying tinycity from
+    generated raw snapshots (admitted through the EP-4a guards) to the
+    expected tables; `hours` and `travel_times` are explicit stubs fed by the
+    generator's oracle until M4 / M3; `publish` writes a plain CSV until
+    EP-7 adds license bucketing. The four curated outputs equal the golden
+    tables by content.
+  - CLI: `phillysim run [--fixture] [--data-root DIR] [--stage NAME]
+    [--param stage.key=value]`, `phillysim status [--fixture]`, and
+    `phillysim verify` extended with stage-state coherence; `--fixture` now
+    targets the fixture pipeline's own data root, `<data root>/fixture/`
+    (gitignored, as is the state file).
+  - CI runs `phillysim run --fixture`, `status --fixture`, and
+    `verify --fixture` on Windows and Linux: the M1 go/no-go criterion.
+  - Tests: 33 new (240 total): runner unit tests (registry rules,
+    content-hash fingerprints, skip / rerun-only-dependents / resume after an
+    injected failure / cancel at a checkpoint and between stages / immutable
+    raw / no absolute paths in the state file), preflight negative tests with
+    injected probes, and the integration suite on tinycity via the CLI.
 
 - **EP-4a — manifest/snapshot engine, zones, download guards, quarantine**
   (Planning Baseline v1.0):

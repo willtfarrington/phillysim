@@ -57,6 +57,38 @@ Written by `phillysim.quarantine` beside the snapshot directory it moved
 | `quarantined_at` | string | ISO-8601 UTC timestamp |
 | `quarantined_as` | string | The directory name used under `quarantine/<source>/` |
 
+## Stage state file (`<data root>/pipeline_state.json`)
+
+Written by the stage runner (`phillysim.runner`, EP-4b) atomically after
+every stage transition; read by `phillysim status` and `phillysim verify`.
+Canonical JSON (two-space indent, sorted keys). It holds relative paths,
+digests, parameters, and UTC timestamps only: never an absolute path or a
+machine identifier. The runner's own `schema_version` (currently **1**) is
+independent of this dictionary's.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | integer | State-file schema version (1) |
+| `pipeline` | string | Name of the pipeline the file belongs to (`fixture` today); a different pipeline's state is refused |
+| `stages` | object | One record per stage that has ever started, keyed by stage name |
+
+Each stage record:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `status` | `done`, `running`, `failed`, or `cancelled` | `done` only after every declared output was installed into its zone; anything else is *incomplete* and re-runs next time |
+| `fingerprint` | string | SHA-256 of canonical JSON `{"inputs": {path: digest}, "params": {…}}`; the stage is skipped while this equals the current value and its outputs are intact |
+| `inputs` | object | `{data-root-relative path: content digest}` at the time the stage started; a file's digest is its SHA-256, a directory's the SHA-256 of its sorted `path␀digest` listing |
+| `params` | object | The stage's parameters as run (after any `--param` override) |
+| `outputs` | object | `{data-root-relative path: content digest}` after installation; empty unless `done` |
+| `started_at`, `finished_at` | string, nullable | ISO-8601 UTC timestamps |
+| `error` | string, nullable | For `failed` / `cancelled`: exception type and message, with the data root replaced by `<data-root>` |
+
+Stage outputs are staged under `cache/staging/<stage>/` and moved into their
+zone by atomic rename; a leftover staging directory is a coherence problem
+`verify` reports. The raw zone is immutable: a stage that re-produces an
+existing snapshot must produce identical content or it fails.
+
 ## Curated tract spine (`tracts_spine.parquet`, GeoParquet)
 
 | Column | Type | Meaning |

@@ -197,8 +197,10 @@ def tracts() -> list[Tract]:
     for row in range(ROWS):
         for col in range(COLS):
             n = row * COLS + col + 1
-            x0, y0 = LON0 + col * CELL, LAT0 + row * CELL
-            x1, y1 = x0 + CELL, y0 + CELL
+            x0, y0 = _round6(LON0 + col * CELL), _round6(LAT0 + row * CELL)
+            x1, y1 = _round6(x0 + CELL), _round6(y0 + CELL)
+            # Corners rounded like every other coordinate, so the polygon read back from
+            # the GeoJSON snapshot equals the golden spine geometry exactly (EP-4b).
             polygon = Polygon([(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)])
             center = (_round6(x0 + CELL / 2), _round6(y0 + CELL / 2))
             dx = 0.002 if n % 2 else -0.002

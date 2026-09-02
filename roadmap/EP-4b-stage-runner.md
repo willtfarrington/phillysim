@@ -53,15 +53,39 @@ with stage-state coherence. The fixture pipeline's outputs must equal EP-3's
 `expected/` tables by content.
 
 ## Acceptance criteria & evidence
-- [ ] `phillysim run --fixture` completes end-to-end; a second run skips
+- [x] `phillysim run --fixture` completes end-to-end; a second run skips
       every stage; changing one parameter re-runs only the dependent stages.
-- [ ] Injected mid-stage failure → `phillysim verify --fixture` reports a
+      — `test_run_fixture_end_to_end_matches_golden_tables` (11 ran, then
+      "0 stage(s) ran, 11 skipped"; the four curated outputs equal
+      `expected/*.parquet` by content; `status` 11 fresh; `verify` 8 of 8
+      snapshots + 11 of 11 stages) and
+      `test_parameter_change_reruns_only_dependent_stages`
+      (`--param metrics.methods_version=…` → metrics + publish only;
+      `--param travel_times.censor_min=30` → travel_times + metrics, publish
+      skipped because the metrics content did not change). Runner-level:
+      `test_parameter_change_reruns_only_dependents`,
+      `test_input_change_reruns_downstream_only_where_content_changed`.
+- [x] Injected mid-stage failure → `phillysim verify --fixture` reports a
       coherent state naming the incomplete stage; the next `run` resumes
-      from it.
-- [ ] Preflight refuses to run when a simulated check fails (negative test)
-      and reports all checks in one pass.
-- Evidence: integration suite green on tinycity in CI (Windows + Linux);
-  M1 go/no-go criterion recorded as met in the handoff.
+      from it. —
+      `test_injected_failure_then_verify_names_the_stage_and_run_resumes`:
+      a raise inside `hours` after writing to staging leaves no file in
+      `curated/`; `verify --fixture` prints `stage hours: incomplete (failed:
+      RuntimeError: injected mid-stage failure)` and `6 of 11 stage(s) done
+      and intact; incomplete: hours` with no coherence problem; the next
+      `run` skips 6 and runs 5, then `verify` is green. Runner-level:
+      `test_injected_failure_leaves_a_coherent_state_and_next_run_resumes`,
+      `test_cancel_between_stages_and_at_a_checkpoint`.
+- [x] Preflight refuses to run when a simulated check fails (negative test)
+      and reports all checks in one pass. —
+      `test_simulated_failures_are_all_reported_in_one_pass` (all five checks
+      fail together and are all listed), `test_one_failing_check_is_enough_to_refuse`,
+      `test_cli_run_refuses_when_preflight_fails` (exit 1, every check
+      printed, "fixture scale" named, data root not created).
+- Evidence: `uv run pytest` → 240 passed locally (207 before the packet);
+  CI runs `phillysim run/status/verify --fixture` on Windows + Linux
+  (run ID in the handoff); M1 go/no-go criterion recorded as met in the
+  handoff.
 
 ## Tests / validation
 Integration suite on tinycity; runner unit tests; preflight negative tests;

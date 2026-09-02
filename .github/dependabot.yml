@@ -1,6 +1,12 @@
 # Dependabot (EP-2; roadmap/governance.md "Maintenance": uv lock + Dependabot,
 # roughly quarterly review). Version-update PRs are batched monthly; security
 # alerts are immediate once enabled in repository settings.
+#
+# The vendored `source material/` tree is reference material that is never
+# built, executed, or modified (CONTRIBUTING.md). Its Ruby and npm lockfiles
+# are still scanned for alerts, but the two entries with
+# `open-pull-requests-limit: 0` stop Dependabot from opening security-update
+# or version-update PRs against them.
 version: 2
 updates:
   - package-ecosystem: "uv"
@@ -13,3 +19,13 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 5
+  - package-ecosystem: "bundler"
+    directory: "/source material/opendataphilly-jkan-main"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+  - package-ecosystem: "npm"
+    directory: "/source material/opendataphilly-jkan-main"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0

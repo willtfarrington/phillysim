@@ -92,12 +92,12 @@ commit. Met 2026-09-02 with EP-2.
 
 ### M1 — Pipeline skeleton + fixture · `[~]`
 
-Go/no-go: `phillysim run --fixture` green in offline CI. 1 of 3 packets done.
+Go/no-go: `phillysim run --fixture` green in offline CI. 2 of 3 packets done.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
 | EP-3 | [tinycity synthetic fixture](EP-3-tinycity-fixture.md) | M | EP-2 | [x] 4ed065a |
-| EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [~] |
+| EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [x] 361b1eb |
 | EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [ ] |
 
 The first **checkpoint packet** ([milestones.md](milestones.md) "Spikes &

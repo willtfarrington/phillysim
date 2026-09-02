@@ -1,6 +1,6 @@
 # EP-4a — Manifest/snapshot engine + zones + download guards
 
-**Status:** [~] in progress (work complete; awaiting owner review) · **Milestone:** M1 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-4 (2026-09-02; EP-4b is the other half)
+**Status:** [x] 361b1eb · **Milestone:** M1 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-4 (2026-09-02; EP-4b is the other half)
 
 ## Outcome & value
 The data half of the pipeline backbone: snapshot IDs and the immutable
@@ -85,7 +85,7 @@ URL host. Keep the module free of adapter knowledge.
       path-bearing file names, short digests, an unlisted terms archive);
       unknown fields rejected too.
 - Evidence: `uv run pytest` → 207 passed locally (76 before the packet);
-  CI run recorded in the handoff once pushed; data dictionary manifest
+  CI run 33666764839 green on Windows + Linux; data dictionary manifest
   section now "Owned by the manifest engine".
 
 ## Tests / validation
@@ -107,8 +107,16 @@ version unchanged unless a field is added, then bump with a migration note);
 package README layout list; packet row in `roadmap/README.md`.
 
 ## Handoff payload (filled 2026-09-02)
-- **Packet:** EP-4a — work complete; status and commit recorded on the
-  owner's decision (see "Owner decisions"). Planning Baseline v1.0.
+- **Packet:** EP-4a — done at commit `361b1eb`, with a one-line test
+  portability fix at `1dfdb9f` (+ this status commit). Planning Baseline
+  v1.0. CI on `361b1eb` (run 33666207875) was green on `windows-latest`
+  and failed on `ubuntu-latest` only: two quarantine tests asserted that
+  the reason file contained no Windows drive-style prefix and no
+  `Path.anchor`, which on Linux is `/` and legitimately appears in URLs and
+  archive member names. The assertion now checks the actual scratch root
+  path is absent. CI run
+  [33666764839](https://github.com/willtfarrington/phillysim/actions/runs/33666764839)
+  on `1dfdb9f` green on `windows-latest` and `ubuntu-latest`.
 - **Files changed:** new `phillysim/src/phillysim/{zones,manifest,guards,quarantine}.py`;
   `phillysim/src/phillysim/cli.py` (`verify` command; module docstring);
   `phillysim/src/phillysim/fixtures/tinycity.py` (manifests built through
@@ -184,7 +192,7 @@ package README layout list; packet row in `roadmap/README.md`.
   no machine identifiers or absolute paths in tracked files (scanned;
   manifest validation now rejects them structurally), `data/` still
   gitignored.
-- **`roadmap/README.md` packet row:** set to `[~]` with the work; becomes
-  `[x] <commit>` in the handoff commit.
+- **`roadmap/README.md` packet row:** updated to `[x] 361b1eb`; M1 stays
+  `[~]` (2 of 3 packets done) until EP-4b meets the go/no-go criterion.
 - **Exact next packet:** EP-4b (stage runner: fingerprints, resume/cancel,
   preflight, `run/status/verify --fixture`; M1 go/no-go).

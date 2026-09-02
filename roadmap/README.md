@@ -20,7 +20,10 @@ were all resolved before this roadmap was drafted.
   per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), sized for
   one bounded coding-agent session each. EP-1–EP-8 cover M0–M2; later
   milestones stay at outcome level until their **refinement gate**, where new
-  EP files are authored.
+  EP files are authored. **At a refinement gate, first apply that
+  milestone's entries under "Refinement-gate carry-ins" in
+  [milestones.md](milestones.md)** — they are deferred obligations from
+  earlier packets, with the text to paste into the new EP files.
 - Estimates use **agent sessions** (one focused, tested, committed sitting)
   with S/M/L labels: S ≈ ≤1 session, M ≈ 1–2, L ≈ must be split.
 - Architecture-level or hard-to-reverse choices are recorded in [adr/](adr/).

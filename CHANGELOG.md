@@ -23,6 +23,11 @@ recorded separately in manifests once the pipeline exists.
   alerts for that path dismissed as "not used" (owner decision, 2026-09-02).
   The tree is reference material that is never built, executed, or
   modified, so the alerts describe no exposure.
+- `roadmap/milestones.md` gains a "Refinement-gate carry-ins" section, and
+  the roadmap README's reading order points to it: deferred obligations from
+  earlier packets are applied when a later milestone's EP files are
+  authored. First entry: the M5 reliability conventions (OQ-I) with the
+  locked-decision text, baseline check, apply list, and regression guard.
 
 ### Added
 

@@ -54,6 +54,57 @@ routing determinism remediation (M3).
   dictionary sync, license-label sweep, performance vs budgets, estimate-
   accuracy review; re-plan if triggers hit.
 
+## Refinement-gate carry-ins
+
+Items that earlier packets deferred to a later milestone's refinement gate.
+**Whoever authors that milestone's packet files applies these first**, then
+deletes the entry here and records the deletion in the new packet's handoff.
+The roadmap README's reading order points here, so no one has to remember.
+
+### M5 — reliability conventions (OQ-I; deferred by EP-3, 2026-09-02)
+
+The tinycity fixture and `phillysim.contracts.ANALYTIC_TABLE` encode four
+conventions that methodology.md does not fully fix. They must be confirmed or
+revised before the first published metric exists.
+
+1. **When authoring the first M5 packet that computes a published
+   `estimate` / `moe`**, paste this under its "Prerequisites & locked
+   decisions" → `locked decisions honored:` line, verbatim:
+
+   ```markdown
+   - locked decisions honored: OQ-I resolved in this packet — confirm or
+     revise the four reliability conventions (CV = (MOE / 1.645) / estimate;
+     tier edges 12 % / 40 % with tier 1 below 12 %, tier 2 to below 40 %,
+     tier 3 at or above; `reliability_action = interval-only` iff tier 3;
+     `moe` / `cv_tier` null for quantities without sampling error) against
+     the ACS handbook chapter on derived estimates and methodology.md
+     "Uncertainty"; record the outcome in `docs/data-dictionary.md`
+     (analytic-table section) and close OQ-I in `roadmap/open-questions.md`.
+   ```
+
+2. **Baseline check when deciding.** Boundary inclusivity and the null
+   convention are clarifications; no baseline change. A different
+   `reliability_action` rule stays inside the baseline's
+   `{none, interval-only}` set and is a `methods_version` bump only. Only a
+   change to the 12 % / 40 % edges themselves touches the frozen baseline
+   and needs a new baseline version plus impact analysis.
+
+3. **Apply in one packet.** The convention lives in four places, all under
+   `phillysim/`: `cv_tier()` and `reliability_action()` in
+   `src/phillysim/fixtures/tinycity.py`; `ANALYTIC_TABLE` in
+   `src/phillysim/contracts.py`; `METHODS_VERSION` in the fixture module
+   (bump it on any change); the analytic-table section of
+   `docs/data-dictionary.md`. Then regenerate both fixture variants
+   (`phillysim gen-tinycity --out tests/fixtures/tinycity` and
+   `… --out tests/fixtures/tinycity-invalid --variant invalid`) and run
+   `uv run pytest`.
+
+4. **Regression guard.** `test_cv_tier_rule` and
+   `test_expected_tables_are_internally_consistent` in
+   `phillysim/tests/test_tinycity_fixture.py` pin the formula and the
+   tier-to-action mapping. Update their expected values in the same commit
+   as the convention change, never separately, so any later drift fails CI.
+
 ## Risks & contingencies
 
 | Risk | Likelihood | Contingency |

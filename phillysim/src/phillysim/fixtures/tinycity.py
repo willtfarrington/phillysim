@@ -30,8 +30,9 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import LineString, Point, Polygon, mapping
 
+from phillysim.manifest import SCHEMA_VERSION, Manifest, canonical_bytes
+
 FIXTURE_NAME = "tinycity"
-SCHEMA_VERSION = 1
 METHODS_VERSION = "tinycity-fixture-1"
 SNAPSHOT_ID = "2026-01-01"
 ACQUIRED_AT = "2026-01-01T00:00:00Z"
@@ -280,19 +281,19 @@ class Model:
 
 
 def _base_manifest(source: str, license_bucket: str, note: str) -> dict[str, Any]:
-    return {
-        "source": source,
-        "snapshot_id": SNAPSHOT_ID,
-        "acquired_at": ACQUIRED_AT,
-        "acquisition_url": f"https://example.invalid/{FIXTURE_NAME}/{source}",
-        "acquisition_url_alt": None,
-        "terms_archive": "TERMS.txt",
-        "license_bucket": license_bucket,
-        "license_note": note,
-        "schema_version": SCHEMA_VERSION,
-        "synthetic": True,
-        "files": {},  # filled with sha256 digests at write time
-    }
+    """The manifest engine's own shape (EP-4a); ``files`` is filled with digests at write time."""
+    return Manifest(
+        source=source,
+        snapshot_id=SNAPSHOT_ID,
+        acquired_at=ACQUIRED_AT,
+        acquisition_url=f"https://example.invalid/{FIXTURE_NAME}/{source}",
+        acquisition_url_alt=None,
+        terms_archive="TERMS.txt",
+        license_bucket=license_bucket,
+        license_note=note,
+        schema_version=SCHEMA_VERSION,
+        synthetic=True,
+    ).to_dict()
 
 
 SYNTHETIC_NOTE = "wholly synthetic fixture; no real data; MIT (repository license)"
@@ -593,10 +594,7 @@ def _csv_bytes(records: list[dict[str, Any]], columns: list[str]) -> bytes:
     return buffer.getvalue().encode("utf-8")
 
 
-def _json_bytes(payload: Any) -> bytes:
-    return (json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode(
-        "utf-8"
-    )
+_json_bytes = canonical_bytes  # manifests and every other JSON file share one canonical form
 
 
 def _round_coords(value: Any) -> Any:

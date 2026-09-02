@@ -52,6 +52,38 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-4a — manifest/snapshot engine, zones, download guards, quarantine**
+  (Planning Baseline v1.0):
+  - `phillysim.zones`: source-name and snapshot-ID rules (`YYYY-MM-DD`,
+    `-N` same-day sequence), snapshot listing, stray-entry detection, and
+    the one function that creates the zone layout (resolution still never
+    does).
+  - `phillysim.manifest`: the snapshot manifest as an owned model with every
+    field rule enforced (UTC timestamp, http(s) URL without credentials,
+    license bucket A/B, integer schema version, bare file names, 64-hex
+    digests, terms archive listed), a canonical reader/writer that
+    round-trips byte-for-byte, and `verify_snapshot` / `verify_raw_zone`
+    naming every missing, altered, unlisted, or relocated file.
+  - `phillysim.guards`: domain allowlist (https only, subdomain match, no
+    IP literals or credentials), size cap before and during streaming,
+    zip-slip path normalization (absolute paths, drive letters, `..`,
+    symlink members), decompression-bomb ceilings (declared size, ratio,
+    member count, actual bytes), plus guarded zip / gzip extraction. No
+    adapter knowledge; allowlist and limits are always passed in.
+  - `phillysim.quarantine`: default-deny `admit` (manifest → guards →
+    checksums); any failure moves the whole snapshot to
+    `data/quarantine/<source>/` and writes a reason file beside it.
+  - `phillysim verify [--fixture | --raw DIR]`: snapshot-level verification
+    with a per-snapshot report and non-zero exit on any failure.
+  - Tests: 131 new (207 total) including one crafted negative input per
+    guard, each shown to be refused *and* quarantined; a tampered byte in a
+    fixture file fails `verify` naming the file; every manifest field shown
+    required and every malformed form rejected.
+  - The tinycity generator now builds its manifests through the engine; the
+    committed fixture was regenerated for both variants and did not change
+    by a byte (the "proposed" shape is now the owned shape, schema version
+    still 1). Data dictionary manifest section promoted to owned and a
+    quarantine reason-file section added.
 - **EP-3 — tinycity synthetic fixture + source-contract harness** (Planning
   Baseline v1.0):
   - `phillysim gen-tinycity`: deterministic generator for a wholly synthetic

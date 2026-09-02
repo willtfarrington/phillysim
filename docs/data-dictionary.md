@@ -16,21 +16,46 @@ Times are minutes. Nullable columns say so; everything else is required.
 
 ## Snapshot manifest (`raw/<source>/<snapshot-id>/manifest.json`)
 
-Proposed shape, owned by the manifest engine from EP-4a.
+Owned by the manifest engine (`phillysim.manifest`, EP-4a). Every field is
+required; a manifest with a missing, extra, or malformed field is rejected
+and the snapshot is quarantined. The file is canonical JSON (two-space
+indent, keys sorted, UTF-8, trailing newline), so reading it and writing it
+back reproduces the bytes exactly. It is the only place the manifest-recorded
+version axes of [ADR-0006](../roadmap/adr/0006-versioning-axes.md) live.
+
+| Field | Type | Meaning and rule |
+|---|---|---|
+| `source` | string | Source identifier; lowercase slug `[a-z][a-z0-9_]*`; must equal the parent directory name |
+| `snapshot_id` | string | `YYYY-MM-DD`, or `YYYY-MM-DD-N` (N = 1, 2, …) for a further acquisition the same day; must equal the directory name |
+| `acquired_at` | string | ISO-8601 acquisition timestamp with an explicit UTC designator (`Z` or `+00:00`) |
+| `acquisition_url` | string | `http(s)` URL with a host and no credentials; the host is checked against the adapter's domain allowlist at admission |
+| `acquisition_url_alt` | string, nullable | Alternate URL where a provider is mid-migration (dual-URL rule); same rules and allowlist check |
+| `terms_archive` | string | File name of the archived terms page in force; must appear in `files` |
+| `license_bucket` | `"A"` or `"B"` | Output bucket the source's derived content falls into ([ADR-0003](../roadmap/adr/0003-license-buckets-odbl.md)) |
+| `license_note` | string | Human-readable license summary |
+| `schema_version` | integer ≥ 1 | This dictionary's version at acquisition |
+| `synthetic` | boolean | `true` only for fixtures |
+| `files` | object, non-empty | `{file name: SHA-256 hex digest}` for every file in the snapshot other than the manifest itself; names are bare file names (no path separators, drive letters, or `..`) |
+
+`phillysim verify` checks each snapshot directory against its manifest: every
+listed file present with the recorded digest, no unlisted file present,
+directory names matching `source` / `snapshot_id`, and no stray entry in the
+raw zone that no manifest vouches for.
+
+## Quarantine reason file (`quarantine/<source>/<name>.reason.json`)
+
+Written by `phillysim.quarantine` beside the snapshot directory it moved
+(`quarantine/<source>/<name>/`, where `<name>` is the snapshot ID, suffixed
+`-q2`, `-q3`, … if that ID was quarantined before). Nothing under
+`quarantine/` is ever read by a pipeline stage.
 
 | Field | Type | Meaning |
 |---|---|---|
-| `source` | string | Source identifier (matches the directory name) |
-| `snapshot_id` | string | Date-stamped per-source snapshot identifier |
-| `acquired_at` | string | ISO-8601 UTC acquisition timestamp |
-| `acquisition_url` | string | URL the snapshot was fetched from |
-| `acquisition_url_alt` | string, nullable | Alternate URL where a provider is mid-migration (dual-URL rule) |
-| `terms_archive` | string | File name of the archived terms page in force |
-| `license_bucket` | `"A"` or `"B"` | Output bucket the source's derived content falls into ([ADR-0003](../roadmap/adr/0003-license-buckets-odbl.md)) |
-| `license_note` | string | Human-readable license summary |
-| `schema_version` | integer | This dictionary's version at acquisition |
-| `synthetic` | boolean | `true` only for fixtures |
-| `files` | object | `{file name: SHA-256 hex digest}` for every file in the snapshot |
+| `source`, `snapshot_id` | string | The snapshot as it was staged |
+| `kind` | string | What refused it: a guard (`allowlist`, `size`, `zip_slip`, `bomb`), `manifest` (unparseable or malformed manifest), or `verify` (checksum / layout mismatch) |
+| `reason` | string | Human-readable detail naming the offending file, member, or URL; never an absolute path |
+| `quarantined_at` | string | ISO-8601 UTC timestamp |
+| `quarantined_as` | string | The directory name used under `quarantine/<source>/` |
 
 ## Curated tract spine (`tracts_spine.parquet`, GeoParquet)
 

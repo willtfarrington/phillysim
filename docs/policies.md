@@ -26,9 +26,12 @@ correction channel above.
   with the listing removed, targeted **within 7 days** of receiving the
   request, plus a changelog note recording the removal.
 - **Safety-motivated requests** (e.g., a site whose exposure creates risk)
-  additionally trigger retraction and re-issue of the affected release
-  artifacts. Raw snapshots are retained privately for reproducibility but are
-  no longer republished.
+  are targeted **within 72 hours** and additionally trigger retraction and
+  re-issue of the affected release artifacts. Raw snapshots are retained
+  privately for reproducibility but are no longer republished.
+- These windows are stated targets for a solo-maintained project, not a
+  service guarantee; the maintainer monitors the correction channel on a
+  best-effort basis and records every removal in the changelog.
 - No justification is demanded for a delisting request from a listed
   organization; the default is removal.
 

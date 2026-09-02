@@ -126,3 +126,13 @@ from code docs if a docs stub exists.
   identifiers or absolute paths in tracked files (scanned), no outbound calls
   beyond GitHub (push, repo-settings API) and PyPI (locked sync).
 - **Exact next packet:** EP-3 (tinycity synthetic fixture).
+
+> **Addendum (2026-09-02, same session).** Two carry-overs resolved after the
+> packet closed. (1) The opendata@phila.gov address used for the OQ-A
+> license-confirmation email on 2026-08-23 does not exist (550 rejection from
+> the City's mail server; the address originated as an unverified guess in the
+> red-team memo). Verified channels recorded in `roadmap/open-questions.md`;
+> owner chose to re-send to maps@phila.gov (the contact the City's Open Data
+> Program page lists) with info@opendataphilly.org in cc; draft prepared for
+> owner review. (2) Delisting window confirmed as two-tier (7 days standard,
+> 72 hours safety-motivated) in `docs/policies.md`.

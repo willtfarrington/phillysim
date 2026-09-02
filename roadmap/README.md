@@ -105,18 +105,21 @@ the curated outputs equal the golden tables.
 | EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [x] 361b1eb |
 | EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [x] 9a0a3dc |
 
-### Checkpoints · `[ ]`
+### Checkpoints · recurring
 
 Recurring S-sized checkpoint packets ([milestones.md](milestones.md)
 "Spikes & gates": every ~5 packets): integration re-run on fixtures (plus
 the real spine once it exists), docs/data-dictionary sync, license-label
 sweep, performance vs budgets, estimate-accuracy review, re-plan if a
 trigger fires. They belong to no milestone; the packet that follows one
-depends on it. The first fell due with EP-4b (owner decision 2026-09-02).
+depends on it. The first fell due with EP-4b (owner decision 2026-09-02)
+and closed on 2026-09-02; the next falls due after about five more packets
+(EP-5a, EP-5b, EP-6, EP-7, EP-8), that is, after EP-8 and before the M3
+refinement gate, and takes the next free integer.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
-| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [~] |
+| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
 
 ### M2 — Spine + first source end-to-end · `[ ]`
 

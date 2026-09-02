@@ -115,7 +115,7 @@ revised before the first published metric exists.
 | Routing spike kill | low-med | Walk-only v1 (partial fallback allowed); transit becomes v1.x |
 | R5 nondeterminism breaks checksum claim | med | Pinned seeds / documented variance band; wording already scoped (AM-2) |
 | Market hours unparseable at acceptable coverage | med | Tier 2 published for meal sites only; markets Tier 1 + disclosed gap |
-| City license position challenged | low | Takedown-ready; ODP confirmation request in progress; method+script publishing model preserves the work |
+| City license position challenged | very low (Open Data Program office confirmed open reuse in writing, 2026-09-02, OQ-A) | Takedown-ready; reply archived with the terms records; method+script publishing model preserves the work |
 | SEPTA terms change | low | Walk-only fallback; facts-not-contents position documented |
 | a11y gate rework loops | med | Cutline (scope.md) + parity checklist early in M6, not at the end |
 | Upstream URL churn | high | Dual-URL manifests + terms archiving (standing policy) |

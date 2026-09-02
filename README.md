@@ -80,7 +80,7 @@ lint) is in [CONTRIBUTING.md](CONTRIBUTING.md).
 | [phillysim/README.md](phillysim/README.md) | The Python package: setup, layout, data-root configuration, locked stack |
 | [docs/CLAIMS.md](docs/CLAIMS.md) | Claims matrix: what the project may and may not say, mapped to evidence |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Table shapes and column meanings (schema version 1, seeded from the synthetic fixture) |
-| [docs/DATA-LICENSES.md](docs/DATA-LICENSES.md) | Per-source data licensing, the City-license caveat, and output license buckets |
+| [docs/DATA-LICENSES.md](docs/DATA-LICENSES.md) | Per-source data licensing, the City's confirmed open-data position, and output license buckets |
 | [docs/policies.md](docs/policies.md) | Correction/feedback channel and delisting/takedown policy |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to report issues and propose changes |
 | [SECURITY.md](SECURITY.md) | How to report security issues |

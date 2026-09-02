@@ -41,7 +41,8 @@ If a data originator (e.g., the City of Philadelphia) objects to this
 project's reuse of its data, the affected layers are removed on the same
 expedited path, the source row in
 [DATA-LICENSES.md](DATA-LICENSES.md) is updated, and the change is recorded
-in the changelog. See the City-license caveat in that document.
+in the changelog. See the City of Philadelphia license position in that
+document.
 
 ## Scope notes
 

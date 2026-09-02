@@ -13,19 +13,24 @@ The OpenDataPhilly catalog licenses nothing; each originator's terms govern
 acquisition, derivatives, and redistribution. Every source below is assessed
 against its **originator's** terms, not the catalog listing.
 
-## City of Philadelphia license caveat (accepted, documented risk)
+## City of Philadelphia license position (confirmed in writing, 2026-09-02)
 
 The operative City of Philadelphia license text **reserves all rights and
 contains no express grant**. This project's reuse of City datasets (farmers'
 markets, free food & meal sites, planning districts) relies on the open-data
 publication context: the datasets' "Public Use; Free" record markings and the
-Open Data Program's stated purpose. This is a documented interpretation, not
-a confirmed grant. Accordingly:
+Open Data Program's stated purpose.
 
-- A written confirmation request to the City's Open Data Program is in
-  progress; if the City answers, the response will be recorded here and in
-  sources.md.
-- The terms pages in force are archived alongside every snapshot.
+That reading was put to the City in writing and **confirmed on 2026-09-02**
+by the GIS Manager of CityGeo (Office of Innovation & Technology), the office
+that runs the Open Data Program: the City has no terms beyond the published
+open-data terms page, and shares the data "for people to use in any way they
+want to benefit the community." The formal license text itself is unchanged,
+so the standing safeguards remain:
+
+- The written reply is kept with the project's records and will be archived
+  beside the terms page in force with the first City snapshot; the terms
+  pages in force are archived alongside every snapshot.
 - The project maintains takedown readiness: if the City objects, affected
   layers are removed and the change is recorded in the changelog.
 
@@ -55,8 +60,8 @@ and SEPTA's terms are re-read and archived at every refresh.
 | Source | License/terms | Status |
 |---|---|---|
 | USDA SNAP retailer file | US public domain | committed |
-| City Farmers' Markets (ODP/ArcGIS) | City terms — see caveat above | committed |
-| City Free Food & Meal Sites (ODP/ArcGIS) | City terms — see caveat above | committed |
+| City Farmers' Markets (ODP/ArcGIS) | City terms — confirmed open, see above | committed |
+| City Free Food & Meal Sites (ODP/ArcGIS) | City terms — confirmed open, see above | committed |
 | USDA SRAM (2025 data, 2020 tracts) | US public domain | comparator |
 | PDPH Neighborhood Food Retail | City terms | comparator (cited, not a metric input) |
 | TIGER/Line 2025 + CenPop2020 | US public domain | committed |

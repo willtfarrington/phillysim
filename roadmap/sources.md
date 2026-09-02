@@ -29,14 +29,16 @@ this matrix ships with the repo.
 **OpenDataPhilly umbrella:** the catalog licenses nothing; each originator's
 terms govern acquisition, derivatives, and redistribution.
 
-**City of Philadelphia license caveat (accepted, documented risk):** the
-operative City text reserves all rights and contains no express grant; reuse
-relies on the open-data publication context ("Public Use; Free" record
-markings, the program's purpose). DATA-LICENSES states this plainly. Per-
-snapshot terms archiving and takedown readiness are standing policy. A
-written confirmation request to the Open Data Program is in progress (owner
-action). `conditional artifact with trigger`: if the City answers, record the
-response and update this row.
+**City of Philadelphia license position (confirmed in writing 2026-09-02):**
+the operative City text reserves all rights and contains no express grant;
+reuse relies on the open-data publication context ("Public Use; Free" record
+markings, the program's purpose). That reading was confirmed by CityGeo
+(Office of Innovation & Technology), the office running the Open Data
+Program: no terms exist beyond the published open-data terms page, and the
+data is shared for people "to use in any way they want to benefit the
+community" (OQ-A, closed). DATA-LICENSES records the reply. Per-snapshot
+terms archiving and takedown readiness remain standing policy; the reply is
+archived beside the terms page with the first City snapshot.
 
 ## License buckets for published outputs (AM-1)
 

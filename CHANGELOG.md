@@ -13,10 +13,14 @@ recorded separately in manifests once the pipeline exists.
 - Delisting window in `docs/policies.md` is now two-tier: 7 days for standard
   requests, 72 hours for safety-motivated requests (owner decision,
   2026-09-02; resolves the EP-1 carry-over).
-- OQ-A (City license confirmation): the address used on 2026-08-23 did not
-  exist and the message bounced; the request is being re-sent to the
-  contact the City's Open Data Program page actually lists
-  (`roadmap/open-questions.md`).
+- OQ-A (City license confirmation) **closed**: the address used on
+  2026-08-23 did not exist and the message bounced; the request was re-sent
+  on 2026-09-02 to the contact the City's Open Data Program page lists, and
+  CityGeo (Office of Innovation & Technology) replied the same day that no
+  terms exist beyond the published open-data terms page and the data is
+  shared for any use that benefits the community. `docs/DATA-LICENSES.md`
+  and `roadmap/sources.md` now record the confirmed position; the caveat
+  wording is retired, takedown readiness stays standing policy.
 - Dependabot no longer opens PRs against the vendored `source material/`
   JKAN tree: `bundler` and `npm` entries with `open-pull-requests-limit: 0`
   added to `.github/dependabot.yml`; PRs #1–#4 closed and the seven open

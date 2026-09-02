@@ -71,7 +71,8 @@ honored; 320 px reflow; plain-language explainers beside every metric.
 
 This is a solo public-interest project without retained counsel. Items a
 qualified reviewer would strengthen, tracked visibly rather than papered
-over: City license interpretation (owner confirmation request in progress);
+over: City license interpretation (confirmed in writing by the Open Data
+Program's office on 2026-09-02, OQ-A; the formal license text is unchanged);
 ODbL bucket boundaries (conservative reading adopted); claims-matrix wording
 (clinical colleague review planned). Disclaimers are not treated as curing
 unsafe design; where meaningful review is infeasible, the default is coarser

@@ -8,14 +8,21 @@ fresh stages), ``status`` reports every stage as fresh / stale / missing /
 incomplete, and ``verify`` checks the raw zone against its manifests (EP-4a)
 and the stage state against the zones.
 
-``--fixture`` selects the tinycity fixture pipeline and its own data root,
-``<data root>/fixture/``; ``--data-root DIR`` points any verb at an explicit
-root. Only ``run`` ever creates directories.
+Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
+EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
+over the network through the guarded download path. ``--fixture`` selects the
+tinycity fixture pipeline and its own data root, ``<data root>/fixture/``;
+``--data-root DIR`` points any verb at an explicit root. Only ``run`` ever
+creates directories.
 """
 
 from __future__ import annotations
 
 import json
+import logging
+import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -26,8 +33,9 @@ from phillysim.config import ENV_DATA_ROOT, Settings
 from phillysim.fixtures.pipeline import FIXTURE_ROOT_NAME, fixture_pipeline
 from phillysim.fixtures.tinycity import Variant, write_fixture
 from phillysim.manifest import verify_raw_zone
+from phillysim.pipeline import real_pipeline
 from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
-from phillysim.runner import StateError, load_state, verify_state
+from phillysim.runner import StateError, verify_state
 from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
 
 app = typer.Typer(
@@ -108,9 +116,25 @@ def _resolve_root(fixture: bool, data_root: Path | None) -> tuple[Path, str]:
     return base, "data root"
 
 
-def _pipeline(fixture: bool) -> Pipeline | None:
-    """The pipeline for this root: the fixture's, or none until real stages exist (EP-5+)."""
-    return fixture_pipeline() if fixture else None
+def _pipeline(fixture: bool) -> Pipeline:
+    """The pipeline for this root: the fixture's, or the real one (EP-5a onward)."""
+    return fixture_pipeline() if fixture else real_pipeline()
+
+
+@contextmanager
+def _download_log() -> Iterator[None]:
+    """Show the download path's progress lines (URL, bytes, retries) while a real run runs."""
+    log = logging.getLogger("phillysim.download")
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(logging.Formatter("     %(message)s"))
+    log.addHandler(handler)
+    previous = log.level
+    log.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        log.removeHandler(handler)
+        log.setLevel(previous)
 
 
 @app.command()
@@ -135,9 +159,6 @@ def run(
     Exit status 1 if preflight refuses or a stage fails.
     """
     pipeline = _pipeline(fixture)
-    if pipeline is None:
-        typer.echo("no real pipeline stages are registered yet (EP-5 onward); use --fixture")
-        raise typer.Exit(code=1)
     try:
         pipeline = pipeline.with_params(parse_params(param or []))
         if stage is not None:
@@ -153,7 +174,8 @@ def run(
         typer.echo("refusing to run: preflight failed")
         raise typer.Exit(code=1)
     try:
-        report = runner.run(root, pipeline, through=stage, echo=typer.echo)
+        with _download_log():
+            report = runner.run(root, pipeline, through=stage, echo=typer.echo)
     except (StageError, StateError) as exc:
         typer.echo(f"FAIL {exc}")
         typer.echo(
@@ -176,9 +198,6 @@ def status(
 ) -> None:
     """Report every stage as fresh, stale, missing, or incomplete. Creates nothing."""
     pipeline = _pipeline(fixture)
-    if pipeline is None:
-        typer.echo("no real pipeline stages are registered yet (EP-5 onward); use --fixture")
-        raise typer.Exit(code=1)
     root, label = _resolve_root(fixture, data_root)
     typer.echo(f"pipeline {pipeline.name!r} at {label}: {root}")
     if not root.is_dir():
@@ -235,24 +254,9 @@ def verify(
     zone_report = verify_raw_zone(raw_zone)
     for line in zone_report.lines():
         typer.echo(line)
-    ok = zone_report.ok
-    if pipeline is not None:
-        typer.echo(f"verifying stage state: pipeline {pipeline.name!r}")
-        state_report = verify_state(root, pipeline)
-        for line in state_report.lines():
-            typer.echo(line)
-        ok = ok and state_report.ok
-    else:
-        try:
-            state = load_state(root)
-        except StateError as exc:
-            typer.echo(f"FAIL {exc}")
-            state = None
-            ok = False
-        if state is not None:
-            typer.echo(
-                f"stage state present for pipeline {state.pipeline!r}, but no real pipeline "
-                "is registered yet (EP-5 onward); stage coherence not checked"
-            )
-    if not ok:
+    typer.echo(f"verifying stage state: pipeline {pipeline.name!r}")
+    state_report = verify_state(root, pipeline)
+    for line in state_report.lines():
+        typer.echo(line)
+    if not (zone_report.ok and state_report.ok):
         raise typer.Exit(code=1)

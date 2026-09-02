@@ -218,10 +218,15 @@ def test_verbs_without_a_fixture_root_create_nothing(cli_env: Path) -> None:
     assert not cli_env.exists() and not cli_env.parent.exists()
 
 
-def test_real_pipeline_is_not_registered_yet(cli_env: Path) -> None:
-    for verb in ("run", "status"):
-        result = CliRunner().invoke(app, [verb])
-        assert result.exit_code == 1 and "EP-5" in result.output
+def test_real_pipeline_verbs_need_a_data_root(cli_env: Path) -> None:
+    """Without --fixture the verbs address the real pipeline (EP-5a); with no data root yet
+    they report that and create nothing (``run`` is not invoked: it would reach the network)."""
+    status = CliRunner().invoke(app, ["status"])
+    assert status.exit_code == 1 and "pipeline 'real'" in status.output
+    assert "does not exist" in status.output
+    verify = CliRunner().invoke(app, ["verify"])
+    assert verify.exit_code == 1 and "nothing to verify" in verify.output
+    assert not cli_env.parent.exists()
 
 
 def test_explicit_data_root_option(tmp_path: Path) -> None:

@@ -1,9 +1,10 @@
 # Data licenses
 
-> **Status: stub (pre-acquisition).** No source data has been acquired or
-> published yet. This document states the licensing rules the project has
-> adopted and will be expanded with per-snapshot terms records as each source
-> is actually ingested. It mirrors the source matrix in
+> **Status: first snapshots acquired (EP-5a, 2026-09-02); nothing published.**
+> The three tract-spine sources have been acquired into the gitignored raw
+> zone with their terms pages archived (dated entries below). This document
+> states the licensing rules the project has adopted and gains a per-source
+> record as each source is actually ingested. It mirrors the source matrix in
 > [roadmap/sources.md](../roadmap/sources.md); that matrix is the working
 > record, this file is the shipped statement.
 
@@ -75,8 +76,8 @@ and SEPTA's terms are re-read and archived at every refresh.
 | City Free Food & Meal Sites (ODP/ArcGIS) | City terms — confirmed open, see above | committed |
 | USDA SRAM (2025 data, 2020 tracts) | US public domain | comparator |
 | PDPH Neighborhood Food Retail | City terms | comparator (cited, not a metric input) |
-| TIGER/Line 2025 + CenPop2020 | US public domain | committed |
-| ACS 5-year 2020–2024 | Census terms (open) | committed |
+| TIGER/Line 2025 + CenPop2020 | US public domain | committed; acquired 2026-09-02 (records below) |
+| ACS 5-year 2020–2024 | US public domain (summary file; API terms not engaged) | committed; acquired 2026-09-02 (record below) |
 | City Planning Districts | City terms | committed |
 | SEPTA GTFS | Custom: revocable, redistribution permitted, fees reservable | committed (raw feed never republished) |
 | OSM via Geofabrik | ODbL | committed (drives Bucket B) |
@@ -85,6 +86,57 @@ Excluded/blocked sources and fallback rules are recorded in
 [roadmap/sources.md](../roadmap/sources.md). Notably, GoodRx is **blocked**
 (ToS prohibits scraping/data mining) — no automated ingestion, caching, or
 republication.
+
+## Snapshot records
+
+One entry per source per acquisition, in the order acquired. Each names the
+terms page archived beside the data (`terms_archive` in the manifest) and the
+wording the download path checks for on every acquisition; if that wording
+changes, the acquisition stops and the snapshot is quarantined
+(`kind = "terms"`) until a person has read the new terms.
+
+### 2026-09-02 — TIGER/Line 2025 census tracts (`tiger_tracts`), Bucket A
+
+- **Acquired:** `https://www2.census.gov/geo/tiger/TIGER2025/TRACT/tl_2025_42_tract.zip`
+  (Pennsylvania; Philadelphia County filtered at read), 13,109,450 bytes,
+  stored as delivered.
+- **Terms in force:** US public domain, a work of the United States
+  Government (17 U.S.C. § 105). Archived beside the data: the Census Bureau
+  Open Government page (`https://www.census.gov/about/policies/open-gov.html`,
+  archived 2026-09-02 as `terms.html`), which states that the Bureau
+  "publishes its data as open data, meaning it is freely available for use
+  and re-use by the public"; the download path checks that sentence. The
+  TIGER/Line 2025 technical documentation, section 1.2, adds that copyright
+  protection is not available for the files and asks that the Census Bureau
+  be cited as the source; section 1.1 notes that TIGER/Line® is a registered
+  trademark and may not be used in a product name.
+- **Attribution:** U.S. Census Bureau, TIGER/Line Shapefiles 2025.
+
+### 2026-09-02 — CenPop2020 tract centers of population (`cenpop`), Bucket A
+
+- **Acquired:** `https://www2.census.gov/geo/docs/reference/cenpop2020/tract/CenPop2020_Mean_TR42.txt`
+  (Pennsylvania; county filtered at read), 144,662 bytes, stored as delivered.
+- **Terms in force:** as for TIGER/Line: US public domain; the same Open
+  Government page archived and checked.
+- **Attribution:** U.S. Census Bureau, Centers of Population by Census Tract, 2020.
+
+### 2026-09-02 — ACS 5-year 2020–2024, tables B01003 and B08201 (`acs`), Bucket A
+
+- **Acquired:** `https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/`
+  files `acsdt5y2024-b01003.dat` (18,313,708 bytes) and `acsdt5y2024-b08201.dat`
+  (65,043,091 bytes), nationwide table files stored as delivered, county
+  filtered at read. The data API was not used: on 2026-09-02 it redirected
+  every key-less request to `missing_key.html`, so its Terms of Service (and
+  the attribution notice they require) do not apply to this snapshot, and no
+  key exists in the project.
+- **Terms in force:** US public domain; the same Open Government page
+  archived and checked.
+- **Attribution:** U.S. Census Bureau, American Community Survey 5-Year
+  Estimates 2020–2024, tables B01003 and B08201.
+
+The committed CI samples under `phillysim/tests/fixtures/spine-samples/`
+are subsets of these three snapshots (six Philadelphia County tracts plus
+control rows) and inherit their public-domain status; their README says so.
 
 ## What ships with each snapshot
 

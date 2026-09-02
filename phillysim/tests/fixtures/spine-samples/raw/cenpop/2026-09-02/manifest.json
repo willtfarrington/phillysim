@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-09-02T23:42:14Z",
+  "acquisition_url": "https://www2.census.gov/geo/docs/reference/cenpop2020/tract/CenPop2020_Mean_TR42.txt",
+  "acquisition_url_alt": null,
+  "files": {
+    "CenPop2020_Mean_TR42.txt": "01d1178b0fec73b808b1db7b25ab69c5c04cb94450ed91a9c31cd64f275e0da5",
+    "terms.html": "97b447bbadff1c972a4c6c35530f7e1ed398fe016f4debc6731103b8a52c8097"
+  },
+  "license_bucket": "A",
+  "license_note": "US public domain: a work of the United States Government (17 U.S.C. section 105); the Census Bureau publishes its data as open data, freely available for use and re-use, and asks to be cited as the source. CenPop2020 centers of population by census tract, 2020 Census counts (no sampling margin of error). CI SAMPLE: 6 Philadelphia County tracts plus control rows, subset from the 2026-09-02 snapshot; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-02",
+  "source": "cenpop",
+  "synthetic": false,
+  "terms_archive": "terms.html"
+}

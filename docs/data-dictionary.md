@@ -34,7 +34,7 @@ version axes of [ADR-0006](../roadmap/adr/0006-versioning-axes.md) live.
 | `license_bucket` | `"A"` or `"B"` | Output bucket the source's derived content falls into ([ADR-0003](../roadmap/adr/0003-license-buckets-odbl.md)) |
 | `license_note` | string | Human-readable license summary |
 | `schema_version` | integer ≥ 1 | This dictionary's version at acquisition |
-| `synthetic` | boolean | `true` only for fixtures |
+| `synthetic` | boolean | `true` only for wholly synthetic data (the tinycity fixture); `false` for real snapshots and for the committed CI samples cut from them (`phillysim/tests/fixtures/spine-samples/`) |
 | `files` | object, non-empty | `{file name: SHA-256 hex digest}` for every file in the snapshot other than the manifest itself; names are bare file names (no path separators, drive letters, or `..`) |
 
 `phillysim verify` checks each snapshot directory against its manifest: every
@@ -52,7 +52,7 @@ Written by `phillysim.quarantine` beside the snapshot directory it moved
 | Field | Type | Meaning |
 |---|---|---|
 | `source`, `snapshot_id` | string | The snapshot as it was staged |
-| `kind` | string | What refused it: a guard (`allowlist`, `size`, `zip_slip`, `bomb`), `manifest` (unparseable or malformed manifest), or `verify` (checksum / layout mismatch) |
+| `kind` | string | What refused it: a guard (`allowlist`, `size`, `zip_slip`, `bomb`), `manifest` (unparseable or malformed manifest), `verify` (checksum / layout mismatch), or `terms` (the archived terms page no longer carries the wording the adapter expects: the acquisition stop condition, EP-5a) |
 | `reason` | string | Human-readable detail naming the offending file, member, or URL; never an absolute path |
 | `quarantined_at` | string | ISO-8601 UTC timestamp |
 | `quarantined_as` | string | The directory name used under `quarantine/<source>/` |
@@ -164,7 +164,8 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 
 | File | Written by | Read by | Contents |
 |---|---|---|---|
-| `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, violations |
+| `intermediate/acquisition.json` | `acquire` (real pipeline, EP-5a) | nobody (report) | Per-source acquisition report: snapshot ID, acquisition URL, whether an existing verified snapshot was re-used, each fetch's URL / bytes / attempts / seconds, the filter placement note, and the guard limits applied |
+| `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
 | `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
@@ -180,6 +181,69 @@ gate in EP-7 replaces it with per-file license-bucket labels and escaping
 ([docs/DATA-LICENSES.md](DATA-LICENSES.md)). No file under any `public/`
 zone is tracked in the repository.
 
+## Raw sources: the tract spine (EP-5a)
+
+Real snapshots are stored **as delivered** by the provider (byte-for-byte,
+so `phillysim verify` and anyone else can check them against the source) and
+the Philadelphia County filter is applied when the adapter reads them; the
+tables below describe what the adapter's `read` returns, which is what the
+`validate` stage checks against the contract
+(`phillysim/src/phillysim/adapters/`). Coordinates in these tables are NAD 83
+(EPSG:4269) as delivered; the analysis CRS is chosen in EP-5b. Every snapshot
+directory also holds `terms.html`, the archived Census Bureau Open Government
+page (the terms in force), and a manifest with `license_bucket = "A"`.
+
+### `raw/tiger_tracts/<snapshot-id>/` — TIGER/Line 2025 census tracts
+
+File `tl_2025_42_tract.zip`, the Census Bureau's Pennsylvania tract layer
+(2020-vintage tracts as of 2025-01-01), read straight from the zip through
+pyogrio and filtered to `STATEFP = 42`, `COUNTYFP = 101`. Every TIGER
+attribute is kept; the contract requires:
+
+| Column | Type | Meaning |
+|---|---|---|
+| `GEOID` | string | Eleven-digit 2020 tract GEOID `42101######` (unique key) |
+| `STATEFP`, `COUNTYFP`, `TRACTCE` | string | FIPS components (`42`, `101`, six digits) |
+| `NAME`, `NAMELSAD` | string | Tract number and its legal/statistical description (`Census Tract 1.01`) |
+| `ALAND`, `AWATER` | integer ≥ 0 | Land and water area, square metres |
+| `geometry` | Polygon / MultiPolygon | Tract boundary, valid, within the county bounds, EPSG:4269 |
+
+### `raw/cenpop/<snapshot-id>/` — CenPop2020 tract centers of population
+
+File `CenPop2020_Mean_TR42.txt`, the Census Bureau's 2020 mean centers of
+population for Pennsylvania's tracts (comma-separated, UTF-8 with a byte-order
+mark), filtered to Philadelphia County. The adapter derives `geoid` and the
+point geometry; these centroids are the routing origins and are never
+recomputed from tract geometry.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `geoid` | string | `STATEFP + COUNTYFP + TRACTCE` (unique key) |
+| `STATEFP`, `COUNTYFP`, `TRACTCE` | string | FIPS components as delivered |
+| `POPULATION` | integer ≥ 0 | 2020 Census population (no sampling MOE) |
+| `LATITUDE`, `LONGITUDE` | float | Population-weighted center, decimal degrees |
+| `geometry` | Point | The center, EPSG:4269, within the county bounds |
+
+### `raw/acs/<snapshot-id>/` — ACS 5-year 2020–2024 selected tables
+
+Files `acsdt5y2024-b01003.dat` and `acsdt5y2024-b08201.dat` from the Census
+Bureau's table-based summary file (pipe-delimited, one row per geography at
+every summary level, `<TABLE>_E<line>` / `<TABLE>_M<line>` columns). The
+adapter keeps the county's tract rows (`GEO_ID` prefix `1400000US42101`),
+selects the pinned variables, renames them to the `<table>_<line>E` / `…M`
+form used throughout this dictionary, and turns the provider's annotation
+values (`-999999999`, `-888888888`, `-666666666`, `-555555555`, `-333333333`,
+`-222222222`) and blank cells into nulls ([ADR-0004](../roadmap/adr/0004-no-suppression.md):
+suppressed stays missing). The pinned variable list is the one methodology.md
+and the `demographics` stage name; adding a variable is a methods-version bump
+([ADR-0006](../roadmap/adr/0006-versioning-axes.md)).
+
+| Column | Type | Meaning |
+|---|---|---|
+| `geoid` | string | Last eleven characters of `GEO_ID` (unique key) |
+| `B01003_001E`, `B01003_001M` | float ≥ 0, nullable | Total population estimate and 90 % margin of error |
+| `B08201_002E`, `B08201_002M` | float ≥ 0, nullable | Households with no vehicle available, estimate and 90 % MOE |
+
 ## Raw fake sources (fixture only)
 
 Column-level contracts for the eight tinycity sources live in
@@ -187,4 +251,6 @@ Column-level contracts for the eight tinycity sources live in
 shape of the real sources loosely (SNAP-like retailers with a format-based
 `store_type`; markets with free-text `hours` / `months`; meal sites with
 `<day>_open` / `<day>_close` in `HH:MM`; ACS columns as `<table>_<line>E` /
-`…M`) and are replaced by each real adapter's contract from EP-5 on.
+`…M`). The three spine sources now have real contracts (above); the five
+destination, transit, and network sources keep their fixture contracts until
+their adapters land (EP-6, M3, M4).

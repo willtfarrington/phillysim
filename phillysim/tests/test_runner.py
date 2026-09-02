@@ -316,16 +316,46 @@ def test_raw_zone_is_immutable_for_stage_outputs(root: Path) -> None:
 
 def test_state_file_holds_no_absolute_paths(root: Path) -> None:
     def failing(ctx: StageContext) -> None:
-        raise FileNotFoundError(str(ctx.root / "raw" / "nope.txt"))
+        # A Windows OSError quotes its paths in repr form (doubled backslashes); the
+        # first real acquisition (EP-5a) leaked the data root that way.
+        raise PermissionError(f"[WinError 5] Access is denied: {str(ctx.root / 'raw')!r}")
 
     pipeline = make_pipeline(upper_fn=failing)
     with pytest.raises(StageError):
         runner.run(root, pipeline)
     text = (root / runner.STATE_FILE).read_text("utf-8")
     assert str(root) not in text and root.as_posix() not in text
+    assert str(root).replace("\\", "\\\\") not in text
     assert "<data-root>" in text
     payload = json.loads(text)
     assert payload["schema_version"] == 1 and payload["pipeline"] == "toy"
+    assert "Access is denied: '<data-root>" in payload["stages"]["upper"]["error"]
+
+
+def test_install_retries_a_transient_permission_error(root: Path, monkeypatch) -> None:
+    """A virus scanner holding a just-written file made the first real install fail (EP-5a);
+    the rename is retried a bounded number of times before the stage is failed."""
+    real_replace = runner.os.replace
+    failures = {"left": 2}
+    sleeps: list[float] = []
+
+    def flaky_replace(src, dst):
+        if str(dst).endswith("upper.txt") and failures["left"]:
+            failures["left"] -= 1
+            raise PermissionError("[WinError 5] Access is denied")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(runner.os, "replace", flaky_replace)
+    monkeypatch.setattr(runner.time, "sleep", sleeps.append)
+    report = runner.run(root, make_pipeline())
+    assert report.ran == ["upper", "count", "publish"]
+    assert sleeps == [0.25, 0.5] and (root / UPPER).read_text("utf-8") == "ONE TWO THREE\n"
+
+    failures["left"] = 99  # never succeeds: the stage fails after the bounded retries
+    (root / RAW / "words.txt").write_text("four five\n", "utf-8")
+    with pytest.raises(StageError, match="Access is denied"):
+        runner.run(root, make_pipeline())
+    assert len(sleeps) == 2 + 5
 
 
 # --- status and verify edge cases ----------------------------------------------------------

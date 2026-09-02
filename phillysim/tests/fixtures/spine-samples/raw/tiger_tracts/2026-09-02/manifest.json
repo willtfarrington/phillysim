@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-09-02T23:43:38Z",
+  "acquisition_url": "https://www2.census.gov/geo/tiger/TIGER2025/TRACT/tl_2025_42_tract.zip",
+  "acquisition_url_alt": null,
+  "files": {
+    "terms.html": "97b447bbadff1c972a4c6c35530f7e1ed398fe016f4debc6731103b8a52c8097",
+    "tl_2025_42_tract.zip": "1583317e527b4d295d36c6bfc9973ea3a82946afdc3fcc19a646e60c5670341b"
+  },
+  "license_bucket": "A",
+  "license_note": "US public domain: a work of the United States Government (17 U.S.C. section 105); the Census Bureau publishes its data as open data, freely available for use and re-use, and asks to be cited as the source. TIGER/Line 2025 technical documentation section 1.2: copyright protection is not available for any work of the United States Government; TIGER/Line is a registered trademark of the Census Bureau. CI SAMPLE: 6 Philadelphia County tracts plus control rows, subset from the 2026-09-02 snapshot; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-02",
+  "source": "tiger_tracts",
+  "synthetic": false,
+  "terms_archive": "terms.html"
+}

@@ -1,0 +1,17 @@
+{
+  "acquired_at": "2026-09-02T23:42:13Z",
+  "acquisition_url": "https://www2.census.gov/programs-surveys/acs/summary_file/2024/table-based-SF/data/5YRData/",
+  "acquisition_url_alt": null,
+  "files": {
+    "acsdt5y2024-b01003.dat": "5f04d917ac226dbd75bb432cc6635665f8956baa87ee03682eabec29b01bb817",
+    "acsdt5y2024-b08201.dat": "954a56e94a598123a09a52e2d5373ebbc8fbf745a6354fef60df42bf24f40900",
+    "terms.html": "97b447bbadff1c972a4c6c35530f7e1ed398fe016f4debc6731103b8a52c8097"
+  },
+  "license_bucket": "A",
+  "license_note": "US public domain: a work of the United States Government (17 U.S.C. section 105); the Census Bureau publishes its data as open data, freely available for use and re-use, and asks to be cited as the source. ACS 5-year 2020-2024 table-based summary file, tables B01003, B08201; estimates carry 90 percent margins of error. CI SAMPLE: 6 Philadelphia County tracts plus control rows, subset from the 2026-09-02 snapshot; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-02",
+  "source": "acs",
+  "synthetic": false,
+  "terms_archive": "terms.html"
+}

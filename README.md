@@ -52,11 +52,16 @@ baseline and work packets live in [roadmap/](roadmap/). This repository
 currently contains the governance documents, the Python package (CLI,
 configuration, offline CI), a deterministic synthetic test fixture with its
 source-contract harness, the manifest/snapshot engine with download guards
-and quarantine, and the stage runner that carries the fixture through all
+and quarantine, the stage runner that carries the fixture through all
 eleven pipeline stages (`phillysim run --fixture`; milestones M0 and M1
-done). No real data source has been acquired yet; the first adapters arrive
-with M2. Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the packet
-tables in [roadmap/README.md](roadmap/README.md).
+done), and the first real acquisition path: the tract spine's three Census
+sources (TIGER/Line 2025 tracts, CenPop2020 centers, ACS 5-year 2020–2024
+tables) are acquired through a guarded download path into manifest-recorded,
+terms-archived snapshots and checked against their contracts
+(`phillysim run --stage validate`; EP-5a, the first M2 packet). Snapshots
+live in the gitignored data root; only fixture-scale public-domain samples
+are committed. Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the
+packet tables in [roadmap/README.md](roadmap/README.md).
 
 ## Setup
 

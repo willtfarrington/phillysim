@@ -21,7 +21,7 @@ Windows environment; canonicalized-value hashes cross-platform.
 
 | Layer | Contents | Runs | Exists at EP-9 (2026-09-02) |
 |---|---|---|---|
-| Source contracts | schema/license/geometry expectations per adapter, on offline fixtures | CI | yes for the eight tinycity sources (`tests/contracts/`, EP-3); real adapters add theirs from EP-5a |
+| Source contracts | schema/license/geometry expectations per adapter, on offline fixtures | CI | yes for the eight tinycity sources (`tests/contracts/`, EP-3) and, since EP-5a, for the three real spine sources on committed real-shaped samples (`tests/contracts/test_spine_sources.py`); the download path itself is tested on crafted local bytes and the suite disables sockets |
 | Golden math | metric formulas, MOE propagation, bin edges vs hand-computed answers | CI | partly: the CV-tier rule is pinned (`test_cv_tier_rule`); MOE propagation and bin edges arrive with M5 |
 | Geospatial invariants | CRS, geometry validity, county bounds, join cardinality, GEOID integrity | CI | not yet (EP-5b) |
 | Integration | tinycity synthetic fixture through all 11 stages | CI | yes (`tests/integration/`, plus the `run` / `status` / `verify --fixture` CI steps, EP-4b) |

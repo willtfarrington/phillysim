@@ -307,10 +307,32 @@ class RunReport:
 
 
 def _scrub(text: str, root: Path) -> str:
-    """Keep absolute paths out of the state file: replace the data root with a placeholder."""
-    for form in {str(root), root.as_posix()}:
+    """Keep absolute paths out of the state file: replace the data root with a placeholder.
+
+    Native, POSIX, and repr-escaped (doubled backslash) forms are all replaced; a
+    Windows ``OSError`` message quotes paths in the last form (found at EP-5a).
+    """
+    native = str(root)
+    for form in dict.fromkeys((native.replace("\\", "\\\\"), native, root.as_posix())):
         text = text.replace(form, "<data-root>")
     return text
+
+
+def _replace_with_retry(source: Path, target: Path, attempts: int = 6) -> None:
+    """``os.replace`` with a short, bounded retry on ``PermissionError``.
+
+    On Windows a virus scanner or indexer can hold a freshly written file for a
+    moment; the first real acquisition (a 13 MB zip, EP-5a) failed its install
+    on exactly that. The retry waits 0.25 s, 0.5 s, ... and then gives up.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == attempts:
+                raise
+            time.sleep(0.25 * attempt)
 
 
 def _staging_dir(root: Path, stage_name: str) -> Path:
@@ -337,7 +359,7 @@ def _install_outputs(root: Path, stage: Stage, staging: Path) -> dict[str, str]:
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.is_dir():
             shutil.rmtree(target)
-        os.replace(source, target)
+        _replace_with_retry(source, target)
         digests[rel] = digest_tree(target)
     return digests
 

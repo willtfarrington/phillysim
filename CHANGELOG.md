@@ -8,8 +8,53 @@ recorded separately in manifests once the pipeline exists.
 
 ## [Unreleased]
 
+### Added
+
+- **EP-5a — spine source adapters: acquisition path + TIGER/CenPop/ACS
+  snapshots** (Planning Baseline v1.0; first half of the EP-5 set):
+  - `phillysim.download`: the guarded outbound acquisition path, in a fixed
+    order: allowlist before any connection (https only, redirect targets
+    checked, no plain-http handler), timeout and bounded backoff (three
+    attempts per URL, 1 s / 2 s / 4 s, definitive failures fall through to
+    the alternate URL), capped streaming through `copy_capped` under
+    per-source `Limits`, zip guards before anything could be extracted, the
+    terms page in force archived beside the data and checked for expected
+    wording (drift quarantines the snapshot with the new reason kind
+    `terms`), manifest via the manifest engine, admission only through
+    `quarantine.admit`. Injectable transport; an optional query secret is
+    never recorded.
+  - `phillysim.adapters`: `tiger_tracts` (TIGER/Line 2025 Pennsylvania
+    tract zip, read from the zip in place), `cenpop` (CenPop2020 tract
+    centers), and `acs` (ACS 5-year 2020–2024 tables B01003 and B08201
+    from the key-free table-based summary file, annotation values nulled),
+    each with its own allowlist, limits, terms phrase, Bucket A license
+    note, `SourceContract`, and a county filter applied at first read
+    (every file is stored as delivered so it stays verifiable against the
+    provider).
+  - `phillysim.pipeline`: the real pipeline (`real`) registered behind
+    `phillysim run / status / verify` without `--fixture`, with `acquire`
+    (pinned `SNAPSHOT_ID = 2026-09-02`; existing verified snapshots re-used,
+    never re-downloaded or replaced; `intermediate/acquisition.json`
+    report) and `validate` (`intermediate/validation.json` with rows, nulls,
+    violations). Same stage names, zones, and paths as the fixture
+    pipeline; separate root and pipeline name.
+  - First real snapshots acquired on 2026-09-02 (408 Philadelphia County
+    tracts in each source, no contract violations); dated records in
+    `docs/DATA-LICENSES.md`; raw-source sections in `docs/data-dictionary.md`.
+  - `tests/fixtures/spine-samples/`: real-shaped, US-public-domain subsets
+    of the three snapshots (six tracts plus control rows) with a README and
+    the deterministic script that cuts them; contract tests and real
+    pipeline integration tests run on them offline.
+  - Tests: 61 new (301 total). `tests/conftest.py` now disables sockets for
+    the whole suite, so no test can reach the network.
+
 ### Changed
 
+- Stage runner (EP-5a fixes): the atomic install of a stage output retries
+  a transient `PermissionError` a bounded number of times (a Windows virus
+  scanner held the freshly downloaded 13 MB TIGER zip during the first real
+  run), and the state-file scrub also replaces the repr-escaped (doubled
+  backslash) form of the data root that Windows `OSError` messages carry.
 - **EP-9 — checkpoint 1** (after M1, before M2; 2026-09-02). Fresh clone of
   `main` at `a72d318` re-run green: `uv sync --locked`, 240 tests,
   `phillysim run --fixture` (11 ran, then 0 ran / 11 skipped), `status`

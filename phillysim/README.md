@@ -45,26 +45,37 @@ phillysim/
     stages.py             stage registry: Stage / Pipeline declarations, cancel token (EP-4b)
     runner.py             fingerprints, state file, skip / resume / cancel, status, verify (EP-4b)
     preflight.py          disk / RAM / dependency / writable-root checks before a run (EP-4b)
+    download.py           the guarded outbound acquisition path: allowlist, https, timeout +
+                          bounded backoff, capped streaming, archive guards, terms archive,
+                          manifest, admission (EP-5a)
+    adapters/             real source adapters: base (Adapter, Philadelphia constants),
+                          tiger, cenpop, acs; ADAPTERS registry (EP-5a)
+    pipeline.py           the real pipeline: `acquire` + `validate` on the pinned snapshots (EP-5a)
     contracts.py          source-contract harness (schema/license/geometry) + the
                           locked analytic-table contract
     fixtures/tinycity.py  deterministic synthetic fixture generator (EP-3)
     fixtures/tinycity_contracts.py   contracts for the eight fake sources
     fixtures/pipeline.py  the eleven fixture stages behind `phillysim run --fixture` (EP-4b)
   tests/
-    conftest.py           fixture-directory paths
+    conftest.py           fixture-directory paths; the suite-wide no-network guard
     test_smoke.py         package import + CLI help/version/paths
     test_config.py        data-root resolution rules
     test_zones.py         snapshot-ID / source-name rules, layout creation, listing
     test_manifest.py      round-trip, field rules, snapshot + zone verification, `verify --raw`
     test_guards.py        one crafted malicious input per guard; admission + quarantine
+    test_download.py      every branch of the download path on a fake transport (EP-5a)
     test_runner.py        registry rules, fingerprints, skip / resume / cancel, status, verify
     test_preflight.py     every check reported in one pass; simulated failures refuse the run
     test_dependency_policy.py   GDAL/fiona ban, with built-in negative checks
     test_tinycity_fixture.py    determinism + committed-golden checks
-    contracts/            harness unit tests; tinycity sources positive/negative
-    integration/          tinycity through all eleven stages via the CLI (M1 evidence)
+    contracts/            harness unit tests; tinycity sources; the three spine sources on
+                          the committed samples (EP-5a)
+    integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
+                          real pipeline's acquire + validate on a fake transport (EP-5a)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
+    fixtures/spine-samples/     real-shaped, public-domain subsets of the three spine
+                                snapshots + the script that cuts them (README explains)
 ```
 
 ## The tinycity fixture
@@ -172,9 +183,67 @@ generator's oracle until M4 (hours parsing) and M3 (routing) supply the real
 logic. The four curated outputs equal the committed golden tables
 (`tests/fixtures/tinycity/expected/`) by content, which the integration suite
 asserts. CI runs `run`, `status`, and `verify --fixture` on Windows and Linux
-(the M1 go/no-go). No real pipeline stages are registered yet: `run` and
-`status` without `--fixture` say so and exit 1 until EP-5 adds the first
-adapters.
+(the M1 go/no-go).
+
+## The real pipeline and the download path (EP-5a)
+
+Without `--fixture`, the verbs use the real pipeline (`phillysim.pipeline`,
+name `real`) on the resolved data root. It shares the fixture pipeline's
+stage names, zones, and output paths, so the architecture.md stage table
+describes both, but the two never meet: the state file records its
+pipeline's name and refuses the other one, and the roots differ
+(`<data root>/` versus `<data root>/fixture/`). Two stages exist so far;
+EP-5b adds `spine` and `demographics`.
+
+- `acquire` brings in the pinned snapshot (`phillysim.pipeline.SNAPSHOT_ID`,
+  currently `2026-09-02`) of each spine source: TIGER/Line 2025 tracts
+  (`tiger_tracts`), CenPop2020 tract centers (`cenpop`), and the ACS 5-year
+  2020–2024 tables B01003 and B08201 (`acs`), each into
+  `raw/<source>/<snapshot-id>/` with the archived terms page and a manifest.
+  A snapshot already in the raw zone is verified and re-used, never
+  re-downloaded (and never replaced: a tampered one fails the stage). It also
+  writes `intermediate/acquisition.json` (URLs, bytes, attempts, timings,
+  filter placement, guard limits per source). A controlled refresh is a
+  change to `SNAPSHOT_ID`, recorded in the changelog; older snapshots stay.
+- `validate` reads each snapshot through its adapter, which applies the
+  Philadelphia County filter (state files are stored as delivered and
+  filtered at first read; see the adapter docstrings and
+  [docs/data-dictionary.md](../docs/data-dictionary.md)), and checks the
+  result against the source's contract; `intermediate/validation.json`
+  records rows, nulls, and violations.
+
+`phillysim run --stage validate` needs the network once (about 97 MB from
+`www2.census.gov` and `www.census.gov`, seconds on a fast connection) and the
+real-run preflight thresholds; afterwards `run`, `status`, and `verify` are
+offline and take about a second each.
+
+The download path (`phillysim.download`) is the outbound side of
+architecture.md's security section, in a fixed order: every URL is checked
+against the adapter's domain allowlist **before any connection** (https only,
+no credentials, no IP literals; redirect targets are checked too, and the
+opener has no plain-http handler); each connection has a timeout and at most
+three attempts per URL with bounded backoff (1 s, 2 s, 4 s, capped at 8 s)
+on transient failures, a definitive failure moving straight to the alternate
+URL (the manifest's dual-URL field); bytes stream through `copy_capped`
+under the source's own `Limits`, so a lying `Content-Length` cannot bypass
+the cap; a downloaded zip is inspected for slip and bomb conditions before
+anything could be extracted (nothing is: the TIGER shapefile is read from
+the zip in place); the terms page in force is fetched through the same path,
+archived beside the data as `terms.html`, and checked for the sentence the
+adapter expects, different wording being the stop condition (the snapshot is
+quarantined with reason kind `terms` and nothing is admitted); the manifest
+is built by the manifest engine; and admission goes only through
+`quarantine.admit`. There is no default allowlist: each adapter declares its
+domains (`www2.census.gov`, `www.census.gov` for all three spine sources).
+No secret exists in the project; if a provider ever demands an API key, the
+path can attach one at request time only and never records it.
+
+Every one of those branches is exercised offline by `tests/test_download.py`
+on a fake transport, and `tests/conftest.py` disables sockets for the whole
+suite, so no test can reach the network by accident. The contract tests and
+the real pipeline's integration tests run on the committed samples under
+`tests/fixtures/spine-samples/` (real-shaped subsets of the public-domain
+snapshots).
 
 ## Resource baselines
 
@@ -197,6 +266,14 @@ budgets at fixture scale.
 Peak RSS is not measured yet: process-tree RSS sampling starts with the M3
 spike harness, which is also where the CI performance-smoke test in
 [roadmap/quality.md](../roadmap/quality.md) lands.
+
+First real run (EP-5a, 2026-09-02, same machine): `phillysim run --stage
+validate` downloaded 13.1 MB (TIGER zip, 0.5 s), 145 KB (CenPop, 0.2 s),
+18.3 MB + 65.0 MB (the two ACS tables, 0.6 s + 1.3 s) and three copies of
+the 311 KB terms page (0.5 s each); `validate` read all three sources (408
+tracts each) in 1.1 s; the run took about 4 s wall including preflight. The
+raw zone holds 94 MB. A repeat run skips both stages in about 1 s;
+`status` and `verify` take about 1 s each.
 
 ## Decisions this package honors
 

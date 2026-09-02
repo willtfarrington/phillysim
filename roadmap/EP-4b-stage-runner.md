@@ -1,6 +1,6 @@
 # EP-4b — Stage runner: fingerprints, resume/cancel, preflight, `phillysim run/status/verify`
 
-**Status:** [ ] planned · **Milestone:** M1 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-4 (2026-09-02; EP-4a is the other half)
+**Status:** [x] 9a0a3dc · **Milestone:** M1 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-4 (2026-09-02; EP-4a is the other half)
 
 ## Outcome & value
 The execution half of the pipeline backbone: an idempotent stage runner over
@@ -106,12 +106,107 @@ resume); `docs/data-dictionary.md` stage-state file shape; CHANGELOG; packet
 row in `roadmap/README.md`, and the M1 heading there if the go/no-go
 criterion is met.
 
-## Handoff payload (fill at session end)
-- packet ID + status; baseline/roadmap version
-- files changed; commands/tests run + results
-- resource observations
-- decisions/ADRs made; unresolved risks/questions
-- no-go areas touched? (must be none)
-- `roadmap/README.md` packet row (and M1 status) updated
-- exact next packet: EP-5 — after the first checkpoint packet if the owner
-  authors one (milestones.md "Spikes & gates": every ~5 packets)
+## Handoff payload (filled 2026-09-02)
+- **Packet:** EP-4b — done at commit `9a0a3dc` (+ this status commit).
+  Planning Baseline v1.0. CI run
+  [33669100510](https://github.com/willtfarrington/phillysim/actions/runs/33669100510)
+  on `9a0a3dc` green on `windows-latest` and `ubuntu-latest`, including the
+  new `phillysim run --fixture`, `status --fixture`, and `verify --fixture`
+  steps. **M1 go/no-go criterion met** (`phillysim run --fixture` green in
+  offline CI); M1 recorded done in `roadmap/README.md`.
+- **Files changed:** new `phillysim/src/phillysim/{stages,runner,preflight}.py`
+  and `phillysim/src/phillysim/fixtures/pipeline.py`;
+  `phillysim/src/phillysim/cli.py` (`run`, `status`; `verify` extended and
+  retargeted; module docstring); `phillysim/src/phillysim/fixtures/tinycity.py`
+  (polygon corners rounded); regenerated
+  `phillysim/tests/fixtures/tinycity/{CHECKSUMS.txt,expected/tracts_spine.parquet}`;
+  new `phillysim/tests/{test_runner,test_preflight}.py` and
+  `phillysim/tests/integration/test_fixture_pipeline.py`;
+  `phillysim/tests/test_manifest.py` (the fresh-generation `verify --fixture`
+  test retired in favour of the integration suite); `.github/workflows/ci.yml`
+  (three fixture-pipeline steps); `.gitignore` (`data/pipeline_state.json`,
+  `data/fixture/`); `phillysim/README.md` (layout; "Pipeline: stages,
+  fingerprints, state, resume" section); `docs/data-dictionary.md` (stage
+  state file section); `CHANGELOG.md`; `roadmap/README.md` (packet row, M1
+  heading and phase row, checkpoint note); this file.
+- **Commands/tests run + results:** `uv run pytest` → 240 passed (207 before
+  the packet; whole suite about seven seconds); `uv run ruff check .` and
+  `ruff format --check .` clean; `pre-commit run --all-files` with the new
+  files staged → all hooks passed; both fixture variants regenerated with
+  `phillysim gen-tinycity` (34 / 30 files; only the spine golden and its
+  checksum line changed); manual `phillysim run --fixture` in a scratch root:
+  11 ran (about 0.5 s total), second run 0 ran / 11 skipped, `status` 11
+  fresh, `verify` 8 of 8 snapshots + 11 of 11 stages, curated outputs equal
+  the golden tables by content, `--param travel_times.censor_min=30` re-ran
+  travel_times + metrics only; scan of the new files and the state file for
+  usernames / absolute paths → none (the runner replaces the data root with
+  `<data-root>` in recorded error text and a test pins it).
+- **Resource observations:** trivial, as budgeted; single session. The
+  fixture root is under 1 MB; preflight on this machine reported the real
+  thresholds would also pass, but only the fixture-scale set is applied by
+  `--fixture` and the report says so.
+- **Decisions made (revisable, below ADR level):**
+  - Fingerprint = SHA-256 of canonical JSON `{inputs: {path: digest}, params}`;
+    a directory input's digest is the SHA-256 of its sorted `path␀digest`
+    listing (platform-independent). No code hashing, no timestamps.
+  - Skip rule = recorded fingerprint equals the current one *and* every
+    recorded output is on disk with its recorded digest. Consequence:
+    downstream stages re-run only when their inputs change *in content*, so
+    a parameter change that leaves a stage's output identical stops the
+    re-run cascade there (documented; the integration suite shows both the
+    cascade and the stop).
+  - Outputs are written to `cache/staging/<stage>/` and installed by
+    `os.replace` per output after the stage function returns; the state
+    file is rewritten atomically at every transition. A stage that returns
+    normally is installed even if cancellation was requested meanwhile
+    (cancellation is honoured between stages and at in-stage checkpoints,
+    never by discarding finished work).
+  - The raw zone is immutable under the runner: an output under `raw/` that
+    already exists must be content-identical or the stage fails. The fixture
+    `acquire` stage goes through `quarantine.admit` with allowlist
+    `example.invalid` and fixture-scale `Limits`, so the invalid variant is
+    quarantined at admission and `acquire` is recorded as failed
+    (`test_invalid_variant_is_quarantined_at_acquire`).
+  - `status` has four states: fresh / stale / missing (never run, or an
+    output gone) / **incomplete** (failed or cancelled). `verify` exits 1
+    for an incomplete or broken stage as well as for raw-zone problems; a
+    partially run pipeline is reported as coherent-but-incomplete, naming
+    the stage.
+  - `--fixture` targets `<data root>/fixture/` (gitignored), the "fixture
+    data root" EP-4a's handoff anticipated; `--data-root DIR` is accepted by
+    all three verbs; `--stage NAME` runs a prefix (EP-5's
+    `phillysim run --stage spine` shape); `--param stage.key=value` overrides
+    declared parameters only. `run` and `status` without `--fixture` say no
+    real pipeline is registered yet and exit 1.
+  - Preflight measures physical RAM without a new dependency (Win32
+    `GlobalMemoryStatusEx`, `/proc/meminfo`, `sysconf`); an unmeasurable
+    value fails rather than passes. Probes are injectable for the negative
+    tests.
+  - Eleven fixture stages named after architecture.md's data flow; stubs:
+    `hours` (oracle answers; M4), `travel_times` (oracle matrix, censored by
+    parameter; M3), and `publish` (plain CSV, no license labels or CSV
+    escaping; EP-7). `conflate` is the identity on the fixture (each site
+    appears once) but enforces the unique-key contract.
+  - tinycity polygon corners rounded to six decimals (generator change;
+    golden spine regenerated by content).
+- **Owner decisions taken interactively (2026-09-02):** commit and push
+  both commits (yes); accept the fixture rounding change (yes); accept the
+  three stubs as recorded, keeping eleven stages and the placeholder public
+  CSV in the gitignored fixture root (yes); next packet is the first
+  checkpoint packet, EP-9, then EP-5 (yes).
+- **Unresolved risks/questions:** the publish stage's placeholder must not
+  be mistaken for the publish gate; EP-7 replaces its body and adds bucket
+  labels and escaping. Cancellation is cooperative only: a hard kill
+  between the state write and the output rename can leave a `running`
+  record, which `verify` reports and the next `run` clears (by design; no
+  signal handling was added). Preflight's real-run RAM threshold uses the
+  24 GB routine peak, not the 20/22 GB process-tree routing budget, which
+  belongs to the M3 spike harness.
+- **No-go areas touched:** none — no network calls, no real data,
+  `source material/` untouched, no machine identifiers or absolute paths in
+  tracked files or in the state file, `data/` (including the fixture root
+  and state file) gitignored.
+- **`roadmap/README.md` packet row:** updated to `[x] 9a0a3dc`; M1 heading
+  set to `[x] 9a0a3dc` (go/no-go met); phase overview row updated.
+- **Exact next packet:** EP-9, the first checkpoint packet (to be authored
+  from `_TEMPLATE.md` per milestones.md "Spikes & gates"), then EP-5.

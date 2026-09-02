@@ -90,19 +90,25 @@ commit. Met 2026-09-02 with EP-2.
 | EP-1 | [Repository governance bootstrap](EP-1-governance-bootstrap.md) | S | — | [x] 102af00 |
 | EP-2 | [Python scaffold + offline CI skeleton](EP-2-scaffold-ci.md) | M | EP-1 | [x] 9bcb7b2 |
 
-### M1 — Pipeline skeleton + fixture · `[~]`
+### M1 — Pipeline skeleton + fixture · `[x] 9a0a3dc`
 
-Go/no-go: `phillysim run --fixture` green in offline CI. 2 of 3 packets done.
+Go/no-go: `phillysim run --fixture` green in offline CI. Met 2026-09-02 with
+EP-4b: CI runs `phillysim run --fixture`, `status --fixture`, and
+`verify --fixture` on Windows and Linux, and the integration suite asserts
+the curated outputs equal the golden tables.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
 | EP-3 | [tinycity synthetic fixture](EP-3-tinycity-fixture.md) | M | EP-2 | [x] 4ed065a |
 | EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [x] 361b1eb |
-| EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [ ] |
+| EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [x] 9a0a3dc |
 
 The first **checkpoint packet** ([milestones.md](milestones.md) "Spikes &
-gates": every ~5 packets, S-sized) falls due after EP-4b. If the owner
-authors it, it takes the next free integer and is added to this table.
+gates": every ~5 packets, S-sized) fell due with EP-4b. Owner decision
+2026-09-02: it is the next packet, **EP-9**, to be authored from
+[_TEMPLATE.md](_TEMPLATE.md) (integration re-run on the fixture,
+docs/data-dictionary sync, license-label sweep, budgets, estimate-accuracy
+review) and added to this table before EP-5 starts.
 
 ### M2 — Spine + first source end-to-end · `[ ]`
 
@@ -129,7 +135,7 @@ procedure.
 
 | Phase | Milestones | Outcome | Status |
 |---|---|---|---|
-| Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [~] M0 done; M1 in progress |
+| Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [x] M0 and M1 done |
 | First data | M2 | Real geography + first source end-to-end, reproducibly | [ ] |
 | Routing | M3 | Travel-time spike passed or walk-only fallback invoked | [ ] |
 | Full ingest | M4 | All v1 sources snapshotted, conflated, hours-parsed | [ ] |

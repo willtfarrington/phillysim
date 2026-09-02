@@ -260,7 +260,9 @@ def _assert_quarantined(
     payload = json.loads(reason.read_text("utf-8"))
     assert payload == record.to_dict()
     assert payload["quarantined_at"].endswith("Z")
-    assert ":\\" not in reason.read_text("utf-8") and str(snap.anchor) not in payload["reason"]
+    # No absolute path may leak into the reason file: the scratch root (tmp_path) is the
+    # only absolute prefix in play, on Windows and Linux alike.
+    assert str(snap.parents[2]) not in reason.read_text("utf-8")
     assert list_quarantined(quarantine_zone) == [record]
 
 

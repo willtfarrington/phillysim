@@ -17,6 +17,12 @@ recorded separately in manifests once the pipeline exists.
   exist and the message bounced; the request is being re-sent to the
   contact the City's Open Data Program page actually lists
   (`roadmap/open-questions.md`).
+- Dependabot no longer opens PRs against the vendored `source material/`
+  JKAN tree: `bundler` and `npm` entries with `open-pull-requests-limit: 0`
+  added to `.github/dependabot.yml`; PRs #1–#4 closed and the seven open
+  alerts for that path dismissed as "not used" (owner decision, 2026-09-02).
+  The tree is reference material that is never built, executed, or
+  modified, so the alerts describe no exposure.
 
 ### Added
 

@@ -32,7 +32,9 @@ maintainer.
 - Wording in public-facing text must comply with the claims matrix
   ([docs/CLAIMS.md](docs/CLAIMS.md)).
 - The vendored `source material/` tree is reference material and is not
-  modified.
+  modified. It is never built or executed, so Dependabot alerts against its
+  lockfiles are dismissed as "not used" and its update PRs are disabled in
+  `.github/dependabot.yml`.
 
 ## Development setup
 

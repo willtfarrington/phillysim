@@ -143,6 +143,8 @@ Fixture README; data dictionary seeded.
   tree (Ruby/JS), which policy says is never modified — the owner should
   either close them and exclude that directory from Dependabot, or accept
   the alerts as reference-material noise. Not touched in this packet.
+  Resolved 2026-09-02 after the packet closed: config entries added  
+  (`cd6de7e`), PRs closed, alerts dismissed.
 - **No-go areas touched:** none — no real data acquired or derived, no
   network calls, `source material/` untouched, no machine identifiers or
   absolute paths in tracked files (scanned), fixture wholly synthetic and

@@ -15,19 +15,45 @@ were all resolved before this roadmap was drafted.
 ## How to read this roadmap
 
 - Milestones **M0–M8** are listed in [milestones.md](milestones.md). Each ends
-  in a demonstrable increment with a go/no-go criterion.
+  in a demonstrable increment with a go/no-go criterion. The
+  [milestone ↔ packet tables](#milestones-and-work-packets) below are where
+  packet and milestone status is tracked; each packet file's header carries
+  the same status.
 - Near-horizon work is decomposed into issue-ready **work packets**, one file
-  per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), sized for
-  one bounded coding-agent session each. EP-1–EP-8 cover M0–M2; later
+  per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), each
+  sized for **one** bounded coding-agent session. EP-1–EP-8 cover M0–M2; later
   milestones stay at outcome level until their **refinement gate**, where new
   EP files are authored. **At a refinement gate, first apply that
   milestone's entries under "Refinement-gate carry-ins" in
   [milestones.md](milestones.md)** — they are deferred obligations from
   earlier packets, with the text to paste into the new EP files.
-- Estimates use **agent sessions** (one focused, tested, committed sitting)
-  with S/M/L labels: S ≈ ≤1 session, M ≈ 1–2, L ≈ must be split.
+- Estimates use **agent sessions** (one focused, tested, committed sitting).
+  One packet is one session; see "Packet sizing and splitting" below.
 - Architecture-level or hard-to-reverse choices are recorded in [adr/](adr/).
-- Status convention: `[ ]` planned · `[~]` in progress · `[x] <commit>` done.
+- Status convention: `[ ]` planned · `[~]` in progress · `[x] <commit>` done
+  (the commit that landed the work; the handoff commit follows it).
+
+### Packet sizing and splitting
+
+- **S** — fits one session. Every packet authored from 2026-09-02 on is S:
+  refinement gates decompose a milestone's outcome into S packets rather
+  than authoring anything larger.
+- **M** (1–2 sessions) survives only in the four M2 packets written before
+  this rule (EP-5–EP-8). At pickup, the session reads the packet and decides
+  whether it fits one session; if not, it is **split before any work
+  starts**, using the convention below.
+- **L** is no longer a valid packet size. The one L packet, EP-4, was split
+  on 2026-09-02 into EP-4a and EP-4b at the engine/runner boundary its own
+  brief allowed.
+- **Split convention.** An already-numbered packet that must be split keeps
+  its number and gains letter suffixes — `EP-Na-<slug>.md`, `EP-Nb-<slug>.md`,
+  … — each a complete packet from the template with `Split from: EP-N` in
+  its header line, sequenced a → b → …, the last part carrying the parent's
+  milestone-level acceptance evidence. The bare `EP-N` then names the set,
+  never a packet of its own, so existing references to it (CHANGELOG, other
+  packets, handoffs) stay valid. Suffixes are a pickup remedy only: new
+  packets are never authored with them, and the next new packet takes the
+  next free integer.
 
 ## Document index
 
@@ -40,15 +66,70 @@ were all resolved before this roadmap was drafted.
 | [architecture.md](architecture.md) | Components, pipeline, stack rationale, budgets, upgrade triggers |
 | [governance.md](governance.md) | Privacy, security, community safety, clinical boundaries, accessibility, maintenance |
 | [quality.md](quality.md) | Versioning axes, test matrix, release gates, reproducibility procedure |
-| [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up |
-| [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2); later EPs authored at refinement gates |
+| [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
+| [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
+| [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md)); later EPs authored at refinement gates |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
+
+## Milestones and work packets
+
+One row per packet, grouped by milestone. A milestone is done when every
+packet in its table is done and its go/no-go criterion in
+[milestones.md](milestones.md) holds; the milestone heading records that
+with the same status convention. A packet's session ends by updating its row
+here (status + commit) as part of the handoff. Milestones M3–M8 get tables
+at their refinement gates.
+
+### M0 — Governance bootstrap · `[x] 9bcb7b2`
+
+Go/no-go: all M0 packets' acceptance criteria met; repo presentable at any
+commit. Met 2026-09-02 with EP-2.
+
+| # | Packet | Size | Depends on | Status |
+|---|---|---|---|---|
+| EP-1 | [Repository governance bootstrap](EP-1-governance-bootstrap.md) | S | — | [x] 102af00 |
+| EP-2 | [Python scaffold + offline CI skeleton](EP-2-scaffold-ci.md) | M | EP-1 | [x] 9bcb7b2 |
+
+### M1 — Pipeline skeleton + fixture · `[~]`
+
+Go/no-go: `phillysim run --fixture` green in offline CI. 1 of 3 packets done.
+
+| # | Packet | Size | Depends on | Status |
+|---|---|---|---|---|
+| EP-3 | [tinycity synthetic fixture](EP-3-tinycity-fixture.md) | M | EP-2 | [x] 4ed065a |
+| EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [ ] |
+| EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [ ] |
+
+The first **checkpoint packet** ([milestones.md](milestones.md) "Spikes &
+gates": every ~5 packets, S-sized) falls due after EP-4b. If the owner
+authors it, it takes the next free integer and is added to this table.
+
+### M2 — Spine + first source end-to-end · `[ ]`
+
+Go/no-go: slice reproducible from a fresh clone; license buckets applied.
+Each M-sized packet is read at pickup and split (convention above) if it
+will not fit one session.
+
+| # | Packet | Size | Depends on | Status |
+|---|---|---|---|---|
+| EP-5 | [Geography spine adapters: TIGER + CenPop + ACS](EP-5-spine-adapters.md) | M | EP-4b | [ ] |
+| EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 | [ ] |
+| EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [ ] |
+| EP-8 | [Minimal slice page](EP-8-slice-page.md) | M | EP-7 | [ ] |
+
+### M3–M8 · `[ ]` refinement gates pending
+
+No packet files exist yet. After EP-8, the M3 (routing spike) and M4 (full
+ingest) refinement gates author their packets from
+[_TEMPLATE.md](_TEMPLATE.md) — carry-ins first — as S packets, one session
+each, numbered from the next free integer. Later gates follow the same
+procedure.
 
 ## Phase overview
 
 | Phase | Milestones | Outcome | Status |
 |---|---|---|---|
-| Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [ ] |
+| Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [~] M0 done; M1 in progress |
 | First data | M2 | Real geography + first source end-to-end, reproducibly | [ ] |
 | Routing | M3 | Travel-time spike passed or walk-only fallback invoked | [ ] |
 | Full ingest | M4 | All v1 sources snapshotted, conflated, hours-parsed | [ ] |

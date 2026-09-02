@@ -23,6 +23,23 @@ recorded separately in manifests once the pipeline exists.
   alerts for that path dismissed as "not used" (owner decision, 2026-09-02).
   The tree is reference material that is never built, executed, or
   modified, so the alerts describe no exposure.
+- Roadmap status surface: `roadmap/README.md` now carries per-milestone
+  work-packet tables (packet, size, depends-on, status) as the place packet
+  and milestone status is tracked, mirroring the sibling repositories'
+  owner-facing roadmaps while keeping this repo's `[ ]` / `[~]` /
+  `[x] <commit>` convention and unpadded `EP-N` numbering. M0 is recorded
+  done at `9bcb7b2` (both packets done; go/no-go met). `milestones.md`
+  gains a Packets column and points to the tables.
+- Packet sizing: one packet is one session from 2026-09-02 on. The only L
+  packet, EP-4, is split at its engine/runner boundary into
+  `EP-4a-manifest-engine.md` (zones, manifests, guards, quarantine,
+  snapshot-level `verify`) and `EP-4b-stage-runner.md` (stages,
+  fingerprints, resume/cancel, preflight, `run/status/verify --fixture`).
+  A lettered-split convention (`EP-Na`, `EP-Nb`, …, number kept) is
+  documented as the pickup remedy for the remaining M packets (EP-5–EP-8);
+  new packets are never authored above one session. `_TEMPLATE.md` updated;
+  EP-5's prerequisite, the data dictionary, and the fixture README now cite
+  EP-4a/EP-4b.
 - `roadmap/milestones.md` gains a "Refinement-gate carry-ins" section, and
   the roadmap README's reading order points to it: deferred obligations from
   earlier packets are applied when a later milestone's EP files are

@@ -1,6 +1,13 @@
-# EP-NN — <title>
+# EP-N — <title>
 
-**Status:** [ ] planned · **Milestone:** M_ · **Effort:** S/M (n–m sessions, confidence) · **Parallel with:** —
+**Status:** [ ] planned · **Milestone:** M_ · **Effort:** S (1 session, confidence) · **Parallel with:** —
+
+> Sizing rule (README "Packet sizing and splitting"): one packet is one
+> session. If the outcome needs more, author two packets with consecutive
+> integers. A packet split at pickup keeps its number, uses
+> `EP-Na-<slug>.md` / `EP-Nb-<slug>.md` file names, and appends
+> `· **Split from:** EP-N` to the header line. Add the packet's row to the
+> milestone table in README.md when the file is created. Delete this note.
 
 ## Outcome & value
 <one paragraph: what exists after this packet and why it matters to the user or the science>
@@ -45,4 +52,6 @@
 - resource observations
 - decisions/ADRs made; unresolved risks/questions
 - no-go areas touched? (must be none)
+- `roadmap/README.md` packet row updated to `[x] <commit>` (and the
+  milestone heading, if this was its last packet and the go/no-go holds)
 - exact next packet

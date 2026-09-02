@@ -15,7 +15,7 @@ cardinality).
 - out (explicit non-scope): destination sources (EP-6); metrics (EP-7).
 
 ## Prerequisites & locked decisions
-- prerequisites: EP-4.
+- prerequisites: EP-4b (and therefore EP-4a).
 - locked decisions honored: 2020 tracts; pinned vintages (sources.md); the
   analysis CRS is chosen and ADR'd **in this packet**.
 - dependencies: Census/TIGER endpoints (documented in outbound allowlist).

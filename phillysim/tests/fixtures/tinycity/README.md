@@ -29,7 +29,7 @@ checksums survive a Windows checkout.
 
 | Pipeline stage (architecture.md "Data flow") | Fixture files | Notes |
 |---|---|---|
-| Source adapters → raw snapshots | `raw/<source>/2026-01-01/` — data file, `manifest.json`, `TERMS.txt` | Eight fake sources mirroring the v1 matrix: `tiger_tracts`, `cenpop`, `acs`, `snap_retailers`, `farmers_markets`, `meal_sites`, `gtfs`, `osm_network`. The manifest shape (URL + alt URL, terms archive, license bucket, schema version, per-file SHA-256) is a proposal for EP-4. |
+| Source adapters → raw snapshots | `raw/<source>/2026-01-01/` — data file, `manifest.json`, `TERMS.txt` | Eight fake sources mirroring the v1 matrix: `tiger_tracts`, `cenpop`, `acs`, `snap_retailers`, `farmers_markets`, `meal_sites`, `gtfs`, `osm_network`. The manifest shape (URL + alt URL, terms archive, license bucket, schema version, per-file SHA-256) is a proposal for EP-4a. |
 | Schema + license validation | `src/phillysim/fixtures/tinycity_contracts.py` + `tests/contracts/` | One `SourceContract` per fake source; the invalid variant (below) proves each check fires. |
 | Normalization to the tract spine | `expected/tracts_spine.parquet` | GeoParquet, EPSG:4326, six polygons with population-weighted centroids that are deliberately off-centre. |
 | Conflation + hours parsing | `expected/sites.parquet` | Thirteen sites with source-scoped IDs, containing tract, and the hand-derived Tier 2 answers for the hours edge cases. |

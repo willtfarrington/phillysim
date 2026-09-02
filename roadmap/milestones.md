@@ -2,8 +2,11 @@
 
 Estimates are ranges in **agent sessions** with confidence; totals are
 medium-confidence. No calendar promises. Milestones M0–M2 are decomposed into
-issue-ready packets (EP-1 … EP-8, one file per packet); M3+ carry a **mandatory refinement gate**
-(decompose to packet standard before implementation begins).
+issue-ready packets (EP-1 … EP-8, one file per packet; EP-4 split into
+EP-4a/EP-4b on 2026-09-02). Packet status and the milestone ↔ packet
+correlation are tracked in the [README](README.md) tables. M3+ carry a
+**mandatory refinement gate** (decompose to packet standard — one session
+per packet — before implementation begins).
 
 ## Dependency graph
 
@@ -26,17 +29,17 @@ against fixture data once M1's schema contract is stable.
 
 ## Milestones
 
-| ID | Outcome (demonstrable increment) | Go/no-go criterion | Effort (sessions) | Confidence |
-|---|---|---|---|---|
-| M0 | Governed public repo: hygiene, licensing docs, claims matrix, honest reframe (README + repo description), CI skeleton | All M0 packets' acceptance criteria met; repo presentable at any commit | 3–4 | high |
-| M1 | Pipeline skeleton runs end-to-end on tinycity synthetic fixture: manifest engine, zones, CLI, contract tests | `phillysim run --fixture` green in offline CI | 4–6 | high |
-| M2 | Thin vertical slice on real data: TIGER/ACS spine + SNAP adapter → tract-joined GeoParquet → trivial public-safe GeoJSON + minimal page | Slice reproducible from fresh clone; license buckets applied | 4–6 | high |
-| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | 3 attended (+ unattended runs) | medium |
-| M4 | All v1 sources snapshotted, conflated (POI dedup), hours parsed with QA report | Adapter contract tests green; hours-coverage % published; conflation QA reviewed | 5–7 | medium |
-| M5 | Metrics + MOE + reliability tiers + sensitivity runs + SRAM like-for-like validation | Golden tests green; validation memo written; method cards drafted | 5–7 | medium |
-| M6 | Public-safe accessible site: map + parity table + panel + methods/data cards + exports | Playwright+axe green; internal keyboard/NVDA dry run passes | 6–10 | medium (first NVDA loop included) |
-| M7 | v1.0.0: harm/claims review, dietitian review (or narrative held out), release checklist, reproducibility rehearsal, tagged release + Pages demo | Full release checklist passes | 3–4 | medium |
-| M8 | Evidence-based gate decisions for v1.x/v2 candidates (scope.md) recorded | Each candidate gets promote/hold/kill with rationale | 1–2 | high |
+| ID | Outcome (demonstrable increment) | Go/no-go criterion | Packets | Effort (sessions) | Confidence |
+|---|---|---|---|---|---|
+| M0 | Governed public repo: hygiene, licensing docs, claims matrix, honest reframe (README + repo description), CI skeleton | All M0 packets' acceptance criteria met; repo presentable at any commit | EP-1, EP-2 | 3–4 | high |
+| M1 | Pipeline skeleton runs end-to-end on tinycity synthetic fixture: manifest engine, zones, CLI, contract tests | `phillysim run --fixture` green in offline CI | EP-3, EP-4a, EP-4b | 4–6 | high |
+| M2 | Thin vertical slice on real data: TIGER/ACS spine + SNAP adapter → tract-joined GeoParquet → trivial public-safe GeoJSON + minimal page | Slice reproducible from fresh clone; license buckets applied | EP-5 … EP-8 | 4–6 | high |
+| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | refinement gate after EP-8 | 3 attended (+ unattended runs) | medium |
+| M4 | All v1 sources snapshotted, conflated (POI dedup), hours parsed with QA report | Adapter contract tests green; hours-coverage % published; conflation QA reviewed | refinement gate after EP-8 | 5–7 | medium |
+| M5 | Metrics + MOE + reliability tiers + sensitivity runs + SRAM like-for-like validation | Golden tests green; validation memo written; method cards drafted | refinement gate (carry-ins below) | 5–7 | medium |
+| M6 | Public-safe accessible site: map + parity table + panel + methods/data cards + exports | Playwright+axe green; internal keyboard/NVDA dry run passes | refinement gate | 6–10 | medium (first NVDA loop included) |
+| M7 | v1.0.0: harm/claims review, dietitian review (or narrative held out), release checklist, reproducibility rehearsal, tagged release + Pages demo | Full release checklist passes | refinement gate | 3–4 | medium |
+| M8 | Evidence-based gate decisions for v1.x/v2 candidates (scope.md) recorded | Each candidate gets promote/hold/kill with rationale | refinement gate | 1–2 | high |
 
 **Total ≈ 34–46 sessions** (+ contingency ≈ 40–50). Sinkhole watch-list:
 accessibility parity loops (M6), POI conflation + hours parsing (M4),
@@ -120,8 +123,12 @@ revised before the first published metric exists.
 
 ## Session model
 
-One packet per session; session ends tests-green, committed, pushed, with the
-handoff payload (_TEMPLATE.md). Trunk-based; short-lived branches for
+One packet per session, and packets are sized to make that true: every
+packet authored from 2026-09-02 on is S (one session), and a pre-rule M
+packet that will not fit is split at pickup into lettered parts before work
+starts (README "Packet sizing and splitting"). Session ends tests-green,
+committed, pushed, with the handoff payload (_TEMPLATE.md) and the packet's
+row in the README tables updated. Trunk-based; short-lived branches for
 risky packets; ADR for hard-to-reverse choices. Blocked → record blocker in
 the packet, stop at a coherent state, surface to owner. Re-plan triggers:
 any kill criterion fires; checkpoint packet finds drift; two consecutive

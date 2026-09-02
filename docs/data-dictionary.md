@@ -16,7 +16,7 @@ Times are minutes. Nullable columns say so; everything else is required.
 
 ## Snapshot manifest (`raw/<source>/<snapshot-id>/manifest.json`)
 
-Proposed shape, owned by the manifest engine from EP-4.
+Proposed shape, owned by the manifest engine from EP-4a.
 
 | Field | Type | Meaning |
 |---|---|---|

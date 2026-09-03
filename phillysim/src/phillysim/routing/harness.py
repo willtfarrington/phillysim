@@ -159,6 +159,7 @@ def run(
     data_root: Path,
     toolchain: Toolchain,
     run_id: str | None = None,
+    run_dir: Path | None = None,
     command: Callable[[Path], list[str]] = child_command,
     kill_bytes: int = KILL_BYTES,
     budget_bytes: int = BUDGET_BYTES,
@@ -168,11 +169,13 @@ def run(
     """Run ``plan`` in a child under the sampler; write the run directory; return the record.
 
     ``command`` builds the child's argv from the run directory (the tests substitute a
-    scripted child). Ctrl-C kills the tree and records ``cancelled``.
+    scripted child). ``run_dir`` overrides the default ``<data root>/runs/routing/<run id>``
+    (the matrix driver, EP-14, keeps a night's runs under one directory). Ctrl-C kills the
+    tree and records ``cancelled``.
     """
     say = echo or (lambda _line: None)
     run_id = run_id or records.run_id(plan.slug)
-    run_dir = records.run_dir(data_root, run_id)
+    run_dir = run_dir if run_dir is not None else records.run_dir(data_root, run_id)
     run_dir.mkdir(parents=True, exist_ok=False)
     roots = scrub_roots(data_root, toolchain)
     cache_dir(data_root).mkdir(parents=True, exist_ok=True)
@@ -382,6 +385,7 @@ def _route(
             percentiles=list(plan.percentiles),
             speed_walking=plan.speed_walking_kmh,
             max_time=timedelta(minutes=plan.max_time_minutes),
+            snap_to_network=plan.snap_to_network,
         )
         table = pd.DataFrame(matrix.drop(columns=[c for c in ("geometry",) if c in matrix.columns]))
         table.insert(0, "mode", mode)

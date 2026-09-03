@@ -51,6 +51,64 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-14 — the pre-scripted run matrix and the first unattended night**
+  (M3; 2026-09-03). The spike's runs are data before they run:
+  `phillysim/src/phillysim/routing/plans/m3-spike.json` (tracked;
+  `phillysim.routing.plan`) names the seven runs of the EP-14 brief with
+  ADR-0008's parameters verbatim and no path — origins the 408 spine centers,
+  destinations all 1,609 SNAP retailers, percentiles 50 and 85, `max_time`
+  120, `snap_to_network` on; the two core runs first (`walk-48-wed`,
+  `transit-48-wed`: 4.8 km/h, the Wednesday 2026-09-23 08:00–20:00 window at
+  one departure per minute), their determinism repeats, the 3.0 km/h
+  sensitivity pair, and the Saturday 2026-09-26 window; the ≤ 8 h wall
+  criterion on the two core runs together (`core_wall_limit_hours`). The
+  loader refuses a repeat whose parameters differ from its original, core runs
+  not listed first, an unknown mode or table, a date outside the plan's dates.
+  `phillysim route matrix --plan FILE [--only RUN] [--origins-subset N]
+  [--night ID] [--continue-after-kill] [--keep-awake]`
+  (`phillysim.routing.matrix`) executes the plan in order as a **night**
+  under `<data root>/runs/routing/<night-id>/`: the origins and destinations
+  built once (`points.parquet`), `feed_info.txt` read from both feed zips and
+  the plan refused when its transit dates fall outside either authoritative
+  window, r5py's cache touched, one EP-13 child per run under the sampler,
+  each completed run's output turned into `travel_times.parquet` in the data
+  dictionary's shape (censored at 120; the full grid) with its byte and
+  canonicalized-value digests and sanity counts (share of finite pairs
+  against the 95 % gate, pairs at the censor, a distribution summary) in
+  `matrix.json`, and `night.json` (per-run outcome, wall, peak RSS; the core
+  wall; the peak RSS over the night; the state; the outcome code; the
+  driver's invocations and interruptions). A run already `completed` is
+  skipped on re-invocation; a failed, cancelled, or interrupted run is re-run
+  with the earlier attempt kept as `<run>.attempt<N>/`. A core run killed at
+  the 22 GB line, or a core wall over the limit, marks the night
+  **`KILLED-BY-EVIDENCE`** and stops unless `--continue-after-kill` (the
+  owner's flag; the killed run is never re-run); a killed non-core run is
+  recorded and the night goes on. `phillysim route status [--night ID]
+  [--json]` reads a night back (state, driver alive or not, per run its
+  status, wall so far, peak, the last RSS sample). `--origins-subset N`
+  routes the plan's `rehearsal_origins` (the six CI sample tracts) first
+  and the night record carries `expected_wall`, the full night extrapolated
+  linearly in origins. The harness plan gains `snap_to_network` and
+  `harness.run` a `run_dir` override. Tests: `test_routing_plan.py` (the
+  plan against ADR-0008; the loader's rules; the points; the feed windows),
+  `test_matrix_driver.py` (the driver on scripted children, no JVM: records,
+  the matrix shape and sanity counts, resume, kills and the outcome code, the
+  extrapolation, status, the CLI). Documentation: `phillysim/README.md`
+  (the verb, the plan, how to launch and resume a night),
+  `docs/data-dictionary.md` (the night record; the matrix's `mode` values
+  and where the speed and window live). **The rehearsal** (`--origins-subset
+  6`, the six CI sample tracts × 1,609 retailers, 2026-09-03): all seven runs
+  completed in 86 s of wall together (walk runs about 7 s, transit runs at
+  720 departures 15–17 s), core wall 24.4 s, peak RSS 3.53 GB, both repeats
+  byte- and value-identical to their originals, every transit run 100 %
+  finite pairs, the walk runs 64 % (4.8 km/h) and 35 % (3.0 km/h) under the
+  120-min censor; the core wall extrapolated linearly to 408 origins is 960 s
+  (0.27 h), all seven runs 0.97 h. The rehearsal's cache touch followed
+  r5py's symlinks into `intermediate/network/` and refreshed three files'
+  modification times (contents unchanged; every stage still fresh); the
+  driver now skips symlinks. The launch of the first unattended night and
+  the owner's decisions are in the packet's handoff
+  (`roadmap/EP-14-routing-run-matrix.md`).
 - **EP-13 — routing toolchain and harness** (M3; 2026-09-03; the project's
   first JVM runs; ADR-0008's jar pin amended with the owner, see below).
   `phillysim toolchain install` / `check`

@@ -1,7 +1,7 @@
 # Data dictionary
 
 > **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b,
-> EP-12); routing run records since EP-13.** Schema version **1**; public schema version **2** (EP-7 wrote
+> EP-12); routing run records since EP-13, routing nights since EP-14.** Schema version **1**; public schema version **2** (EP-7 wrote
 > version 1; EP-8b added the basemap file). This document describes the
 > tables the pipeline produces. Instances today: the synthetic tinycity
 > fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
@@ -126,7 +126,7 @@ state file's error text. No machine identifier or user name enters a record.
 
 | File | Contents |
 |---|---|
-| `plan.json` | What was asked: `slug`; `modes` (`walk`, `walk_transit`); `speed_walking_kmh`; `departure` (naive local `YYYY-MM-DDTHH:MM`) and `time_zone`; `window_minutes`; `percentiles`; `max_time_minutes`; `origins` and `destinations` (`description`, `count`, `points` as `{id, lon, lat}` in WGS 84); `inputs` (label → data-root-relative path: `osm`, `gtfs_bus`, `gtfs_rail`); `note` |
+| `plan.json` | What was asked: `slug`; `modes` (`walk`, `walk_transit`); `speed_walking_kmh`; `departure` (naive local `YYYY-MM-DDTHH:MM`) and `time_zone`; `window_minutes`; `percentiles`; `max_time_minutes`; `origins` and `destinations` (`description`, `count`, `points` as `{id, lon, lat}` in WGS 84); `inputs` (label → data-root-relative path: `osm`, `gtfs_bus`, `gtfs_rail`); `note`; `snap_to_network` (EP-14; r5py snaps the points to the street network before routing; the smoke route leaves it off) |
 | `record.json` | What happened; fields below |
 | `rss.csv` | The sampler's series: `utc` (ISO 8601 second), `elapsed_s`, `rss_bytes` (the sum over the process tree) |
 | `log.txt` | The child's stdout and stderr (JVM notices, r5py warnings, tracebacks) |
@@ -155,6 +155,61 @@ state file's error text. No machine identifier or user name enters a record.
 
 The record is the spike's evidence (EP-14 aggregates records; EP-15 judges
 them against the milestones.md criteria) and never a published table.
+
+## Routing nights (`<data root>/runs/routing/<night-id>/`) — EP-14
+
+Written by the matrix driver (`phillysim.routing.matrix`, `phillysim route
+matrix --plan FILE`) for a plan of runs executed in order, one harness run
+each. `<night-id>` is `<UTC timestamp>-<plan name>` (`20260903T230000Z-m3-spike`),
+with `-subsetN` appended for a rehearsal on the first N origins. The plan
+itself is tracked (`phillysim/src/phillysim/routing/plans/m3-spike.json`;
+`phillysim.routing.plan`) and carries names and parameters only, never a
+path. Scrubbing and canonical JSON as for run records.
+
+| File | Contents |
+|---|---|
+| `night.json` | The night record; fields below |
+| `points.parquet` | Every point the night routes, built once from the curated tables: `role` (`origin` / `destination`), `id` (the tract `geoid` or the retailer `site_id`), `lon`, `lat` (WGS 84 as the curated tables carry them); origins in the driver's order (the plan's `rehearsal_origins` first, then sorted GEOID), destinations in `site_id` order |
+| `driver.log` | The driver's own lines, UTC-stamped, appended across invocations (resumes included) |
+| `<run>/` | One EP-13 run directory per run of the plan (the files above), plus `travel_times.parquet` (the matrix in the travel-time matrix's shape, below) and `matrix.json` (its `matrix` digests and the `sanity` counts, with the run's `mode`, `speed_walking_kmh`, `departure`, `window_minutes`, `departures`, `max_time_minutes`) |
+| `<run>.attempt<N>/` | An earlier attempt of the run that did not complete (failed, cancelled, killed, or interrupted), kept as it was when the run was re-run on resume |
+| `launch.log`, `launch.err` | Only when the night was launched detached (the README's launch step): the process's standard streams |
+
+`night.json` fields (`schema_version` **1**):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `night_id` | string | The night's ID (the directory name) |
+| `plan` | object | `name`, `file`, `sha256` (of the plan file), `title`, `runs` (names in order), `core_runs`, `core_wall_limit_hours`, `time_zone`, `percentiles`, `max_time_minutes`, `snap_to_network` |
+| `origins`, `destinations` | object | `count` as routed, the origins' `full_count` from the plan and `subset` (N, or null), `description`, `table` (data-root-relative) |
+| `points` | object | `file`, `sha256`, `rows` of `points.parquet` |
+| `inputs` | object | Label → data-root-relative path of the network inputs (`osm`, `gtfs_bus`, `gtfs_rail`), as every run's `plan.json` |
+| `feeds` | object | Per `gtfs*` input its `feed_info.txt` window: `feed_start_date`, `feed_end_date` (ISO), `feed_version`; the driver refuses a plan whose transit dates fall outside either window |
+| `state` | `running`, `stopped`, `finished`, or `KILLED-BY-EVIDENCE` | `running` while a driver executes; `stopped` after a `failed` / `cancelled` run or when `--only` left runs pending (re-invoke to resume); `finished` when every run is done (`completed`, or `killed-rss` on a non-core run) and no kill was called; `KILLED-BY-EVIDENCE` once the outcome code is set (it stays, whatever runs follow under `--continue-after-kill`) |
+| `outcome_code` | `KILLED-BY-EVIDENCE` or null | Set when a core run is `killed-rss` or the core wall exceeds the limit; `kill_reason` says which. `TIMEBOX-EXHAUSTED` and `go` are EP-15's to call, not the driver's |
+| `kill_reason`, `stop_reason` | string, nullable | Why the night was killed / why the driver stopped |
+| `continue_after_kill` | boolean | Whether the owner's flag was given (at creation or on a later resume) |
+| `started_at`, `updated_at`, `finished_at` | string | ISO 8601 UTC; `finished_at` is set at `finished` or at the kill |
+| `driver` | object | The current / last driver's `pid` and `create_time` (so `route status` can tell whether it is alive), and `invocations`: per invocation `started_at`, `ended_at`, `pid`, `resumed`, `only`, `argv` (scrubbed) |
+| `interruptions` | array | Runs found in status `running` when a driver started (the previous driver ended mid-run): `run`, `attempt`, `started_at`, `noticed_at` |
+| `runs` | object | Per run name: `order`, `role`, `repeat_of`, `core`, `mode`, `speed_walking_kmh`, `departure`, `window_minutes`, `departures`, `status` (`pending`, `running`, or the run record's outcome), `attempts`, `dir`, `earlier_attempts`, `run_id` (`<night-id>/<run>`), `started_at`, `finished_at`, `wall_seconds` (the completed attempt's own wall), `exit_code`, `peak_rss_bytes`, `budget_crossed`, `rss_samples`, `error`, `output` (the run record's output block: the CSV's digests), `phases` (`import_seconds`, `build_seconds`, `fixed_seconds`, `route_seconds`, `network_cached_before`, `build_peak_rss_bytes`, `route_peak_rss_bytes`), `matrix` (`path`, `rows`, `bytes`, `byte_sha256`, `canonical_value_sha256` over the key, `key`, `columns`), `sanity` (below) |
+| `core_wall_seconds` | float, nullable | The core runs' completed walls together (partial until both completed) |
+| `core_wall_limit_seconds`, `core_wall_within_limit` | float; boolean, nullable | The plan's limit (28,800 s for `m3-spike`); the verdict once both core runs completed |
+| `peak_rss_bytes`, `peak_rss_run` | integer; string | The highest run peak over the night and which run |
+| `all_runs_done` | boolean | Every run `completed` or `killed-rss` |
+| `expected_wall` | object, nullable | Rehearsal only: `method` (linear in origins), `subset_origins`, `full_origins`, per run `wall_seconds`, `fixed_seconds` (import + build), `route_seconds`, `per_origin_seconds`, `extrapolated_seconds`, `network_cached_before`; `core_extrapolated_seconds`, `core_within_limit`, `all_runs_extrapolated_seconds` |
+
+The `sanity` block per completed run, computed on the child's raw output
+(`travel_times.csv`) before censoring: `pairs_expected` (origins ×
+destinations), `rows` (pairs R5 returned), `missing_rows` (pairs R5 dropped,
+for example a point it could not snap), `unreachable` (rows with no route
+within `max_time`), `finite_pairs` (typical time under the censor),
+`finite_share` against `finite_share_gate` (0.95, methodology.md
+"Validation") and `finite_share_gate_met`, `at_censor`
+(`pairs_expected - finite_pairs`), `finite_pairs_p85`,
+`origins_without_a_finite_pair` (and up to 20 of their IDs),
+`median_minutes` and `p85_minutes` (min, p10, p25, p50, p75, p90, max, mean
+over the finite pairs), `p85_minus_median_mean`.
 
 ## Curated tract spine (`curated/tracts_spine.parquet`, GeoParquet)
 
@@ -248,6 +303,18 @@ One row per destination after conflation, keyed by a source-scoped site ID.
 
 Key: (`origin_geoid`, `site_id`, `mode`). The fixture's matrix is a
 deterministic stand-in (`fixture.json` → `travel_model`), not routing output.
+
+Real instances since EP-14: every completed run of a routing night writes
+`travel_times.parquet` in this shape under its run directory (one `mode` per
+run, `walk` or `walk_transit`; the full origin × destination grid, sorted by
+key). Times are the integer minutes R5 reports, **censored at 120**: a pair
+with no route within 120 minutes, or a point R5 could not snap to the street
+network, reads 120 in both columns, and nothing exceeds it. The walking speed,
+the departure date and time, and the window live in the run's record
+(`plan.json`, `matrix.json`, `night.json`), not in the table. Until the M3
+verdict registers a `travel_times` stage, these tables stay under
+`runs/routing/` (Bucket B by derivation from the clipped OSM network) and
+are never published.
 
 ## Analytic table (`tract_metrics.parquet`) — locked schema
 

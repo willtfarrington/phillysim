@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "name": "m3-spike",
+  "title": "M3 routing spike: the pre-scripted run matrix (EP-14)",
+  "references": [
+    "roadmap/adr/0008-routing-toolchain-pins.md (calendar, decision numbers)",
+    "roadmap/methodology.md (Travel model; Units and origins)",
+    "roadmap/milestones.md (M3; Spikes & gates)",
+    "roadmap/EP-14-routing-run-matrix.md"
+  ],
+  "time_zone": "America/New_York",
+  "dates": {
+    "wednesday": "2026-09-23",
+    "saturday": "2026-09-26"
+  },
+  "percentiles": [50, 85],
+  "max_time_minutes": 120,
+  "snap_to_network": true,
+  "origins": {
+    "table": "tracts_spine",
+    "id": "geoid",
+    "lon": "centroid_lon",
+    "lat": "centroid_lat",
+    "count": 408,
+    "description": "the 408 spine centers (CenPop2020 population-weighted centers; block-group origins are M5's)"
+  },
+  "destinations": {
+    "table": "snap_retailers",
+    "id": "site_id",
+    "lon": "longitude",
+    "lat": "latitude",
+    "count": 1609,
+    "description": "all 1,609 SNAP retailers (the 164 supermarket-format rows are a subset; one run serves the headline layer and M5's all-retailer variant)"
+  },
+  "rehearsal_origins": [
+    "42101000101",
+    "42101000102",
+    "42101000200",
+    "42101000300",
+    "42101000401",
+    "42101000403"
+  ],
+  "core_runs": ["walk-48-wed", "transit-48-wed"],
+  "core_wall_limit_hours": 8,
+  "runs": [
+    {
+      "name": "walk-48-wed",
+      "mode": "walk",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 1,
+      "role": "core"
+    },
+    {
+      "name": "transit-48-wed",
+      "mode": "walk_transit",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 720,
+      "role": "core"
+    },
+    {
+      "name": "walk-48-wed-repeat",
+      "mode": "walk",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 1,
+      "role": "repeat",
+      "repeat_of": "walk-48-wed"
+    },
+    {
+      "name": "transit-48-wed-repeat",
+      "mode": "walk_transit",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 720,
+      "role": "repeat",
+      "repeat_of": "transit-48-wed"
+    },
+    {
+      "name": "walk-30-wed",
+      "mode": "walk",
+      "speed_walking_kmh": 3.0,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 1,
+      "role": "sensitivity"
+    },
+    {
+      "name": "transit-30-wed",
+      "mode": "walk_transit",
+      "speed_walking_kmh": 3.0,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 720,
+      "role": "sensitivity"
+    },
+    {
+      "name": "transit-48-sat",
+      "mode": "walk_transit",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-26",
+      "departure_time": "08:00",
+      "window_minutes": 720,
+      "role": "saturday"
+    }
+  ]
+}

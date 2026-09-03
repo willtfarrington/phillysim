@@ -89,6 +89,8 @@ class RunPlan:
     origins_description: str = ""
     destinations_description: str = ""
     note: str = ""
+    #: r5py's ``snap_to_network`` (EP-14 plans set it; the smoke route does not).
+    snap_to_network: bool = False
 
     def __post_init__(self) -> None:
         check_slug(self.slug)
@@ -126,6 +128,7 @@ class RunPlan:
             },
             "inputs": dict(self.inputs),
             "note": self.note,
+            "snap_to_network": self.snap_to_network,
         }
 
     @classmethod
@@ -145,6 +148,7 @@ class RunPlan:
             origins_description=data["origins"].get("description", ""),
             destinations_description=data["destinations"].get("description", ""),
             note=data.get("note", ""),
+            snap_to_network=bool(data.get("snap_to_network", False)),
         )
 
 

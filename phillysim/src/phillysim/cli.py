@@ -12,7 +12,9 @@ leakage; CI runs it on the fixture). ``site build`` / ``site serve`` (EP-8a)
 build the static slice page from a gated public zone and serve it locally.
 ``toolchain install`` / ``toolchain check`` (EP-13) install and verify the pinned
 JDK and R5 jar project-local; ``route smoke`` runs the first JVM route in a
-sampled child process and leaves run records under ``<data root>/runs/routing/``.
+sampled child process and leaves run records under ``<data root>/runs/routing/``;
+``route matrix`` (EP-14) executes a pre-scripted plan of runs as a resumable
+night under the same harness and ``route status`` reads a night back.
 
 Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
 EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
@@ -44,7 +46,8 @@ from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
 from phillysim.publish import sitebuild
 from phillysim.publish.export import PUBLIC_MANIFEST, PUBLIC_ZONE
 from phillysim.publish.gate import check_public_zone
-from phillysim.routing import smoke, toolchain
+from phillysim.routing import matrix, smoke, toolchain
+from phillysim.routing import plan as plans
 from phillysim.runner import StateError, verify_state
 from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
 
@@ -550,6 +553,157 @@ def route_smoke(
     )
     if not report.ok:
         raise typer.Exit(code=1)
+
+
+# --- the run matrix and the night (EP-14) ------------------------------------------------------
+
+NightOption = Annotated[
+    str | None,
+    typer.Option(
+        "--night", help="A night ID under <data root>/runs/routing/ (default: the latest)."
+    ),
+]
+
+
+def _night_dir(root: Path, night: str | None) -> Path:
+    if night is not None:
+        if "/" in night or "\\" in night or night in (".", ".."):
+            typer.echo(f"FAIL --night must be a plain night ID, not {night!r}")
+            raise typer.Exit(code=1)
+        directory = matrix.night_dir(root, night)
+        if not (directory / matrix.NIGHT_FILE).is_file():
+            typer.echo(f"FAIL no night {night} under {root / matrix.records.RUNS_DIR}")
+            raise typer.Exit(code=1)
+        return directory
+    nights = matrix.list_nights(root)
+    if not nights:
+        typer.echo(f"FAIL no night under {root / matrix.records.RUNS_DIR}")
+        raise typer.Exit(code=1)
+    return nights[-1]
+
+
+@route_app.command("matrix")
+def route_matrix(
+    plan: Annotated[
+        str,
+        typer.Option(
+            "--plan",
+            help="A plan file path, or a file name under phillysim/routing/plans/ (m3-spike.json).",
+        ),
+    ],
+    data_root: DataRootOption = None,
+    home: HomeOption = None,
+    only: Annotated[
+        list[str] | None,
+        typer.Option("--only", help="Execute only this run of the plan (repeatable)."),
+    ] = None,
+    origins_subset: Annotated[
+        int | None,
+        typer.Option(
+            "--origins-subset",
+            min=1,
+            help="Route only the first N origins (the plan's rehearsal origins come first): "
+            "the rehearsal; the night record extrapolates the full wall.",
+        ),
+    ] = None,
+    night: Annotated[
+        str | None,
+        typer.Option(
+            "--night",
+            help="The night ID to create or resume (default: <UTC stamp>-<plan name>[-subsetN]).",
+        ),
+    ] = None,
+    continue_after_kill: Annotated[
+        bool,
+        typer.Option(
+            "--continue-after-kill",
+            help="After a core run's kill or a core wall over the limit, execute the remaining "
+            "runs anyway (the owner's flag; the default stops).",
+        ),
+    ] = False,
+    keep_awake: Annotated[
+        bool,
+        typer.Option(
+            "--keep-awake",
+            help="Ask Windows not to sleep while the driver runs (a per-process request, "
+            "released at exit; not a system setting).",
+        ),
+    ] = False,
+) -> None:
+    """Execute (or resume) a plan's runs in order as a night: one child per run under the
+    sampler, records under <data root>/runs/routing/<night ID>/<run>/, the matrix in the
+    data dictionary's shape per run, and night.json with the state and the outcome code.
+    A run already completed in the night is skipped; a core run killed at the RSS line, or
+    the core runs' walls together over the plan's limit, marks the night KILLED-BY-EVIDENCE
+    and stops unless --continue-after-kill. Exit status 0 when the night finished, 1 when
+    it stopped, was killed, or was refused (preflight, plan, or feed windows).
+    """
+    root, label = _resolve_root(False, data_root)
+    chain = _toolchain(home)
+    if night is not None and ("/" in night or "\\" in night):
+        typer.echo(f"FAIL --night must be a plain night ID, not {night!r}")
+        raise typer.Exit(code=1)
+    try:
+        loaded = plans.load_plan(plan)
+    except plans.PlanError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    typer.echo(f"route matrix at {label}: {root}")
+    typer.echo(
+        f"plan {loaded.name} ({loaded.source}, sha256 {loaded.sha256[:12]}): {loaded.title}; "
+        f"{len(loaded.runs)} runs, core {', '.join(loaded.core_runs)} within "
+        f"{loaded.core_wall_limit_hours:g} h together; origins {loaded.origins.count} "
+        f"({loaded.origins.table}), destinations {loaded.destinations.count} "
+        f"({loaded.destinations.table}); percentiles {list(loaded.percentiles)}, max "
+        f"{loaded.max_time_minutes} min, snap_to_network {loaded.snap_to_network}"
+    )
+    for run in loaded.runs:
+        typer.echo(f"  {plans.describe(run)}")
+    preflight = run_preflight(root, REAL_RUN, extra=toolchain.check(chain).checks)
+    for line in preflight.lines():
+        typer.echo(line)
+    if not preflight.ok:
+        typer.echo("refusing to run: preflight failed")
+        raise typer.Exit(code=1)
+    if keep_awake:
+        typer.echo(f"keep awake: {'requested' if matrix.keep_awake() else 'not available'}")
+    try:
+        result = matrix.run_matrix(
+            loaded,
+            data_root=root,
+            toolchain=chain,
+            night_id_=night,
+            origins_subset=origins_subset,
+            only=only,
+            continue_after_kill=continue_after_kill,
+            echo=typer.echo,
+        )
+    except (plans.PlanError, FileNotFoundError, ValueError) as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for line in matrix.status_lines(matrix.status(result.dir)):
+        typer.echo(line)
+    if result.state != matrix.FINISHED:
+        raise typer.Exit(code=1)
+
+
+@route_app.command("status")
+def route_status(
+    data_root: DataRootOption = None,
+    night: NightOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the report as JSON.")] = False,
+) -> None:
+    """Read a night back (read-only): its state and outcome code, whether its driver is
+    still running, and per run the status, the wall so far, the peak RSS, and the last
+    RSS sample of the run in progress.
+    """
+    root, _label = _resolve_root(False, data_root)
+    report = matrix.status(_night_dir(root, night))
+    if as_json:
+        typer.echo(json.dumps(report, indent=2, sort_keys=True))
+        return
+    for line in matrix.status_lines(report):
+        typer.echo(line)
 
 
 if __name__ == "__main__":  # pragma: no cover - `python -m phillysim.cli`

@@ -35,7 +35,7 @@ checksums survive a Windows checkout.
 | Conflation + hours parsing | `expected/sites.parquet` | Thirteen sites with source-scoped IDs, containing tract, and the hand-derived Tier 2 answers for the hours edge cases. |
 | Travel-time matrices (M3) | `expected/travel_times.parquet` | **Precomputed stand-in**, not routing: Manhattan distance at 4.8 km/h plus a fixed access minute, a 15 % slower 85th percentile, and a stub transit line along the bottom row of tracts. Until M3, downstream stages consume this file. |
 | Metrics + MOE + analytic tables | `expected/tract_metrics.parquet` | The locked schema `{estimate, moe, cv_tier, reliability_action}` with all three CV tiers present, plus `time_to_nearest_min` per tract × category × mode derived from the matrix. |
-| Public-safe aggregates / site | — | Not seeded here; the analytic table is the input those stages will read. |
+| Public-safe aggregates / site | — | Not seeded here; the fixture pipeline's `publish` stage builds the public zone from the analytic table, the spine, and the sites at run time (EP-7), and the tests check it against the gate rather than against golden files. |
 
 `fixture.json` records every parameter (bounds, analysis weeks, travel-model
 constants, CV tier edges) so tests never hard-code them.
@@ -76,7 +76,11 @@ untouched sources to still pass.
 ## What this fixture does not exercise (on purpose)
 
 Real routing, the 120-minute censoring branch (all trips are short), POI
-de-duplication across sources (each site appears once), CSV formula-injection
-cases, ACS ratio-MOE propagation, and license-bucket labeling of published
-outputs. Each belongs to the packet that builds that stage; the brief's stop
-condition is "exercises every stage, not realism."
+de-duplication across sources (each site appears once), and ACS ratio-MOE
+propagation. Each belongs to the packet that builds that stage; the brief's
+stop condition is "exercises every stage, not realism." Since EP-7 the
+fixture pipeline's `publish` stage does exercise license-bucket labeling
+(the zone is Bucket B because `osm_network` is) and CSV escaping, and the
+gate's negative cases (formula cells, mislabeled files, leaked paths) are
+crafted in `tests/test_publish.py` on copies of that zone rather than seeded
+here.

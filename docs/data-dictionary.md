@@ -1,11 +1,13 @@
 # Data dictionary
 
-> **Status: seeded (EP-3); first real instances (EP-5b, EP-6).** Schema
-> version **1**. This document describes the tables the pipeline produces.
-> Instances today: the synthetic tinycity fixture's golden files
-> (`phillysim/tests/fixtures/tinycity/`) for every table, and, since EP-5b
-> and EP-6, the real curated tract spine, its ACS join, and the SNAP retailer
-> layer in the gitignored data root.
+> **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7).** Schema
+> version **1**; public schema version **1** (EP-7). This document describes
+> the tables the pipeline produces. Instances today: the synthetic tinycity
+> fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
+> curated table, and, since EP-5b, EP-6, and EP-7, the real curated tract
+> spine, its ACS join, the SNAP retailer layer, the analytic table (holding
+> the QA-only slice metric), and the gated public zone in the gitignored data
+> root.
 > The integer schema version is one of the manifest-recorded version axes
 > ([ADR-0006](../roadmap/adr/0006-versioning-axes.md)): any breaking change to
 > a table shape below bumps it, with a migration note here. Column names are
@@ -27,7 +29,7 @@ parameter. Which tables carry which CRS:
 | Raw SNAP retailer table (`raw/snap_retailers` below) | WGS 84, EPSG:4326 | the provider's geocodes carry no stated datum; treated as WGS 84 (the difference from NAD 83 is far below the geocoding error) |
 | Curated tract spine `geometry`; every analysis-zone geometry derived from it or joined to it (the SNAP retailer layer since EP-6, sites, travel-time inputs, metrics) | EPSG:26918 | the analysis CRS; recorded in each GeoParquet file's metadata |
 | `centroid_lon` / `centroid_lat` in the spine; `longitude` / `latitude` in the SNAP retailer layer and the sites table | degrees (NAD 83 as published for the spine, the provider's geocodes for destinations; treated as WGS 84 at publication, ADR-0007 datum note) | the form routing origins and destinations take; `phillysim.spine.centroids_in` projects the spine's centers on demand |
-| Public zone (`public/`, GeoJSON / CSV) | WGS 84, EPSG:4326 | the publication boundary, and nowhere else |
+| Public zone (`public/`, GeoJSON / CSV; EP-7) | WGS 84, EPSG:4326 | the publication boundary, and nowhere else: the `publish` stage reprojects from the analysis CRS, rounds coordinates to six decimals, and writes RFC 7946 GeoJSON (no `crs` member, which the publish gate rejects) |
 | The tinycity fixture's tables | the fixture's own geographic CRS (EPSG:4326, the fixture pipeline's `crs` parameter) | a synthetic grid outside Pennsylvania and outside UTM zone 18; the invariant module takes the expected CRS as an argument for this reason |
 
 ## Snapshot manifest (`raw/<source>/<snapshot-id>/manifest.json`)
@@ -85,7 +87,7 @@ independent of this dictionary's.
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | integer | State-file schema version (1) |
-| `pipeline` | string | Name of the pipeline the file belongs to (`fixture` today); a different pipeline's state is refused |
+| `pipeline` | string | Name of the pipeline the file belongs to (`fixture` or `real`); a different pipeline's state is refused |
 | `stages` | object | One record per stage that has ever started, keyed by stage name |
 
 Each stage record:
@@ -219,7 +221,23 @@ One row per tract × metric (× category × mode where applicable). This is the
 | `methods_version` | string | Methods / parameters version (any metric or pinned-parameter change bumps it) |
 
 Class bins for map, table, and CSV are computed at build time from this table
-and are not stored in it.
+and are not stored in it (the `publish` stage computes them; see "Public
+zone" below).
+
+**Instances.** The fixture's golden table (`population_total` with MOE and
+CV tiers; `time_to_nearest_min` per category × mode). The real pipeline's
+first instance (EP-7, `phillysim.metrics.slice`, `methods_version`
+`slice-qa-1`) holds one row per tract of the **QA-only** metric
+`qa_straight_line_m` (category `supermarket_format`, `mode` null): the
+straight-line distance in metres, in the analysis CRS, from the tract's
+population-weighted center to the nearest supermarket-format SNAP retailer;
+`moe` and `cv_tier` null, `reliability_action` `none`
+([method card](method-cards/qa-straight-line.md)). **A metric ID starting
+with `qa_` is a quality-assurance column, never an access measure**
+(methodology.md "Travel model"): the public manifest flags it `qa_only`, the
+publish gate enforces the flag and the QA note, and the site may not present
+it as access. M5 replaces the `metrics` stage body with the transparent
+baseline family and keeps this column as QA.
 
 ## Intermediate files (undocumented by policy)
 
@@ -235,19 +253,108 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
 | `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract; real pipeline (EP-5b): `geoid` + the pinned `B01003_001E/M`, `B08201_002E/M` as float64, exactly one row per spine tract in spine order, suppressed cells null (ADR-0004), join cardinality enforced |
 | `intermediate/snap_retailers.json` | `snap_retailers` (real pipeline, EP-6) | nobody (report) | Counts for the SNAP retailer layer: rows, supermarket-format rows, by store type, by format class, tracts with any / with a supermarket-format retailer, points unassigned to a tract, mapping version, as-of date, CRS |
+| `intermediate/slice_metric.json` | `metrics` (real pipeline, EP-7) | nobody (report) | The QA slice metric's report: metric ID, category, methods version, tract and destination counts, null estimates, min / median / max distance in metres |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
 | `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
 
-## Placeholder public export (`public/tract_metrics.csv`)
+## Public zone (`public/`) — public schema version 1 (EP-7)
 
-Written by the `publish` stage of the fixture pipeline (EP-4b): the analytic
-table above as plain CSV, one row per record, same columns. It carries **no
-license label and no CSV formula-injection escaping**, exists only in the
-gitignored fixture data root, and is not a published output; the publish
-gate in EP-7 replaces it with per-file license-bucket labels and escaping
-([docs/DATA-LICENSES.md](DATA-LICENSES.md)). No file under any `public/`
-zone is tracked in the repository.
+Written as a whole by the `publish` stage of either pipeline
+(`phillysim.publish.export`; the zone directory is the stage's single
+output, so the runner installs or replaces it atomically and a gate failure
+leaves nothing behind). Everything here is WGS 84, license-labeled per file,
+escaped, and checked by the publish gate (`phillysim.publish.gate`;
+`phillysim gate`) before it is installed and again in CI. The **public schema
+version** (`public_schema_version`, currently **1**) is a parameter of the
+`publish` stage and a member of every public file; any change to the files,
+columns, or manifest shape below bumps it, with a note here. No file under
+any `public/` zone is tracked in the repository; the site (EP-8, M6) reads
+these files and nothing else.
+
+| File | Contents |
+|---|---|
+| `manifest.json` | The label registry (below) |
+| `tracts.geojson` | FeatureCollection, one feature per spine tract, feature `id` = `geoid`, polygon geometry, properties = the tracts columns |
+| `tracts.csv` | The same rows and columns without geometry (the table-parity source) |
+| `sites.geojson` | FeatureCollection, one feature per published facility point, feature `id` = `site_id`, point geometry, properties = the sites columns minus coordinates |
+| `sites.csv` | The same rows with `longitude` / `latitude` columns |
+
+**Tracts columns.** `geoid`, `name`, `population` (the spine's 2020 Census
+count, no MOE), then, for every tract-metric the analytic table holds, a
+group of five columns named from the metric's key,
+`<metric_id>[__<category>][__<mode>]` (parts joined by two underscores; null
+parts omitted; `qa_straight_line_m__supermarket_format`,
+`time_to_nearest_min__farmers_market__walk`): the estimate under the bare
+column name, `_moe`, `_cv_tier`, `_reliability_action` (the analytic
+table's four values, so map, table, and CSV carry the same
+{estimate, MOE, CV tier, action}), and `_bin`, the build-time class.
+Columns are lowercase slugs and carry none of the terms the claims matrix
+prohibits (the gate rejects `score`, `rank`, `index`, `desert`, `healthy`,
+…); a metric whose ID starts with `qa_` is QA-only (above).
+
+**Sites columns.** `site_id`, `source`, `category`, `name` (the provider's
+text, untrusted: escaped in CSV, a plain string in GeoJSON), `geoid`
+(nullable: the tract containing the point), and in the CSV `longitude`,
+`latitude` (WGS 84, six decimals). The real pipeline publishes the
+supermarket-format SNAP retailers the slice metric was computed against; the
+fixture publishes its conflated sites table.
+
+**Bins.** For every metric column the stage computes class edges over the
+column's non-null values (quantiles, five classes requested; ties collapse
+edges, so a column may get fewer classes, never zero when a value exists)
+and writes each row's 1-based class in `<column>_bin` (null where the
+estimate is null). The edges are recorded in the manifest under `bins`
+(`method`, `classes_requested`, `classes`, `edges`); the site never bins on
+its own ([methodology.md](../roadmap/methodology.md) "Uncertainty":
+build-time bins so map, table, and CSV agree).
+
+**License labels (ADR-0003).** Every file's bucket is *derived* from the
+buckets of the sources it is built from (`manifest.json` in each raw
+snapshot): Bucket B if any source is Bucket B, else A. The label
+(`bucket`, `spdx_id`, `name`, `url`, `notices`) is written into the
+manifest per file and, for GeoJSON, in-file as the top-level `license`
+member beside `attribution` (RFC 7946 foreign members); CSV has no slot for
+it, so the manifest is its sidecar. Bucket B labels carry the ODbL notice
+and "© OpenStreetMap contributors". The gate refuses a file whose label
+differs from the derived bucket or whose in-file label differs from the
+manifest's ([docs/DATA-LICENSES.md](DATA-LICENSES.md)).
+
+**Escaping and determinism.** String cells in CSV that start with `=`, `+`,
+`-`, `@`, tab, or carriage return are prefixed with `'` (spreadsheet
+formula injection; the gate rejects an unescaped cell, allowing a leading
+`-` only on a plain number). GeoJSON is written with sorted keys, compact
+separators, UTF-8, polygon rings oriented per RFC 7946, and `\n` line ends;
+CSV with `\n` line ends; so a rebuilt zone is byte-identical.
+
+**`manifest.json`.** Canonical JSON (sorted keys). Members:
+
+| Member | Meaning |
+|---|---|
+| `pipeline` | `fixture` or `real` |
+| `schema_version`, `public_schema_version`, `methods_version` | The dictionary's schema version and the methods version carried by the analytic table; the public schema version (this section) |
+| `license`, `attribution` | The zone-wide label (every file shares the sources) and the sources' citations, de-duplicated |
+| `crs`, `bounds`, `coordinate_decimals` | `EPSG:4326`; `[minx, miny, maxx, maxy]` in degrees every published coordinate must lie in (the stage's `bounds` parameter: the county bounds for the real pipeline, the grid for the fixture); the rounding applied |
+| `sources` | One record per source the zone derives from: `source`, `snapshot_id`, `license_bucket`, `license_note`, `synthetic`, `citation` (never a path) |
+| `fields` | One record per published metric column: `column`, `metric_id`, `category`, `mode`, `qa_only`, `description` |
+| `bins` | Per metric column: the edge record above |
+| `columns` | The ordered column lists of `tracts` and `sites` (the CSV headers) |
+| `files` | Per file: `table`, `format`, `rows`, `bucket`, `license`, `attribution`, `sources`, `sha256`, `bytes` |
+| `qa_note` | Present when any field is `qa_only`: the sentence that QA columns are not access measures |
+
+The gate (`phillysim.publish.gate.check_public_zone`) checks, in order: the
+manifest parses and every file in the directory is listed with a matching
+digest and size (nothing unlisted, nothing missing, no subdirectories);
+every file's bucket equals the bucket derived from its sources, its label is
+that bucket's, Bucket B files carry the notices, attribution covers every
+source, and GeoJSON in-file labels agree; GeoJSON is a FeatureCollection
+without a `crs` member whose every position is a valid longitude / latitude
+inside the declared bounds (which must equal the pipeline's when the caller
+supplies them); no CSV cell starts with a formula character; no file
+(manifest included) mentions a pipeline zone path, the state file, or an
+absolute path; names are slugs without prohibited terms and `qa_` columns
+are declared; and both formats of a table hold the same keys and row
+count, with the CSV header equal to the manifest's column list.
 
 ## Raw sources: the tract spine (EP-5a) and SNAP retailers (EP-6)
 

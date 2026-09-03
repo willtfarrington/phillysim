@@ -1,12 +1,13 @@
-"""EP-5a / EP-5b / EP-6 integration: the real pipeline's five stages, offline.
+"""EP-5a / EP-5b / EP-6 / EP-7 integration: the real pipeline's seven stages, offline.
 
 A fake transport serves the committed samples under the adapters' real URLs,
 so ``acquire`` and ``validate`` run exactly as they do against the Census and
 USDA hosts (allowlist, caps, archive guards, terms check, manifest, admission)
 without a network; ``spine`` / ``demographics`` (EP-5b) build the curated
-spine from the six sample tracts, and ``snap_retailers`` (EP-6) the classified
-retailer layer on it. The suite-wide socket guard in ``conftest.py`` would
-fail any test that tried to connect.
+spine from the six sample tracts, ``snap_retailers`` (EP-6) the classified
+retailer layer on it, and ``metrics`` / ``publish`` (EP-7) the QA slice
+metric and the gated public zone. The suite-wide socket guard in
+``conftest.py`` would fail any test that tried to connect.
 """
 
 from __future__ import annotations
@@ -28,15 +29,42 @@ from phillysim.classify.store_format import MAPPING_VERSION
 from phillysim.cli import app
 from phillysim.destinations import SNAP_LAYER_COLUMNS, SNAP_REPORT, SNAP_RETAILERS, check_snap_layer
 from phillysim.fixtures.pipeline import fixture_pipeline
-from phillysim.pipeline import ACQUISITION, RAW_SNAPSHOTS, SNAPSHOT_ID, VALIDATION, real_pipeline
+from phillysim.metrics import slice as qa_slice
+from phillysim.pipeline import (
+    ACQUISITION,
+    PUBLISH_SOURCES,
+    RAW_SNAPSHOTS,
+    SNAPSHOT_ID,
+    VALIDATION,
+    real_pipeline,
+)
+from phillysim.publish.bucket import BUCKET_A
+from phillysim.publish.export import (
+    PUBLIC_FILES,
+    PUBLIC_MANIFEST,
+    PUBLIC_ZONE,
+    SITES_CSV,
+    TRACTS_CSV,
+    TRACTS_GEOJSON,
+)
+from phillysim.publish.gate import check_public_zone
 from phillysim.quarantine import list_quarantined
 from phillysim.runner import StateError
 from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, SPINE_COLUMNS, check_spine
 from phillysim.stages import Pipeline, StageError
 
-STAGES = ["acquire", "validate", "spine", "demographics", "snap_retailers"]
+STAGES = [
+    "acquire",
+    "validate",
+    "spine",
+    "demographics",
+    "snap_retailers",
+    "metrics",
+    "publish",
+]
 SAMPLE_TRACTS = 6
 SAMPLE_RETAILERS = 26
+SAMPLE_SUPERMARKET_FORMAT = 5
 
 
 def _pipeline(transport) -> Pipeline:
@@ -149,14 +177,53 @@ def test_acquire_and_validate_end_to_end(root: Path, spine_samples_dir: Path) ->
         "as_of": snap.AS_OF,
     }
 
+    # EP-7: the QA slice metric on the six tracts, and the gated public zone (Bucket A).
+    table = pd.read_parquet(root / qa_slice.TRACT_METRICS)
+    assert len(table) == SAMPLE_TRACTS and set(table["metric_id"]) == {qa_slice.METRIC_ID}
+    assert table["estimate"].notna().all() and (table["estimate"] > 0).all()
+    assert set(table["methods_version"]) == {qa_slice.METHODS_VERSION}
+    slice_report = json.loads((root / qa_slice.SLICE_REPORT).read_text("utf-8"))
+    assert slice_report["destinations"] == SAMPLE_SUPERMARKET_FORMAT and slice_report["qa_only"]
+    public = root / PUBLIC_ZONE
+    assert sorted(p.name for p in public.iterdir()) == sorted([*PUBLIC_FILES, PUBLIC_MANIFEST])
+    assert (
+        check_public_zone(public, bounds=tuple(real_pipeline()["publish"].params["bounds"])) == []
+    )
+    manifest = json.loads((public / PUBLIC_MANIFEST).read_text("utf-8"))
+    assert (
+        manifest["pipeline"] == "real" and manifest["methods_version"] == qa_slice.METHODS_VERSION
+    )
+    assert [s["source"] for s in manifest["sources"]] == list(PUBLISH_SOURCES)
+    assert all(s["license_bucket"] == BUCKET_A and not s["synthetic"] for s in manifest["sources"])
+    assert all(entry["bucket"] == BUCKET_A for entry in manifest["files"].values())
+    assert manifest["license"]["spdx_id"] == "CC-BY-4.0"
+    assert any("SNAP Retailer Locator" in line for line in manifest["attribution"])
+    assert manifest["files"][TRACTS_GEOJSON]["rows"] == SAMPLE_TRACTS
+    assert manifest["files"][SITES_CSV]["rows"] == SAMPLE_SUPERMARKET_FORMAT
+    fields = manifest["fields"]
+    assert len(fields) == 1 and fields[0]["qa_only"] is True
+    assert fields[0]["column"] == f"{qa_slice.METRIC_ID}__{qa_slice.CATEGORY}"
+    assert "qa_note" in manifest
+    tracts = pd.read_csv(public / TRACTS_CSV, dtype={"geoid": str})
+    assert list(tracts["geoid"]) == list(spine["geoid"])
+    assert tracts[f"{fields[0]['column']}_bin"].between(1, 5).all()
+    assert "Census Tract" in tracts["name"].iloc[0]
+    state = json.loads((root / runner.STATE_FILE).read_text("utf-8"))
+    assert state["stages"]["publish"]["outputs"] == {
+        PUBLIC_ZONE: state["stages"]["publish"]["outputs"][PUBLIC_ZONE]
+    }
+
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 0, verify.output
     assert "4 of 4 snapshot(s) verified" in verify.output
-    assert "pipeline 'real'" in verify.output and "5 of 5 stage(s) done and intact" in verify.output
+    assert "pipeline 'real'" in verify.output and "7 of 7 stage(s) done and intact" in verify.output
+    gate = CliRunner().invoke(app, ["gate", "--data-root", str(root)])
+    assert gate.exit_code == 0, gate.output
+    assert "Bucket A (CC-BY-4.0)" in gate.output and "pipeline 'real'" in gate.output
     # The CLI's pipeline expects the county's 408 tracts, so the six-tract spine built with
     # the overridden parameter is stale on parameters there (and only there).
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
-    assert status.exit_code == 0 and "4 fresh, 1 stale, 0 missing, 0 incomplete" in status.output
+    assert status.exit_code == 0 and "6 fresh, 1 stale, 0 missing, 0 incomplete" in status.output
     assert "stale      spine" in status.output and "changed: parameters" in status.output
     assert runner.status(root, _pipeline(transport))[2].status == "fresh"
 
@@ -203,7 +270,7 @@ def test_terms_drift_stops_acquisition_and_quarantines(root: Path, spine_samples
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 1, verify.output
     assert "0 of 0 snapshot(s) verified" in verify.output
-    assert "0 of 5 stage(s) done and intact; incomplete: acquire" in verify.output
+    assert "0 of 7 stage(s) done and intact; incomplete: acquire" in verify.output
     assert "quarantined (terms)" in verify.output
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
     assert "incomplete acquire" in status.output
@@ -213,8 +280,13 @@ def test_real_and_fixture_state_files_never_mix(root: Path, spine_samples_dir: P
     runner.run(root, _pipeline(SampleTransport(spine_samples_dir)))
     with pytest.raises(StateError, match="belongs to pipeline 'real'"):
         runner.run(root, fixture_pipeline())
-    # The real pipeline shares the fixture's first four stage names; `snap_retailers` (EP-6)
-    # is the first per-source destination layer and has no fixture counterpart.
+    # The real pipeline shares the fixture's first four and last two stage names;
+    # `snap_retailers` (EP-6) is the first per-source destination layer and has no fixture
+    # counterpart, and the fixture's middle stages (M3 / M4) have no real body yet.
     assert real_pipeline().names == tuple(STAGES)
     assert real_pipeline().names[:4] == fixture_pipeline().names[:4]
+    assert real_pipeline().names[-2:] == fixture_pipeline().names[-2:] == ("metrics", "publish")
     assert "snap_retailers" not in fixture_pipeline().names
+    assert (
+        real_pipeline()["publish"].outputs == fixture_pipeline()["publish"].outputs == ("public",)
+    )

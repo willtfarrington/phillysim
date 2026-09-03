@@ -20,5 +20,8 @@ source" success evidence.
 
 The remaining destination sources (farmers' markets, meal sites), transit,
 and the street network get cards with their adapters (M3, M4). Method cards
-are a separate set under [docs/method-cards/](../method-cards/); the first,
-the store-format classification, arrived with EP-6.
+are a separate set under [docs/method-cards/](../method-cards/): the
+store-format classification (EP-6) and the QA-only straight-line slice
+metric (EP-7; explicitly not an access measure). Every published file names
+its sources' citations, taken from the adapters, in its license label
+(EP-7 publish gate).

@@ -56,8 +56,8 @@ pipeline from EP-5a on (recorded at the EP-9 checkpoint, 2026-09-02):
 | 7 | `hours` | hours parsing | `curated/sites.parquet` | oracle stub until M4 |
 | 8 | `network` | routing inputs (GTFS + street network) | `intermediate/network.json` | computed summary |
 | 9 | `travel_times` | travel-time matrices | `curated/travel_times.parquet` | precomputed stub until M3 |
-| 10 | `metrics` | transparent metrics + MOE propagation → analytic table | `curated/tract_metrics.parquet` | computed (CV tiers, time to nearest) |
-| 11 | `publish` | public-safe aggregates | `public/tract_metrics.csv` | placeholder until EP-7 (no license labels, no CSV escaping) |
+| 10 | `metrics` | transparent metrics + MOE propagation → analytic table | `curated/tract_metrics.parquet` | fixture: computed (CV tiers, time to nearest); real (EP-7, `phillysim.metrics.slice`): the QA-only straight-line slice metric to the nearest supermarket-format retailer, in the locked analytic shape; M5 replaces the body and keeps the column as QA |
+| 11 | `publish` | public-safe aggregates: license-bucketed GeoJSON/CSV (public zone) | `public/` (the whole zone, one atomic install: `manifest.json`, `tracts.geojson`, `tracts.csv`, `sites.geojson`, `sites.csv`) | both pipelines (EP-7, `phillysim.publish`): the analytic table widened onto the tracts with build-time bins, facility points, per-file license labels derived from the sources' manifests (ADR-0003), CSV formula-injection escaping, WGS 84, and the publish gate run on the staged zone before install; `phillysim gate` re-checks an installed zone (CI runs it on the fixture) |
 
 The static site is built from the public zone and is not a pipeline stage.
 

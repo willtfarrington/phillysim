@@ -10,6 +10,47 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-7 — thin-slice metric + public zone + license bucketing** (Planning
+  Baseline v1.0; M2):
+  - `phillysim.metrics.slice`: the real pipeline's `metrics` stage
+    (`curated/tract_metrics.parquet`, the analytic table's first real
+    instance, methods version `slice-qa-1`): the **QA-only** straight-line
+    distance in metres from each tract's population-weighted center to the
+    nearest supermarket-format SNAP retailer, metric ID `qa_straight_line_m`;
+    never an access measure (methodology.md), which the ID prefix, the
+    manifest flag, the gate, and the method card
+    `docs/method-cards/qa-straight-line.md` all say.
+  - `phillysim.publish`: the publication boundary. `bucket` (ADR-0003: a
+    file's bucket is derived from its sources' manifests, Bucket B
+    contagious, labels with SPDX IDs and the ODbL / OpenStreetMap notices);
+    `bins` (build-time quintile classes with edges recorded in the manifest,
+    ties collapsing, nulls kept); `export` (the public zone, public schema
+    version 1: `manifest.json`, `tracts.geojson` / `tracts.csv` with the
+    analytic table widened into `<metric>[__<category>][__<mode>]` + `_moe`
+    / `_cv_tier` / `_reliability_action` / `_bin` columns, `sites.geojson` /
+    `sites.csv`; WGS 84, RFC 7946 rings, six-decimal coordinates, in-file
+    license labels, CSV formula-injection escaping, byte-deterministic);
+    `gate` (registry and digests, derived-bucket labels, in-file labels and
+    notices, bounds, escaped cells, no zone or absolute path leakage,
+    prohibited vocabulary and `qa_` flags per docs/CLAIMS.md, format
+    parity).
+  - The `publish` stage of both pipelines declares the whole `public/`
+    directory as its one output, runs the gate on the staged zone, and lets
+    nothing leave the curated zone if it fails; the runner installs the
+    zone atomically. The fixture's zone is Bucket B (its `osm_network`
+    source is), the real slice's is Bucket A (CC BY 4.0). Adapters gain a
+    `citation`, carried into every label's attribution.
+  - CLI: `phillysim gate [--fixture] [--data-root DIR | --public DIR]`
+    re-runs the gate on an installed zone; CI runs `gate --fixture`.
+    `Pipeline.upstream_raw` names a path's raw provenance so a test holds
+    the publish stage's declared sources to the DAG.
+  - Tests: golden distances by hand and a brute-force check on the samples;
+    bin edges by hand; escaping cases; the gate green on the fixture's zone
+    and one negative per check, an intentionally mislabeled file first; the
+    stage-level refusal; byte determinism; the real-pipeline integration
+    test through seven stages ending in a gated Bucket A zone. Data
+    dictionary: "Public zone" section (public schema v1) replaces the
+    placeholder export; DATA-LICENSES "How labels are applied".
 - **EP-6 — SNAP retailer adapter + supermarket-format classification**
   (Planning Baseline v1.0; M2):
   - `phillysim.adapters.snap` (`snap_retailers`): the USDA SNAP Retailer

@@ -139,4 +139,8 @@ ADAPTER = Adapter(
         "against the provider, no API key); county filter on the GEO_ID prefix, the pinned "
         "variable selection, and annotation-value nulling applied at first read"
     ),
+    citation=(
+        "U.S. Census Bureau, American Community Survey 5-Year Estimates 2020-2024, "
+        "tables B01003 and B08201."
+    ),
 )

@@ -27,8 +27,12 @@ is an explicit stub that takes its answers from the fixture generator's oracle
     matrix, censored by parameter (M3 stub).
 10. ``metrics`` -> ``curated/tract_metrics.parquet``: population + CV tiers and
     time to nearest (computed).
-11. ``publish`` -> ``public/tract_metrics.csv``: public-safe export; plain CSV
-    until EP-7 adds license bucketing and CSV escaping.
+11. ``publish`` -> ``public/`` (the whole zone, one atomic install): the public
+    zone through :mod:`phillysim.publish` (EP-7): the analytic table widened
+    onto the tracts with build-time bins, the sites as points, per-file license
+    labels derived from the eight fixture manifests (Bucket B, because
+    ``osm_network`` is Bucket B), CSV escaping, and the publish gate run on the
+    staged zone before it is installed.
 
 Every stage writes through its :class:`~phillysim.stages.StageContext` and calls
 ``checkpoint()`` between units of work, so cancellation is honoured inside a
@@ -48,15 +52,20 @@ import pandas as pd
 from phillysim.contracts import check_frame
 from phillysim.fixtures.tinycity import (
     CATEGORIES,
+    CELL,
     CENSOR_MIN,
+    COLS,
     CRS,
     CV_TIER_EDGES_PCT,
     IN_SEASON_WEEK_START,
+    LAT0,
+    LON0,
     METHODS_VERSION,
     MODES,
     MOE_TO_SE,
     OFF_SEASON_WEEK_START,
     RAW_SOURCES,
+    ROWS,
     SNAPSHOT_ID,
     Variant,
     build_model,
@@ -67,6 +76,7 @@ from phillysim.fixtures.tinycity import (
 from phillysim.fixtures.tinycity_contracts import CONTRACTS
 from phillysim.guards import Limits
 from phillysim.manifest import SCHEMA_VERSION
+from phillysim.publish import bins, export
 from phillysim.quarantine import admit
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
@@ -90,7 +100,29 @@ NETWORK = "intermediate/network.json"
 TRAVEL_TIMES = "curated/travel_times.parquet"
 TRACT_METRICS = "curated/tract_metrics.parquet"
 VALIDATION = "intermediate/validation.json"
-PUBLIC_METRICS = "public/tract_metrics.csv"
+PUBLIC_ZONE = export.PUBLIC_ZONE
+
+#: The fixture grid's extent in its own CRS (the publish stage's ``bounds`` parameter, which
+#: the gate holds every published coordinate to).
+FIXTURE_BOUNDS: tuple[float, float, float, float] = (
+    LON0,
+    LAT0,
+    round(LON0 + COLS * CELL, 6),
+    round(LAT0 + ROWS * CELL, 6),
+)
+FIXTURE_CITATION = "phillysim tinycity synthetic fixture (no real provider; synthetic data)."
+#: What the fixture's published metrics are (the manifest carries a description per metric).
+DESCRIPTIONS: dict[str, str] = {
+    "population_total": (
+        "Synthetic fixture: ACS-shaped total population estimate with its 90 % margin of "
+        "error and CV reliability tier."
+    ),
+    "time_to_nearest_min": (
+        "Synthetic fixture: typical travel time in minutes (median departure) to the nearest "
+        "site of the category by the mode, from the fixture's stand-in matrix, censored at "
+        f"{CENSOR_MIN:g} minutes."
+    ),
+}
 
 CATEGORY_OF_SOURCE = {
     "snap_retailers": "supermarket_format",
@@ -403,11 +435,28 @@ def metrics(ctx: StageContext) -> None:
 
 
 def publish(ctx: StageContext) -> None:
-    """Public-safe export of the analytic table. Plain CSV for now: license-bucket labels and
-    formula-injection escaping arrive with the publish gate (EP-7)."""
+    """The public zone (EP-7): the analytic table widened onto the tracts with build-time
+    bins, the conflated sites as points, license labels derived from every fixture
+    manifest, CSV escaping, and the gate run on the staged zone before install."""
     frame = pd.read_parquet(ctx.input(TRACT_METRICS))
+    spine_frame = gpd.read_parquet(ctx.input(SPINE))
+    table = pd.read_parquet(ctx.input(SITES))
     ctx.checkpoint()
-    frame.to_csv(ctx.output(PUBLIC_METRICS), index=False, lineterminator="\n")
+    sites = gpd.GeoDataFrame(
+        table[["site_id", "source", "category", "name", "geoid"]].copy(),
+        geometry=gpd.points_from_xy(table["longitude"], table["latitude"]),
+        crs=CRS,
+    )
+    export.publish_zone(
+        ctx,
+        pipeline=PIPELINE_NAME,
+        metrics=frame,
+        spine=spine_frame,
+        sites=sites,
+        raw_snapshots={source: _raw(source) for source in SOURCES},
+        citations=dict.fromkeys(SOURCES, FIXTURE_CITATION),
+        descriptions=DESCRIPTIONS,
+    )
 
 
 # --- the pipeline ---------------------------------------------------------------------------
@@ -510,10 +559,19 @@ def fixture_pipeline() -> Pipeline:
             Stage(
                 "publish",
                 publish,
-                inputs=(TRACT_METRICS,),
-                outputs=(PUBLIC_METRICS,),
-                params={"format": "csv"},
-                description="public-safe export (bucketing arrives with EP-7)",
+                # Provenance: every raw snapshot upstream of the analytic table and the
+                # sites (all eight; the test suite checks this list against the DAG).
+                inputs=(TRACT_METRICS, SPINE, SITES, *RAW_SNAPSHOTS),
+                outputs=(PUBLIC_ZONE,),
+                params={
+                    "public_schema_version": export.PUBLIC_SCHEMA_VERSION,
+                    "bounds": list(FIXTURE_BOUNDS),
+                    "coordinate_decimals": export.COORDINATE_DECIMALS,
+                    "bin_classes": bins.BIN_CLASSES,
+                    "bin_method": bins.BIN_METHOD,
+                },
+                description="public zone: license-labeled, binned, escaped GeoJSON + CSV, "
+                "gated before install",
             ),
         ],
     )

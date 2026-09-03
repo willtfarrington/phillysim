@@ -101,4 +101,5 @@ ADAPTER = Adapter(
         "stored as delivered (state-level zip, verifiable against the provider); "
         "county filter STATEFP/COUNTYFP applied at first read"
     ),
+    citation="U.S. Census Bureau, TIGER/Line Shapefiles 2025.",
 )

@@ -1,10 +1,14 @@
 # --- Data zones (architecture.md) ---------------------------------------
 # Only data/public/ may ever be tracked, and only at the publish gate with
 # per-file license labels validated. Raw/intermediate/curated zones and
-# quarantined downloads never enter the repository.
+# quarantined downloads never enter the repository. Since EP-7 the public
+# zone is built and gated locally but ignored too: nothing is published
+# before the release gates (quality.md), and a release adds the files
+# deliberately (`git add -f data/public/`), never by `git add -A`.
 data/raw/
 data/intermediate/
 data/curated/
+data/public/
 data/quarantine/
 data/cache/
 # The stage runner's state file and the fixture pipeline's own data root (EP-4b).

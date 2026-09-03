@@ -56,9 +56,15 @@ phillysim/
                           mapping table rendered into docs/method-cards/) (EP-6)
     destinations.py       destination layers on the spine: the classified SNAP retailer
                           point layer and its invariants (EP-6)
+    metrics/              metrics on the spine: slice (the QA-only straight-line slice
+                          metric, the analytic table's first real instance) (EP-7)
+    publish/              the publication boundary: bucket (ADR-0003 labels derived from
+                          the sources), bins (build-time classes), export (the public
+                          zone: labeled, escaped, deterministic GeoJSON + CSV + manifest),
+                          gate (what must hold before anything leaves curated) (EP-7)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
-                          `demographics` (EP-5b), `snap_retailers` (EP-6) on the pinned
-                          snapshots
+                          `demographics` (EP-5b), `snap_retailers` (EP-6), `metrics` +
+                          `publish` (EP-7) on the pinned snapshots
     spine.py              the curated tract spine, the analysis CRS (ADR-0007), and the
                           geospatial invariants every later packet inherits (EP-5b)
     contracts.py          source-contract harness (schema/license/geometry) + the
@@ -84,10 +90,14 @@ phillysim/
                                 the method card it renders into (EP-6)
     test_destinations.py        the SNAP retailer layer on the samples and its invariants,
                                 one negative per check (EP-6)
+    test_slice_metric.py        the QA slice metric: golden distances by hand, a brute-force
+                                check on the samples, the rules that keep it QA-only (EP-7)
+    test_publish.py             buckets, bins, escaping, the export, and the publish gate:
+                                green on the fixture's zone, one negative per check (EP-7)
     contracts/            harness unit tests; tinycity sources; the three spine sources and
                           the SNAP retailer source on the committed samples (EP-5a, EP-6)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
-                          real pipeline's five stages on a fake transport (EP-5a–EP-6)
+                          real pipeline's seven stages on a fake transport (EP-5a–EP-7)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
     fixtures/spine-samples/     real-shaped, public-domain subsets of the four real
@@ -299,6 +309,46 @@ the real pipeline's integration tests run on the committed samples under
 `tests/fixtures/spine-samples/` (real-shaped subsets of the public-domain
 snapshots).
 
+## The public zone and the publish gate (EP-7)
+
+Both pipelines end in a `publish` stage (`phillysim.publish`) whose single
+declared output is the whole `public/` directory, so the runner installs or
+replaces the zone atomically and a failure leaves nothing behind. The stage
+widens the analytic table onto the tracts (one column group per metric:
+estimate, MOE, CV tier, reliability action, and a build-time class bin whose
+edges are recorded in the manifest), writes the facility points, reprojects
+everything to WGS 84, escapes CSV cells against spreadsheet formulas, labels
+every file with the license bucket *derived* from its sources' manifests
+(ADR-0003: Bucket B if any source is; the fixture's zone is Bucket B because
+its synthetic `osm_network` is, the real slice's is Bucket A / CC BY 4.0),
+and then runs the gate on the staged zone. The gate
+(`phillysim.publish.gate.check_public_zone`) reads the directory as a
+stranger would and refuses it on any of: a file unlisted, missing, or
+altered; a label that differs from the derived bucket or from the in-file
+label; a Bucket B file without the ODbL and OpenStreetMap notices; a
+coordinate outside WGS 84 or the declared bounds, or a `crs` member; an
+unescaped CSV cell; a pipeline path, state file, or absolute path mentioned
+anywhere (the manifest included); a column name that is not a slug or
+carries a term the claims matrix prohibits; a `qa_` column not declared
+QA-only; or two formats of one table that disagree. Columns, files, and the
+manifest are documented in [docs/data-dictionary.md](../docs/data-dictionary.md)
+("Public zone", public schema version 1, a `publish` stage parameter).
+
+```
+uv run phillysim run                 # ... metrics, publish (gated before install)
+uv run phillysim gate                # re-check the installed public zone; exit 1 on any violation
+uv run phillysim gate --fixture      # the CI step
+uv run phillysim gate --public DIR   # any directory claiming to be a public zone
+```
+
+The real pipeline's `metrics` stage today computes one deliberately trivial,
+**QA-only** number per tract (`phillysim.metrics.slice`: straight-line
+distance to the nearest supermarket-format SNAP retailer, metric ID
+`qa_straight_line_m`) to prove that path; it is not an access measure and
+the gate enforces the flag that says so
+([method card](../docs/method-cards/qa-straight-line.md)). Nothing under any
+`public/` zone is committed or deployed.
+
 ## Resource baselines
 
 Recorded at the EP-9 checkpoint (2026-09-02) from a fresh clone of `main`
@@ -328,6 +378,16 @@ the 311 KB terms page (0.5 s each); `validate` read all three sources (408
 tracts each) in 1.1 s; the run took about 4 s wall including preflight. The
 raw zone holds 94 MB. A repeat run skips both stages in about 1 s;
 `status` and `verify` take about 1 s each.
+
+First slice through the publication boundary (EP-7, 2026-09-02, same
+machine): on the existing data root `phillysim run` skipped the five fresh
+stages and ran `metrics` in 0.1 s and `publish` in 0.3–0.4 s (408 tracts,
+164 supermarket-format points, the gate included); the public zone is
+965 KB (`tracts.geojson` 876 KB, 176 KB gzipped; `sites.geojson` 45 KB;
+the two CSVs 38 KB; `manifest.json` 6 KB), well under the "sub-MB gzipped"
+size architecture.md sizes the site's payload at; the data root is 118 MB.
+`phillysim gate` on the real zone takes about 1 s. The test suite is
+400 tests in about 15 s (the fixture pipeline is built several times).
 
 ## Decisions this package honors
 

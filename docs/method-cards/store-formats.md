@@ -2,10 +2,11 @@
 
 > **Status: stub (EP-6, 2026-09-02).** This card documents one method: how
 > the project turns USDA's own store-type labels into the format classes its
-> destination layers use. It is the first method card; the cards for the
-> access metrics themselves start with EP-7 (the QA-only slice metric) and
-> are drafted in full at M5. Method cards restate what the code pins and
-> never relax a claims row ([docs/CLAIMS.md](../CLAIMS.md)).
+> destination layers use. It is the first method card; the second, the
+> QA-only slice metric of EP-7, is [qa-straight-line.md](qa-straight-line.md),
+> and the cards for the access metrics themselves are drafted at M5. Method
+> cards restate what the code pins and never relax a claims row
+> ([docs/CLAIMS.md](../CLAIMS.md)).
 
 ## What this method does
 

@@ -103,6 +103,30 @@ Paste into the M5 sensitivity packet, then delete this entry:
   Retailer` types, which SRAM may include).
 ```
 
+### M5 / M6 — the QA slice column and the public schema (deferred by EP-7, 2026-09-02)
+
+Paste into the first M5 packet that replaces the real `metrics` stage body,
+and into the M6 packet that designs the map / table fields; then delete
+this entry:
+
+```markdown
+- The real `metrics` stage body today is the QA-only slice metric
+  `qa_straight_line_m` (`phillysim.metrics.slice`, methods version
+  `slice-qa-1`; method card `docs/method-cards/qa-straight-line.md`).
+  Replace the body with the transparent baseline family, bump
+  `methods_version`, and **keep the `qa_` column** in the analytic table as
+  a QA column (never promote it: methodology.md "Travel model"); the publish
+  gate enforces the `qa_only` flag and the QA note on any `qa_` column.
+- The public zone (public schema version 1, data dictionary "Public zone")
+  widens every tract-metric into five columns (`<metric_id>[__<category>]
+  [__<mode>]` + `_moe`, `_cv_tier`, `_reliability_action`, `_bin`) and
+  records field descriptions and bin edges in `public/manifest.json`. The
+  M6 page reads fields from the manifest, never bins on its own, and renders
+  `qa_only` fields only under their description or not at all. A change to
+  the public files or manifest shape bumps `public_schema_version` (a
+  `publish` stage parameter) with a dictionary note.
+```
+
 ### M5 — reliability conventions (OQ-I; deferred by EP-3, 2026-09-02)
 
 The tinycity fixture and `phillysim.contracts.ANALYTIC_TABLE` encode four

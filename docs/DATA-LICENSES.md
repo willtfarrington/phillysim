@@ -1,13 +1,15 @@
 # Data licenses
 
-> **Status: four snapshots acquired (EP-5a and EP-6, 2026-09-02); nothing
-> published.** The three tract-spine sources and the USDA SNAP retailer file
-> have been acquired into the gitignored raw zone with their terms pages (or,
-> for USDA, the provider's data page in force) archived (dated entries below). This document
-> states the licensing rules the project has adopted and gains a per-source
-> record as each source is actually ingested. It mirrors the source matrix in
-> [roadmap/sources.md](../roadmap/sources.md); that matrix is the working
-> record, this file is the shipped statement.
+> **Status: four snapshots acquired (EP-5a and EP-6, 2026-09-02); the
+> publish gate exists (EP-7); nothing published.** The three tract-spine
+> sources and the USDA SNAP retailer file have been acquired into the
+> gitignored raw zone with their terms pages (or, for USDA, the provider's
+> data page in force) archived (dated entries below), and the public zone
+> they feed is built and gated locally but not tracked or deployed. This
+> document states the licensing rules the project has adopted and gains a
+> per-source record as each source is actually ingested. It mirrors the
+> source matrix in [roadmap/sources.md](../roadmap/sources.md); that matrix
+> is the working record, this file is the shipped statement.
 
 ## The OpenDataPhilly umbrella
 
@@ -53,16 +55,35 @@ Public-domain inputs impose nothing; carrying ACS columns inside an ODbL file
 creates no conflict. CI validates per-file license labels at the publish
 gate.
 
-**Labeling status (EP-9 checkpoint, 2026-09-02).** Nothing has been
-published. The only `public/` file that exists today is the fixture
-pipeline's placeholder export, `public/tract_metrics.csv` under the
-gitignored fixture data root: it is **unlabeled** (no bucket label, no
-attribution notice, no CSV escaping) until EP-7 builds the publish gate, and
-it is not a published output. No file under any `public/` zone is tracked in
-the repository. The eight synthetic tinycity manifests do carry bucket
-labels (seven Bucket A; `osm_network` Bucket B, as OSM-shaped content), and
-each source's contract pins its bucket: the contract suite checks them on
-every test run and the `validate` stage on every `phillysim run --fixture`.
+**How labels are applied (EP-7, 2026-09-02).** The `publish` stage
+(`phillysim.publish`) derives every public file's bucket from the
+`license_bucket` fields of the raw-snapshot manifests the file is built
+from: Bucket B if any source is Bucket B, else Bucket A. No one labels a
+file by hand. The label (bucket, SPDX identifier, license name and URL,
+required notices) and the sources' citations are recorded per file in
+`public/manifest.json` and, for GeoJSON, in the file itself (top-level
+`license` and `attribution` members); Bucket B labels carry the ODbL notice
+and "© OpenStreetMap contributors". The **publish gate**
+(`phillysim.publish.gate`; `phillysim gate`) refuses a zone in which any
+file's label differs from the derived bucket, an in-file label differs from
+the manifest, a Bucket B file lacks its notices, a file is unlisted,
+missing, or altered, a coordinate leaves WGS 84 or the declared bounds, a
+CSV cell is unescaped, or any file mentions a pipeline path; the stage runs
+it on the staged zone before the runner installs anything, and CI runs it
+on the fixture's zone on every push. Field details are in the
+[data dictionary](data-dictionary.md) ("Public zone").
+
+**Labeling status (EP-7, 2026-09-02).** Nothing has been published. Two
+public zones exist, both gitignored and gated green: the fixture pipeline's
+(Bucket B throughout, because its synthetic `osm_network` source is Bucket
+B; it is the CI evidence for the ODbL path) and the real pipeline's thin
+slice (Bucket A, CC BY 4.0, derived from the TIGER/Line, CenPop, and USDA
+SNAP snapshots; the ACS snapshot feeds nothing published yet). No file under
+any `public/` zone is tracked in the repository. The eight synthetic tinycity
+manifests carry bucket labels (seven Bucket A; `osm_network` Bucket B, as
+OSM-shaped content), and each source's contract pins its bucket: the
+contract suite checks them on every test run and the `validate` stage on
+every `phillysim run --fixture`.
 
 **SEPTA-derived aggregates:** computed travel times are facts; published
 matrices contain no GTFS feed contents. The raw feed is never republished,

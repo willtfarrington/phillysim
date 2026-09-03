@@ -46,3 +46,6 @@ jobs:
       - run: uv run phillysim run --fixture
       - run: uv run phillysim status --fixture
       - run: uv run phillysim verify --fixture
+      # EP-7: the publish gate on the fixture's public zone (ADR-0003 license labels, bounds,
+      # CSV escaping, no path leakage). Nothing under data/public/ is ever committed.
+      - run: uv run phillysim gate --fixture

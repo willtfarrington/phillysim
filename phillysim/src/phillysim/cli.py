@@ -5,8 +5,10 @@ orchestrator (architecture.md, B3-07). Inspection commands (``version``,
 ``paths``), the fixture generator (``gen-tinycity``), and the pipeline verbs
 from the stage runner (EP-4b): ``run`` brings a pipeline up to date (skipping
 fresh stages), ``status`` reports every stage as fresh / stale / missing /
-incomplete, and ``verify`` checks the raw zone against its manifests (EP-4a)
-and the stage state against the zones.
+incomplete, ``verify`` checks the raw zone against its manifests (EP-4a)
+and the stage state against the zones, and ``gate`` (EP-7) re-runs the publish
+gate on the installed public zone (license labels, bounds, escaping, no path
+leakage; CI runs it on the fixture).
 
 Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
 EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
@@ -35,6 +37,8 @@ from phillysim.fixtures.tinycity import Variant, write_fixture
 from phillysim.manifest import verify_raw_zone
 from phillysim.pipeline import real_pipeline
 from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
+from phillysim.publish.export import PUBLIC_MANIFEST, PUBLIC_ZONE
+from phillysim.publish.gate import check_public_zone
 from phillysim.runner import StateError, verify_state
 from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
 
@@ -260,3 +264,54 @@ def verify(
         typer.echo(line)
     if not (zone_report.ok and state_report.ok):
         raise typer.Exit(code=1)
+
+
+@app.command()
+def gate(
+    fixture: FixtureOption = False,
+    data_root: DataRootOption = None,
+    public: Annotated[
+        Path | None,
+        typer.Option(
+            "--public",
+            help="Gate this public-zone directory on its own (bounds from its manifest only).",
+        ),
+    ] = None,
+) -> None:
+    """Run the publish gate on the installed public zone (ADR-0003): every file listed and
+    labeled with the bucket its sources require, in-file labels, WGS 84 within bounds, CSV
+    escaped, no zone or absolute path leaked, no prohibited vocabulary, formats in parity.
+
+    Exit status 1 on any violation or when there is no public zone to check. Creates nothing.
+    """
+    if fixture and public is not None:
+        raise typer.BadParameter("--fixture and --public are mutually exclusive")
+    if public is not None:
+        target, bounds, label = public.expanduser().resolve(), None, str(public)
+    else:
+        root, label = _resolve_root(fixture, data_root)
+        target = root / PUBLIC_ZONE
+        params = _pipeline(fixture)["publish"].params
+        bounds = tuple(float(b) for b in params["bounds"])
+        label = f"{label}: {target}"
+    typer.echo(f"publish gate: {label}")
+    if not target.is_dir() or not any(target.iterdir()):
+        typer.echo("no public zone to check (run the pipeline through `publish` first)")
+        raise typer.Exit(code=1)
+    problems = check_public_zone(target, bounds=bounds)
+    for problem in problems:
+        typer.echo(f"FAIL {problem}")
+    if problems:
+        typer.echo(f"publish gate: {len(problems)} violation(s); nothing here may be published")
+        raise typer.Exit(code=1)
+    manifest = json.loads((target / PUBLIC_MANIFEST).read_text("utf-8"))
+    for name, entry in sorted(manifest["files"].items()):
+        typer.echo(
+            f"ok   {name:<16} Bucket {entry['bucket']} ({entry['license']['spdx_id']}), "
+            f"{entry['rows']} row(s)"
+        )
+    typer.echo(
+        f"publish gate: green ({len(manifest['files'])} file(s) labeled, "
+        f"{len(manifest['sources'])} source(s), pipeline {manifest['pipeline']!r}, "
+        f"methods {manifest['methods_version']!r})"
+    )

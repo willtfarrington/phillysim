@@ -21,6 +21,7 @@ from phillysim import runner
 from phillysim.cli import app
 from phillysim.fixtures import pipeline as fx
 from phillysim.fixtures.pipeline import FIXTURE_ROOT_NAME, fixture_pipeline
+from phillysim.publish.export import PUBLIC_FILES, PUBLIC_MANIFEST
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
 GOLDEN = {
@@ -75,7 +76,15 @@ def test_run_fixture_end_to_end_matches_golden_tables(cli_env: Path, tinycity_di
         pd.testing.assert_frame_equal(
             _read(cli_env / rel), _read(tinycity_dir / "expected" / golden)
         )
-    assert (cli_env / "public" / "tract_metrics.csv").is_file()
+    # EP-7: the public zone is complete, labeled, and the gate verb is green on it.
+    assert sorted(p.name for p in (cli_env / "public").iterdir()) == sorted(
+        [*PUBLIC_FILES, PUBLIC_MANIFEST]
+    )
+    gate = CliRunner().invoke(app, ["gate", "--fixture"])
+    assert gate.exit_code == 0, gate.output
+    assert "publish gate: green (4 file(s) labeled, 8 source(s)" in gate.output
+    assert "Bucket B (ODbL-1.0), 6 row(s)" in gate.output
+    assert "Bucket B (ODbL-1.0), 13 row(s)" in gate.output
     validation = json.loads((cli_env / "intermediate" / "validation.json").read_text("utf-8"))
     assert set(validation) == set(fx.SOURCES)
     assert all(entry["violations"] == [] for entry in validation.values())
@@ -105,7 +114,8 @@ def test_parameter_change_reruns_only_dependent_stages(cli_env: Path) -> None:
     assert "run  metrics" in result.output and "run  publish" in result.output
     metrics = pd.read_parquet(cli_env / "curated" / "tract_metrics.parquet")
     assert set(metrics["methods_version"]) == {"tinycity-fixture-2"}
-    assert "tinycity-fixture-2" in (cli_env / "public" / "tract_metrics.csv").read_text("utf-8")
+    manifest = json.loads((cli_env / "public" / PUBLIC_MANIFEST).read_text("utf-8"))
+    assert manifest["methods_version"] == "tinycity-fixture-2"
 
     # A censoring change re-runs the matrix and the metrics; publish is skipped when the
     # metrics content is unchanged (every nearest site is under 30 minutes).
@@ -215,7 +225,29 @@ def test_verbs_without_a_fixture_root_create_nothing(cli_env: Path) -> None:
     assert status.exit_code == 1 and "does not exist" in status.output
     verify = CliRunner().invoke(app, ["verify", "--fixture"])
     assert verify.exit_code == 1 and "nothing to verify" in verify.output
+    gate = CliRunner().invoke(app, ["gate", "--fixture"])
+    assert gate.exit_code == 1 and "no public zone to check" in gate.output
     assert not cli_env.exists() and not cli_env.parent.exists()
+
+
+def test_gate_verb_reports_violations_and_gates_a_bare_directory(cli_env: Path) -> None:
+    assert CliRunner().invoke(app, ["run", "--fixture", "--stage", "metrics"]).exit_code == 0
+    assert CliRunner().invoke(app, ["gate", "--fixture"]).exit_code == 1, "public zone empty"
+    assert CliRunner().invoke(app, ["run", "--fixture"]).exit_code == 0
+    public = cli_env / "public"
+    (public / "stray.txt").write_text("stray", "utf-8")
+    gate = CliRunner().invoke(app, ["gate", "--fixture"])
+    assert gate.exit_code == 1, gate.output
+    assert "FAIL unlisted file(s) in the public zone: ['stray.txt']" in gate.output
+    assert "nothing here may be published" in gate.output
+    (public / "stray.txt").unlink()
+    alone = CliRunner().invoke(app, ["gate", "--public", str(public)])
+    assert alone.exit_code == 0, alone.output
+    both = CliRunner().invoke(app, ["gate", "--fixture", "--public", str(public)])
+    assert both.exit_code != 0 and "mutually exclusive" in both.output
+    # The `verify` verb sees the stray file too: the zone is a stage output.
+    (public / "stray.txt").write_text("stray", "utf-8")
+    assert CliRunner().invoke(app, ["verify", "--fixture"]).exit_code == 1
 
 
 def test_real_pipeline_verbs_need_a_data_root(cli_env: Path) -> None:

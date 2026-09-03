@@ -14,8 +14,13 @@ which also holds the geospatial invariants and the analysis CRS); EP-6 adds
 the ``snap_retailers`` source to ``acquire`` / ``validate`` and the
 ``snap_retailers`` stage (body in :mod:`phillysim.destinations`), the first
 per-source destination layer, which the fixture pipeline has no counterpart
-for (its ``destinations`` stage reads its fake sources directly); later
-packets append the rest.
+for (its ``destinations`` stage reads its fake sources directly); EP-7 adds
+``metrics`` (body in :mod:`phillysim.metrics.slice`: the QA-only straight-line
+slice metric, the analytic table's first real instance) and ``publish`` (the
+public zone through :mod:`phillysim.publish`: license-labeled, binned, escaped
+GeoJSON + CSV, gated before install); later packets append the rest
+(``destinations`` .. ``travel_times`` between ``snap_retailers`` and
+``metrics`` at M3 / M4).
 
 Snapshot IDs are pinned in :data:`SNAPSHOT_ID` rather than taken from the
 clock, because a stage's outputs are static paths in the DAG. ``acquire``
@@ -35,12 +40,18 @@ import time
 from dataclasses import replace
 from typing import Any
 
-from phillysim.adapters import ADAPTERS, snap
+import geopandas as gpd
+import pandas as pd
+
+from phillysim.adapters import ADAPTERS, cenpop, snap, tiger
+from phillysim.adapters.base import COUNTY_BOUNDS
 from phillysim.classify.store_format import MAPPING_VERSION
 from phillysim.contracts import check_frame
 from phillysim.destinations import SNAP_REPORT, SNAP_RETAILERS, snap_retailers
 from phillysim.download import Acquisition, Opener, acquire_snapshot, urllib_open
 from phillysim.manifest import SCHEMA_VERSION, read_manifest, verify_snapshot
+from phillysim.metrics import slice as qa_slice
+from phillysim.publish import bins, export
 from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, TRACT_COUNT, demographics, spine
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
@@ -52,6 +63,9 @@ SOURCES: tuple[str, ...] = tuple(sorted(ADAPTERS))
 RAW_SNAPSHOTS: tuple[str, ...] = tuple(f"raw/{source}/{SNAPSHOT_ID}" for source in SOURCES)
 ACQUISITION = "intermediate/acquisition.json"
 VALIDATION = "intermediate/validation.json"
+#: The sources the public zone is derived from (its provenance and its license bucket): the
+#: spine's geometry and centers, and the SNAP layer. ACS feeds nothing published until M5.
+PUBLISH_SOURCES: tuple[str, ...] = tuple(sorted((cenpop.SOURCE, snap.SOURCE, tiger.SOURCE)))
 
 
 def _raw(source: str) -> str:
@@ -149,6 +163,41 @@ def validate(ctx: StageContext) -> None:
         raise StageError(f"{len(failures)} contract violation(s): " + "; ".join(failures))
 
 
+# --- 11. publish ------------------------------------------------------------------------------
+
+
+def publish(ctx: StageContext) -> None:
+    """The public zone (EP-7): the tracts with the QA slice metric and its bins, the
+    supermarket-format points the metric was computed against, per-file license labels
+    derived from the three sources' manifests, gated before the runner installs it."""
+    metrics = pd.read_parquet(ctx.input(qa_slice.TRACT_METRICS))
+    spine_frame = gpd.read_parquet(ctx.input(SPINE))
+    layer = gpd.read_parquet(ctx.input(SNAP_RETAILERS))
+    ctx.checkpoint()
+    chosen = layer[layer["supermarket_format"].astype(bool)]
+    sites = gpd.GeoDataFrame(
+        {
+            "site_id": chosen["site_id"].astype(str).to_numpy(),
+            "source": chosen["source"].astype(str).to_numpy(),
+            "category": qa_slice.CATEGORY,
+            "name": chosen["name"].astype(str).to_numpy(),
+            "geoid": chosen["geoid"].astype("string").to_numpy(),
+        },
+        geometry=chosen.geometry.to_numpy(),
+        crs=layer.crs,
+    )
+    export.publish_zone(
+        ctx,
+        pipeline=PIPELINE_NAME,
+        metrics=metrics,
+        spine=spine_frame,
+        sites=sites,
+        raw_snapshots={source: _raw(source) for source in PUBLISH_SOURCES},
+        citations={source: ADAPTERS[source].citation for source in PUBLISH_SOURCES},
+        descriptions=qa_slice.DESCRIPTIONS,
+    )
+
+
 # --- the pipeline -------------------------------------------------------------------------------
 
 
@@ -213,6 +262,40 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 },
                 description="SNAP retailer point layer: store-format classification, tract "
                 "assignment, stable site IDs, invariants enforced",
+            ),
+            Stage(
+                "metrics",
+                qa_slice.metrics,
+                inputs=(SPINE, SNAP_RETAILERS),
+                outputs=(qa_slice.TRACT_METRICS, qa_slice.SLICE_REPORT),
+                params={
+                    "crs": ANALYSIS_CRS,
+                    "category": qa_slice.CATEGORY,
+                    "methods_version": qa_slice.METHODS_VERSION,
+                    "schema_version": SCHEMA_VERSION,
+                },
+                description="analytic table (EP-7 body: the QA-only straight-line slice "
+                "metric to the nearest supermarket-format retailer; real metrics at M5)",
+            ),
+            Stage(
+                "publish",
+                publish,
+                inputs=(
+                    qa_slice.TRACT_METRICS,
+                    SPINE,
+                    SNAP_RETAILERS,
+                    *(_raw(source) for source in PUBLISH_SOURCES),
+                ),
+                outputs=(export.PUBLIC_ZONE,),
+                params={
+                    "public_schema_version": export.PUBLIC_SCHEMA_VERSION,
+                    "bounds": list(COUNTY_BOUNDS),
+                    "coordinate_decimals": export.COORDINATE_DECIMALS,
+                    "bin_classes": bins.BIN_CLASSES,
+                    "bin_method": bins.BIN_METHOD,
+                },
+                description="public zone: license-labeled, binned, escaped GeoJSON + CSV, "
+                "gated before install",
             ),
         ],
     )

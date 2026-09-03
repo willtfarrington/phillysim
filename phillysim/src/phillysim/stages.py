@@ -226,6 +226,26 @@ class Pipeline:
         """Name of the stage that produces ``rel``, or ``None`` for external (raw) inputs."""
         return self._producers.get(rel)
 
+    def upstream_raw(self, rel: str) -> tuple[str, ...]:
+        """Every raw-zone path ``rel`` depends on, transitively through the stages that produce
+        its inputs (``rel`` itself if it is a raw path), sorted. A stage that publishes a
+        table declares this set as its provenance, and a test holds it to the DAG."""
+        raws: set[str] = set()
+        seen: set[str] = set()
+        stack = [rel]
+        while stack:
+            current = stack.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            if zone_of(current) == "raw":  # acquired (or generated) data: provenance stops here
+                raws.add(current)
+                continue
+            producer = self._producers.get(current)
+            if producer is not None:
+                stack.extend(self[producer].inputs)
+        return tuple(sorted(raws))
+
     def through(self, name: str | None = None) -> tuple[Stage, ...]:
         """The stages to run, in order, to bring ``name`` (default: the last stage) up to date."""
         if name is None:

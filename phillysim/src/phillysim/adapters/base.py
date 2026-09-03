@@ -54,6 +54,9 @@ class Adapter:
     contract: SourceContract
     read: Callable[[Path], pd.DataFrame]
     filter_note: str
+    #: How the source is cited in published outputs (the attribution line the public
+    #: manifest and every in-file license label carry; docs/DATA-LICENSES.md).
+    citation: str = ""
 
     @property
     def name(self) -> str:

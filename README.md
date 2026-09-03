@@ -58,10 +58,16 @@ done), and the first real acquisition path: the tract spine's three Census
 sources (TIGER/Line 2025 tracts, CenPop2020 centers, ACS 5-year 2020–2024
 tables) are acquired through a guarded download path into manifest-recorded,
 terms-archived snapshots and checked against their contracts
-(`phillysim run --stage validate`; EP-5a, the first M2 packet). Snapshots
+(`phillysim run --stage validate`; EP-5a, the first M2 packet), built into
+the curated tract spine (EP-5b), joined by the USDA SNAP retailer layer with
+its published store-format classification (EP-6), and carried through a
+deliberately trivial, QA-only slice metric into a license-labeled public
+zone that a publish gate checks before anything leaves the curated zone
+(`phillysim run`, then `phillysim gate`; EP-7). Snapshots and the public zone
 live in the gitignored data root; only fixture-scale public-domain samples
-are committed. Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the
-packet tables in [roadmap/README.md](roadmap/README.md).
+are committed, and nothing is deployed. Progress is tracked in
+[CHANGELOG.md](CHANGELOG.md) and the packet tables in
+[roadmap/README.md](roadmap/README.md).
 
 ## Setup
 

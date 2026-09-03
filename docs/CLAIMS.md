@@ -86,6 +86,18 @@ no address-entry workflows in the public system. Area-level measures are
 never presented as individual risk. See charter.md for the full list and its
 conditions.
 
+## Mechanical enforcement (EP-7)
+
+The publish gate (`phillysim.publish.gate`) applies the parts of this matrix
+a program can check to every public data file: column and property names
+must be lowercase slugs carrying none of `healthy`, `unhealthy`,
+`nutritious`, `quality`, `desert`, `insecur`, `score`, `rank`, or `index`
+(C-1, C-2, C-3), and any column whose metric ID starts with `qa_` must be
+declared quality-assurance-only with a description that says so, beside a
+manifest note that QA columns are not access measures
+([methodology.md](../roadmap/methodology.md) "Travel model"). Prose, cards,
+and site copy remain the manual sweep's job.
+
 ## Maintaining this file
 
 - New public claims require a new row (or an amendment to an existing row)

@@ -103,4 +103,5 @@ ADAPTER = Adapter(
         "stored as delivered (state-level text file, verifiable against the provider); "
         "county filter STATEFP/COUNTYFP applied at first read; geoid derived from the FIPS columns"
     ),
+    citation="U.S. Census Bureau, Centers of Population by Census Tract, 2020.",
 )

@@ -194,4 +194,8 @@ ADAPTER = Adapter(
         f"provider's attribution), authorization spells open at the file's as-of date {AS_OF} "
         "(blank end date), blank cells null, coordinates as float"
     ),
+    citation=(
+        "U.S. Department of Agriculture, Food and Nutrition Administration, SNAP Retailer "
+        f"Locator Historical Data 2005-2025 (as of {AS_OF})."
+    ),
 )

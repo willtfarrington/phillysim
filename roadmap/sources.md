@@ -52,7 +52,8 @@ archived beside the terms page with the first City snapshot.
 - Public-domain inputs impose nothing; carrying ACS columns inside an ODbL
   file creates no conflict.
 - CI validates per-file license labels in `data/public/` **and** site data
-  payloads at the publish gate.
+  payloads at the publish gate (since EP-7: buckets are derived from the
+  sources' manifests, never assigned by hand; `phillysim gate`).
 
 ## Refresh & drift strategy
 

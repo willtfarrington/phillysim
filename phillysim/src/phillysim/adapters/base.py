@@ -23,6 +23,7 @@ from phillysim.download import SnapshotSpec
 STATE_FIPS = "42"  # Pennsylvania
 COUNTY_FIPS = "101"  # Philadelphia County
 COUNTY_GEOID = STATE_FIPS + COUNTY_FIPS
+COUNTY_NAME = "Philadelphia County"
 TRACT_GEOID_PATTERN = rf"{COUNTY_GEOID}\d{{6}}"  # eleven digits, 2020 tracts of the county
 
 #: TIGER/Line and CenPop coordinates are NAD 83 (EPSG:4269), as delivered.

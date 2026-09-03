@@ -1,11 +1,12 @@
 # Data licenses
 
-> **Status: four snapshots acquired (EP-5a and EP-6, 2026-09-02); the
-> publish gate exists (EP-7); nothing published.** The three tract-spine
-> sources and the USDA SNAP retailer file have been acquired into the
-> gitignored raw zone with their terms pages (or, for USDA, the provider's
-> data page in force) archived (dated entries below), and the public zone
-> they feed is built and gated locally but not tracked or deployed. This
+> **Status: five snapshots acquired (EP-5a, EP-6, and EP-8b, 2026-09-02);
+> the publish gate exists (EP-7); nothing published.** The three tract-spine
+> sources, the USDA SNAP retailer file, and the TIGER/Line county roads file
+> for the basemap have been acquired into the gitignored raw zone with their
+> terms pages (or, for USDA, the provider's data page in force) archived
+> (dated entries below), and the public zone they feed is built and gated
+> locally but not tracked or deployed. This
 > document states the licensing rules the project has adopted and gains a
 > per-source record as each source is actually ingested. It mirrors the
 > source matrix in [roadmap/sources.md](../roadmap/sources.md); that matrix
@@ -99,6 +100,7 @@ and SEPTA's terms are re-read and archived at every refresh.
 | USDA SRAM (2025 data, 2020 tracts) | US public domain | comparator |
 | PDPH Neighborhood Food Retail | City terms | comparator (cited, not a metric input) |
 | TIGER/Line 2025 + CenPop2020 | US public domain | committed; acquired 2026-09-02 (records below) |
+| TIGER/Line 2025 roads (basemap) | US public domain | committed; acquired 2026-09-02 (record below; EP-8b) |
 | ACS 5-year 2020–2024 | US public domain (summary file; API terms not engaged) | committed; acquired 2026-09-02 (record below) |
 | City Planning Districts | City terms | committed |
 | SEPTA GTFS | Custom: revocable, redistribution permitted, fees reservable | committed (raw feed never republished) |
@@ -183,10 +185,28 @@ changes, the acquisition stops and the snapshot is quarantined
   December 31, 2025). Store type definitions: USDA "SNAP Store Type
   Definitions" (`https://www.fna.usda.gov/snap/store-definitions`).
 
+### 2026-09-02 — TIGER/Line 2025 county roads, primary and secondary (`tiger_roads`), Bucket A
+
+- **Acquired:** `https://www2.census.gov/geo/tiger/TIGER2025/ROADS/tl_2025_42101_roads.zip`
+  (Philadelphia County, the provider's own county scope; primary and
+  secondary roads, MTFCC S1100 / S1200, kept at read, the local streets
+  dropped), 1,352,071 bytes, stored as delivered. Acquired on 2026-09-03
+  UTC into the pinned `2026-09-02` snapshot beside the other Census
+  sources (EP-8b).
+- **Terms in force:** as for TIGER/Line tracts: US public domain, a work of
+  the United States Government (17 U.S.C. § 105); the same Open Government
+  page archived as `terms.html` and checked for the same sentence; the
+  TIGER/Line 2025 technical documentation, section 1.2, on copyright and
+  citation, and section 1.1 on the TIGER/Line® trademark.
+- **Attribution:** U.S. Census Bureau, TIGER/Line Shapefiles 2025, roads.
+- **Use:** the basemap only ([data card](data-cards/tiger-roads.md)); the
+  published `basemap.geojson` (public schema version 2) carries the
+  Bucket A label like every other file of the zone.
+
 The committed CI samples under `phillysim/tests/fixtures/spine-samples/`
-are subsets of these four snapshots (six Philadelphia County tracts, the
-retailers inside them, plus control rows) and inherit their public-domain
-status; their README says so.
+are subsets of these five snapshots (six Philadelphia County tracts, the
+retailers and major roads inside them, plus control rows) and inherit their
+public-domain status; their README says so.
 
 ## What ships with each snapshot
 

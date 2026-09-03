@@ -28,7 +28,8 @@ is an explicit stub that takes its answers from the fixture generator's oracle
 10. ``metrics`` -> ``curated/tract_metrics.parquet``: population + CV tiers and
     time to nearest (computed).
 11. ``publish`` -> ``public/`` (the whole zone, one atomic install): the public
-    zone through :mod:`phillysim.publish` (EP-7): the analytic table widened
+    zone through :mod:`phillysim.publish` (EP-7; the basemap file with the
+    boundary only since EP-8b, the fixture having no roads source): the analytic table widened
     onto the tracts with build-time bins, the sites as points, per-file license
     labels derived from the eight fixture manifests (Bucket B, because
     ``osm_network`` is Bucket B), CSV escaping, and the publish gate run on the
@@ -111,6 +112,9 @@ FIXTURE_BOUNDS: tuple[float, float, float, float] = (
     round(LAT0 + ROWS * CELL, 6),
 )
 FIXTURE_CITATION = "phillysim tinycity synthetic fixture (no real provider; synthetic data)."
+#: What the fixture's basemap calls its dissolved tract grid (the real pipeline says
+#: "Philadelphia County").
+FIXTURE_BOUNDARY_NAME = "tinycity (synthetic)"
 #: What the fixture's published metrics are (the manifest carries a description per metric).
 DESCRIPTIONS: dict[str, str] = {
     "population_total": (
@@ -456,6 +460,10 @@ def publish(ctx: StageContext) -> None:
         raw_snapshots={source: _raw(source) for source in SOURCES},
         citations=dict.fromkeys(SOURCES, FIXTURE_CITATION),
         descriptions=DESCRIPTIONS,
+        # The fixture has no roads source (EP-8b decided against a synthetic one), so its
+        # basemap is the boundary only; the page handles both shapes.
+        boundary_name=FIXTURE_BOUNDARY_NAME,
+        roads=None,
     )
 
 

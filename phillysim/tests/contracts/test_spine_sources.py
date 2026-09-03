@@ -27,7 +27,8 @@ from phillysim.guards import check_url_allowed
 from phillysim.manifest import read_manifest, verify_snapshot
 from phillysim.quarantine import admit
 
-#: The three spine sources; the SNAP retailer adapter (EP-6) has its own module, test_snap.py.
+#: The three spine sources; the SNAP retailer adapter (EP-6) and the TIGER roads adapter
+#: (EP-8b) have their own modules, test_snap.py and test_tiger_roads.py.
 SOURCES = ("acs", "cenpop", "tiger_tracts")
 SAMPLE_TRACTS = [
     "42101000101",
@@ -48,7 +49,7 @@ def _sample(samples: Path, source: str) -> Path:
 
 def test_registry_matches_the_real_pipeline() -> None:
     assert tuple(sorted(ADAPTERS)) == pipeline.SOURCES
-    assert pipeline.SOURCES == ("acs", "cenpop", "snap_retailers", "tiger_tracts")
+    assert pipeline.SOURCES == ("acs", "cenpop", "snap_retailers", "tiger_roads", "tiger_tracts")
     assert set(SOURCES) < set(pipeline.SOURCES)
     for name, adapter in ADAPTERS.items():
         assert adapter.name == adapter.spec.source == adapter.contract.name == name

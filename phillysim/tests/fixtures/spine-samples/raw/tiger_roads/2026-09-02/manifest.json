@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-09-03T02:57:43Z",
+  "acquisition_url": "https://www2.census.gov/geo/tiger/TIGER2025/ROADS/tl_2025_42101_roads.zip",
+  "acquisition_url_alt": null,
+  "files": {
+    "terms.html": "97b447bbadff1c972a4c6c35530f7e1ed398fe016f4debc6731103b8a52c8097",
+    "tl_2025_42101_roads.zip": "5bf2921d22fc555652b31280a37b10a5fd5d132edad234596890d679e4d52e32"
+  },
+  "license_bucket": "A",
+  "license_note": "US public domain: a work of the United States Government (17 U.S.C. section 105); the Census Bureau publishes its data as open data, freely available for use and re-use, and asks to be cited as the source. TIGER/Line 2025 technical documentation section 1.2: copyright protection is not available for any work of the United States Government; TIGER/Line is a registered trademark of the Census Bureau. County roads file, primary and secondary roads (MTFCC S1100 / S1200) kept at read. CI SAMPLE: 6 Philadelphia County tracts plus control rows, subset from the 2026-09-02 snapshot; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-02",
+  "source": "tiger_roads",
+  "synthetic": false,
+  "terms_archive": "terms.html"
+}

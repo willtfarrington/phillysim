@@ -352,8 +352,8 @@ def site_build(
     out: OutOption = None,
 ) -> None:
     """Build the static slice page: re-run the publish gate on the public zone, copy its files
-    verbatim, derive the county-boundary basemap, lay the page and the vendored MapLibre beside
-    them. Replaces a previous build at the output directory; refuses anything else there.
+    (the basemap among them) verbatim, lay the page and the vendored MapLibre beside them.
+    Replaces a previous build at the output directory; refuses anything else there.
 
     Exit status 1 if the zone fails the gate or there is no zone to build from.
     """
@@ -379,10 +379,8 @@ def site_build(
         raise typer.Exit(code=1) from exc
     for name, digest in sorted(report["public_files"].items()):
         typer.echo(f"ok   data/{name:<16} {digest[:12]}")
-    typer.echo(
-        f"ok   data/{report['basemap']['file']:<16} {report['basemap']['sha256'][:12]} "
-        f"(derived: {', '.join(report['basemap']['layers'])})"
-    )
+    layers = ", ".join(f"{layer} ({n})" for layer, n in report["basemap"]["layers"].items())
+    typer.echo(f"basemap: data/{report['basemap']['file']} holds {layers}")
     typer.echo(
         f"site build: done at {dist} (pipeline {report['pipeline']!r}, "
         f"MapLibre GL JS {report['vendor']['maplibre-gl']['version']}, work in progress)"

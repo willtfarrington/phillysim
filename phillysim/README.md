@@ -49,8 +49,10 @@ phillysim/
                           bounded backoff, capped streaming, archive guards, terms archive,
                           manifest, admission (EP-5a)
     adapters/             real source adapters: base (Adapter, Philadelphia constants),
-                          tiger, cenpop, acs (EP-5a), snap (USDA SNAP retailers, EP-6);
+                          tiger, cenpop, acs (EP-5a), snap (USDA SNAP retailers, EP-6),
+                          tiger_roads (TIGER county roads for the basemap, EP-8b);
                           ADAPTERS registry
+    basemap.py            the basemap's roads layer on the spine and its invariants (EP-8b)
     classify/             project-derived, format-based classifications: store_format
                           (USDA store type -> format class, the packaged, versioned
                           mapping table rendered into docs/method-cards/) (EP-6)
@@ -61,12 +63,13 @@ phillysim/
     publish/              the publication boundary: bucket (ADR-0003 labels derived from
                           the sources), bins (build-time classes), export (the public
                           zone: labeled, escaped, deterministic GeoJSON + CSV + manifest),
-                          gate (what must hold before anything leaves curated) (EP-7);
-                          sitebuild (the slice page built from a gated zone, the county
-                          boundary, the local dev server) (EP-8a)
+                          gate (what must hold before anything leaves curated) (EP-7;
+                          the basemap file and public schema version 2, EP-8b);
+                          sitebuild (the slice page built from a gated zone, the local
+                          dev server) (EP-8a)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
-                          `demographics` (EP-5b), `snap_retailers` (EP-6), `metrics` +
-                          `publish` (EP-7) on the pinned snapshots
+                          `demographics` (EP-5b), `snap_retailers` (EP-6), `basemap`
+                          (EP-8b), `metrics` + `publish` (EP-7) on the pinned snapshots
     spine.py              the curated tract spine, the analysis CRS (ADR-0007), and the
                           geospatial invariants every later packet inherits (EP-5b)
     contracts.py          source-contract harness (schema/license/geometry) + the
@@ -92,21 +95,29 @@ phillysim/
                                 the method card it renders into (EP-6)
     test_destinations.py        the SNAP retailer layer on the samples and its invariants,
                                 one negative per check (EP-6)
+    test_basemap.py             the basemap roads layer on the samples and its invariants,
+                                one negative per check, the stage body; the real layer with
+                                `--real-data-root DIR` (EP-8b)
     test_slice_metric.py        the QA slice metric: golden distances by hand, a brute-force
                                 check on the samples, the rules that keep it QA-only (EP-7)
     test_publish.py             buckets, bins, escaping, the export, and the publish gate:
-                                green on the fixture's zone, one negative per check (EP-7)
-    test_sitebuild.py           the site build: verbatim copies, boundary geometry, vendored
-                                digests, determinism, refusals, CLI, the dev server (EP-8a)
-    test_site_browser.py        the fixture-built page in the machine's own Chrome or Edge:
-                                Playwright + axe, keyboard, reflow, fallbacks (EP-8a)
-    contracts/            harness unit tests; tinycity sources; the three spine sources and
-                          the SNAP retailer source on the committed samples (EP-5a, EP-6)
+                                green on the fixture's zone, one negative per check (EP-7);
+                                the basemap file and its gate rules (EP-8b)
+    test_sitebuild.py           the site build: verbatim copies (the basemap among them),
+                                vendored digests, determinism, refusals, CLI, the dev
+                                server (EP-8a, EP-8b)
+    test_site_browser.py        the fixture-built page and the sample-built real page in
+                                the machine's own Chrome or Edge: Playwright + axe,
+                                keyboard, reflow, fallbacks, the basemap's measured
+                                contrast table (EP-8a, EP-8b)
+    contracts/            harness unit tests; tinycity sources; the three spine sources,
+                          the SNAP retailer source, and the TIGER roads source on the
+                          committed samples (EP-5a, EP-6, EP-8b)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
-                          real pipeline's seven stages on a fake transport (EP-5a–EP-7)
+                          real pipeline's eight stages on a fake transport (EP-5a–EP-8b)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
-    fixtures/spine-samples/     real-shaped, public-domain subsets of the four real
+    fixtures/spine-samples/     real-shaped, public-domain subsets of the five real
                                 snapshots + the script that cuts them (README explains)
 ```
 
@@ -224,16 +235,19 @@ name `real`) on the resolved data root. It shares the fixture pipeline's
 stage names, zones, and output paths where the two overlap, so the
 architecture.md stage table describes both, but the two never meet: the
 state file records its pipeline's name and refuses the other one, and the
-roots differ (`<data root>/` versus `<data root>/fixture/`). Five stages
-exist so far: `acquire` and `validate` (EP-5a), `spine` and `demographics`
+roots differ (`<data root>/` versus `<data root>/fixture/`). Eight stages
+exist: `acquire` and `validate` (EP-5a), `spine` and `demographics`
 (EP-5b), `snap_retailers` (EP-6; the first per-source destination layer,
-which the fixture pipeline has no counterpart for).
+which the fixture pipeline has no counterpart for), `basemap` (EP-8b; the
+roads layer of the basemap, likewise real-only), and `metrics` and
+`publish` (EP-7, EP-8b).
 
 - `acquire` brings in the pinned snapshot (`phillysim.pipeline.SNAPSHOT_ID`,
   currently `2026-09-02`) of each registered source: TIGER/Line 2025 tracts
   (`tiger_tracts`), CenPop2020 tract centers (`cenpop`), the ACS 5-year
-  2020–2024 tables B01003 and B08201 (`acs`), and the USDA SNAP Retailer
-  Locator historical file (`snap_retailers`, EP-6), each into
+  2020–2024 tables B01003 and B08201 (`acs`), the USDA SNAP Retailer
+  Locator historical file (`snap_retailers`, EP-6), and the TIGER/Line 2025
+  county roads file (`tiger_roads`, EP-8b), each into
   `raw/<source>/<snapshot-id>/` with the archived terms page (for USDA, the
   provider's data page in force) and a manifest. A snapshot already in the
   raw zone is verified and re-used, never re-downloaded (and never replaced:
@@ -273,15 +287,24 @@ which the fixture pipeline has no counterpart for).
   the layer's invariants on its output and writes a count report to
   `intermediate/snap_retailers.json`. Its parameters are `crs`,
   `mapping_version`, and `as_of`.
+- `basemap` (EP-8b, `phillysim.basemap`) builds `curated/basemap_roads.parquet`
+  (GeoParquet, analysis CRS): the county's primary and secondary roads from
+  the TIGER/Line county roads file (the adapter keeps MTFCC S1100 / S1200
+  at read; 426 roads, 1,044 km), the provider's geometry reprojected and
+  nothing else, keyed by `linearid` with `name`, `mtfcc`, and `route_type`;
+  it enforces the layer's invariants against the spine (every road touches a
+  tract, none outside the county bounds) and writes
+  `intermediate/basemap.json`. Its parameters are `crs` and `road_classes`.
+  The county boundary needs no stage: `publish` dissolves the spine.
 
-`phillysim run` (or `run --stage snap_retailers`) needs the network once
-(about 121 MB: 97 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
+`phillysim run` (or `run --stage basemap`) needs the network once (about
+122 MB: 98 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
 `www.fna.usda.gov`, seconds on a fast connection) and the real-run preflight
 thresholds; afterwards `run`, `status`, and `verify` are offline and take a
 few seconds each. The invariants can be re-run on a real data root by hand:
 
 ```
-uv run pytest tests/test_spine_invariants.py --real-data-root ../data -s
+uv run pytest tests/test_spine_invariants.py tests/test_basemap.py --real-data-root ../data -s
 ```
 
 CI never passes `--real-data-root`; those tests skip without it and the rest
@@ -322,8 +345,11 @@ declared output is the whole `public/` directory, so the runner installs or
 replaces the zone atomically and a failure leaves nothing behind. The stage
 widens the analytic table onto the tracts (one column group per metric:
 estimate, MOE, CV tier, reliability action, and a build-time class bin whose
-edges are recorded in the manifest), writes the facility points, reprojects
-everything to WGS 84, escapes CSV cells against spreadsheet formulas, labels
+edges are recorded in the manifest), writes the facility points, writes the
+basemap (`basemap.geojson`, public schema version 2 since EP-8b: the county
+boundary dissolved from the spine and, on the real pipeline, the curated
+roads, one `layer` per feature), reprojects everything to WGS 84, escapes
+CSV cells against spreadsheet formulas, labels
 every file with the license bucket *derived* from its sources' manifests
 (ADR-0003: Bucket B if any source is; the fixture's zone is Bucket B because
 its synthetic `osm_network` is, the real slice's is Bucket A / CC BY 4.0),
@@ -355,19 +381,21 @@ the gate enforces the flag that says so
 ([method card](../docs/method-cards/qa-straight-line.md)). Nothing under any
 `public/` zone is committed or deployed.
 
-## The slice page (EP-8a)
+## The slice page (EP-8a, EP-8b)
 
 The repository root's [`site/`](../site/README.md) holds the page sources
 (vanilla ES module + vendored MapLibre GL JS) and `phillysim site build`
 turns a **gated** public zone into a static site under `site/dist/`
-(gitignored): the gate is re-run, the five public files are copied byte for
-byte, the county boundary is derived from the published tracts as the
-basemap's first cut, and `site.json` records every digest; the build is
-deterministic. `phillysim site serve` serves it on loopback. The page reads
-`manifest.json` for everything it shows (columns, descriptions, bin edges,
-the QA note, sources and snapshot IDs, license and attribution) and makes no
-request to any other host. It is labeled work in progress and is not
-deployed (roadmap open question OQ-H).
+(gitignored): the gate is re-run, the six public files are copied byte for
+byte (the basemap, county boundary plus TIGER major roads, is one of them
+since EP-8b; nothing is derived at build time), and `site.json` records
+every digest; the build is deterministic. `phillysim site serve` serves it
+on loopback. The page reads `manifest.json` for everything it shows
+(columns, descriptions, bin edges, the QA note, sources and snapshot IDs,
+license and attribution, the basemap's layer counts) and makes no request
+to any other host; the roads are drawn in a gray whose contrast ratios are
+measured by a test and tabulated in the site README. It is labeled work in
+progress and is not deployed (roadmap open question OQ-H).
 
 ```
 uv run phillysim site build --fixture    # from data/fixture/public/
@@ -421,6 +449,18 @@ the two CSVs 38 KB; `manifest.json` 6 KB), well under the "sub-MB gzipped"
 size architecture.md sizes the site's payload at; the data root is 118 MB.
 `phillysim gate` on the real zone takes about 1 s. The test suite is
 400 tests in about 15 s (the fixture pipeline is built several times).
+
+The basemap roads (EP-8b, 2026-09-03 UTC, same machine): on the existing
+data root `phillysim run` re-ran `acquire` (7.2 s, the roads zip 1.35 MB in
+0.3 s plus its terms page, the four other snapshots re-used), `validate`
+(3.3 s), `spine` and `snap_retailers` (their `validation.json` input
+changed; byte-identical outputs), `basemap` (0.3 s), and `publish` (0.6 s;
+the schema bump made it stale on parameters); about 15 s wall. The raw zone
+gains 1.7 MB (data root 120 MB); `curated/basemap_roads.parquet` is 272 KB;
+`public/basemap.geojson` is 589 KB (140 KB gzipped), so the whole zone is
+1.5 MB (about 330 KB gzipped) and the built site 2.8 MB. The suite grows
+to 461 tests in about 30 s, the sample-built real zone and its browser run
+included.
 
 ## Decisions this package honors
 

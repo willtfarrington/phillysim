@@ -19,7 +19,7 @@ this matrix ships with the repo.
 | City Planning Districts | Context geography | City terms | committed | |
 | SEPTA GTFS | Transit schedules for routing | Custom: revocable, redistribution permitted, fees reservable | committed | Pin release tags; never republish the raw feed; re-read terms each refresh; derived aggregates position: matrices contain no feed contents — computed travel times are facts (documented in DATA-LICENSES) |
 | OSM via Geofabrik | Street network; supermarket cross-check | ODbL | committed | Share-alike: see license buckets below |
-| Basemap (v1) | Minimal public-domain cartography from TIGER/city boundaries + roads | US public domain / City terms | committed | AM-5; PMTiles upgrade gated (scope.md) |
+| Basemap (v1) | Minimal public-domain cartography: county boundary (dissolved from the TIGER tract spine) + TIGER/Line 2025 primary and secondary roads (`tiger_roads`, the county roads file filtered to MTFCC S1100 / S1200) | US public domain | committed; acquired 2026-09-02 (EP-8b); published as `basemap.geojson` (public schema 2) | AM-5; no City layer needed for v1; PMTiles upgrade gated (scope.md, OQ-F) |
 | Archived Philly Food Access 2012–14 | — | — | excluded | Stale; provider marks non-comparable |
 | CostQuest BDC Fabric | — | Licensed, BDC-purposes-only | excluded | Not needed |
 | NPPES pharmacy locations | Future pharmacy-access module | US public domain | gated | |

@@ -18,9 +18,11 @@ for (its ``destinations`` stage reads its fake sources directly); EP-7 adds
 ``metrics`` (body in :mod:`phillysim.metrics.slice`: the QA-only straight-line
 slice metric, the analytic table's first real instance) and ``publish`` (the
 public zone through :mod:`phillysim.publish`: license-labeled, binned, escaped
-GeoJSON + CSV, gated before install); later packets append the rest
-(``destinations`` .. ``travel_times`` between ``snap_retailers`` and
-``metrics`` at M3 / M4).
+GeoJSON + CSV, gated before install); EP-8b adds the ``tiger_roads`` source
+and the ``basemap`` stage (body in :mod:`phillysim.basemap`: the major roads
+in the analysis CRS) and publishes the basemap file beside the rest (public
+schema version 2); later packets append the rest (``destinations`` ..
+``travel_times`` between ``snap_retailers`` and ``metrics`` at M3 / M4).
 
 Snapshot IDs are pinned in :data:`SNAPSHOT_ID` rather than taken from the
 clock, because a stage's outputs are static paths in the DAG. ``acquire``
@@ -43,8 +45,9 @@ from typing import Any
 import geopandas as gpd
 import pandas as pd
 
-from phillysim.adapters import ADAPTERS, cenpop, snap, tiger
-from phillysim.adapters.base import COUNTY_BOUNDS
+from phillysim.adapters import ADAPTERS, cenpop, snap, tiger, tiger_roads
+from phillysim.adapters.base import COUNTY_BOUNDS, COUNTY_NAME
+from phillysim.basemap import BASEMAP_REPORT, ROADS, basemap
 from phillysim.classify.store_format import MAPPING_VERSION
 from phillysim.contracts import check_frame
 from phillysim.destinations import SNAP_REPORT, SNAP_RETAILERS, snap_retailers
@@ -64,8 +67,11 @@ RAW_SNAPSHOTS: tuple[str, ...] = tuple(f"raw/{source}/{SNAPSHOT_ID}" for source 
 ACQUISITION = "intermediate/acquisition.json"
 VALIDATION = "intermediate/validation.json"
 #: The sources the public zone is derived from (its provenance and its license bucket): the
-#: spine's geometry and centers, and the SNAP layer. ACS feeds nothing published until M5.
-PUBLISH_SOURCES: tuple[str, ...] = tuple(sorted((cenpop.SOURCE, snap.SOURCE, tiger.SOURCE)))
+#: spine's geometry and centers, the SNAP layer, and the basemap's roads (EP-8b). ACS feeds
+#: nothing published until M5.
+PUBLISH_SOURCES: tuple[str, ...] = tuple(
+    sorted((cenpop.SOURCE, snap.SOURCE, tiger.SOURCE, tiger_roads.SOURCE))
+)
 
 
 def _raw(source: str) -> str:
@@ -168,11 +174,14 @@ def validate(ctx: StageContext) -> None:
 
 def publish(ctx: StageContext) -> None:
     """The public zone (EP-7): the tracts with the QA slice metric and its bins, the
-    supermarket-format points the metric was computed against, per-file license labels
-    derived from the three sources' manifests, gated before the runner installs it."""
+    supermarket-format points the metric was computed against, the basemap (EP-8b: the
+    county boundary dissolved from the spine and the curated major roads), per-file
+    license labels derived from the sources' manifests, gated before the runner installs
+    it."""
     metrics = pd.read_parquet(ctx.input(qa_slice.TRACT_METRICS))
     spine_frame = gpd.read_parquet(ctx.input(SPINE))
     layer = gpd.read_parquet(ctx.input(SNAP_RETAILERS))
+    roads = gpd.read_parquet(ctx.input(ROADS))
     ctx.checkpoint()
     chosen = layer[layer["supermarket_format"].astype(bool)]
     sites = gpd.GeoDataFrame(
@@ -195,6 +204,8 @@ def publish(ctx: StageContext) -> None:
         raw_snapshots={source: _raw(source) for source in PUBLISH_SOURCES},
         citations={source: ADAPTERS[source].citation for source in PUBLISH_SOURCES},
         descriptions=qa_slice.DESCRIPTIONS,
+        boundary_name=COUNTY_NAME,
+        roads=roads,
     )
 
 
@@ -264,6 +275,18 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 "assignment, stable site IDs, invariants enforced",
             ),
             Stage(
+                "basemap",
+                basemap,
+                inputs=(SPINE, _raw(tiger_roads.SOURCE), VALIDATION),
+                outputs=(ROADS, BASEMAP_REPORT),
+                params={
+                    "crs": ANALYSIS_CRS,
+                    "road_classes": sorted(tiger_roads.MAJOR_ROAD_CLASSES),
+                },
+                description="basemap roads layer: TIGER primary and secondary roads in the "
+                "analysis CRS, invariants enforced against the spine",
+            ),
+            Stage(
                 "metrics",
                 qa_slice.metrics,
                 inputs=(SPINE, SNAP_RETAILERS),
@@ -284,6 +307,7 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                     qa_slice.TRACT_METRICS,
                     SPINE,
                     SNAP_RETAILERS,
+                    ROADS,
                     *(_raw(source) for source in PUBLISH_SOURCES),
                 ),
                 outputs=(export.PUBLIC_ZONE,),
@@ -294,8 +318,8 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                     "bin_classes": bins.BIN_CLASSES,
                     "bin_method": bins.BIN_METHOD,
                 },
-                description="public zone: license-labeled, binned, escaped GeoJSON + CSV, "
-                "gated before install",
+                description="public zone: license-labeled, binned, escaped GeoJSON + CSV "
+                "with the basemap, gated before install",
             ),
         ],
     )

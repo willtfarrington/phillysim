@@ -45,7 +45,8 @@ were all resolved before this roadmap was drafted.
   by the EP-9 pre-read on 2026-09-02; EP-6 and EP-7 were each read at
   pickup the same day, judged to fit one session, and did; EP-8 was read at
   pickup the same day and split into EP-8a / EP-8b (the page versus a new
-  roads source for the basemap). No M packet remains.
+  roads source for the basemap); each half fit one session. No M packet
+  remains.
 - **L** is no longer a valid packet size. The one L packet, EP-4, was split
   on 2026-09-02 into EP-4a and EP-4b at the engine/runner boundary its own
   brief allowed.
@@ -124,9 +125,16 @@ refinement gate, and takes the next free integer.
 |---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
 
-### M2 — Spine + first source end-to-end · `[ ]`
+### M2 — Spine + first source end-to-end · `[x] EP8B_COMMIT`
 
 Go/no-go: slice reproducible from a fresh clone; license buckets applied.
+Met 2026-09-03 with EP-8b: the eight-stage real pipeline reproduces the
+public zone byte for byte from a fresh clone (digests in the EP-7 and EP-8b
+handoffs), every public file carries the bucket derived from its sources
+and passes the gate (Bucket A / CC BY 4.0 on the real slice, Bucket B on
+the fixture, both gated in CI), and the minimal page renders the zone over
+the ADR-0005 basemap (county boundary plus TIGER major roads) with axe and
+the browser tests green on both platforms.
 Each M-sized packet is read at pickup and split (convention above) if it
 will not fit one session. EP-9 did that pre-read for EP-5 on 2026-09-02 and
 split it into EP-5a / EP-5b; the EP-8 pickup did the same on 2026-09-02 and
@@ -140,22 +148,23 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [x] 907f8f8 |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [x] bf9df7f |
 | EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
-| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [ ] |
+| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [~] |
 
 ### M3–M8 · `[ ]` refinement gates pending
 
-No packet files exist yet. After EP-8, the M3 (routing spike) and M4 (full
-ingest) refinement gates author their packets from
-[_TEMPLATE.md](_TEMPLATE.md) — carry-ins first — as S packets, one session
-each, numbered from the next free integer. Later gates follow the same
-procedure.
+No packet files exist yet. With M2 done, the second checkpoint comes first
+(the next free integer, EP-10; see "Checkpoints" above), then the M3
+(routing spike) and M4 (full ingest) refinement gates author their packets
+from [_TEMPLATE.md](_TEMPLATE.md) — carry-ins first — as S packets, one
+session each, numbered from the next free integer after it. Later gates
+follow the same procedure.
 
 ## Phase overview
 
 | Phase | Milestones | Outcome | Status |
 |---|---|---|---|
 | Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [x] M0 and M1 done |
-| First data | M2 | Real geography + first source end-to-end, reproducibly | [ ] |
+| First data | M2 | Real geography + first source end-to-end, reproducibly | [x] M2 done |
 | Routing | M3 | Travel-time spike passed or walk-only fallback invoked | [ ] |
 | Full ingest | M4 | All v1 sources snapshotted, conflated, hours-parsed | [ ] |
 | Metrics | M5 | Access metrics + uncertainty + validation vs SRAM | [ ] |

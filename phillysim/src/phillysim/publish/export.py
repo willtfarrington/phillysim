@@ -1,6 +1,7 @@
 """The public-zone export: analytic table -> license-labeled, binned, escaped GeoJSON + CSV.
 
-Public schema version 1 (docs/data-dictionary.md, "Public zone"). One call,
+Public schema version 2 (docs/data-dictionary.md, "Public zone"; version 1 was
+EP-7's, version 2 adds the basemap file, EP-8b). One call,
 :func:`build_public_zone`, writes the whole zone into a directory:
 
 - ``tracts.geojson`` / ``tracts.csv``: one row per spine tract (``geoid``,
@@ -10,10 +11,16 @@ Public schema version 1 (docs/data-dictionary.md, "Public zone"). One call,
   class, :mod:`phillysim.publish.bins`);
 - ``sites.geojson`` / ``sites.csv``: the facility points the metrics were
   computed against (already public upstream), keyed by site ID;
+- ``basemap.geojson``: ADR-0005's minimal public-domain basemap as one file
+  with a ``layer`` property per feature: the ``county_boundary`` (one polygon,
+  the spine's tract polygons dissolved) and the ``roads`` (the curated major
+  roads layer, :mod:`phillysim.basemap`, as lines; absent when the pipeline
+  has no roads source, as the fixture has not), keyed by ``feature_id``;
 - ``manifest.json``: the label registry the gate checks: every file's bucket
   (derived from its sources' manifests, :mod:`phillysim.publish.bucket`),
   license, attribution, digest, and row count; the sources with their snapshot
-  IDs; the published fields with descriptions; the bin edges; the bounds.
+  IDs; the published fields with descriptions; the bin edges; the bounds; the
+  basemap's layers with their feature counts.
 
 Every GeoJSON file also carries the label in-file (top-level ``license`` and
 ``attribution`` members; RFC 7946 permits foreign members) so the label travels
@@ -44,22 +51,39 @@ from phillysim.contracts import ANALYTIC_TABLE, check_frame
 from phillysim.manifest import read_manifest, sha256_file
 from phillysim.publish import bins as binning
 from phillysim.publish.bucket import derive_bucket, label_of
-from phillysim.publish.gate import PublishGateError, check_public_zone
+from phillysim.publish.gate import (
+    BASEMAP_COLUMNS,
+    COUNTY_BOUNDARY_LAYER,
+    PUBLIC_SCHEMA_VERSION,
+    ROADS_LAYER,
+    PublishGateError,
+    check_public_zone,
+)
 from phillysim.stages import StageContext
 
 PUBLIC_ZONE = "public"
 PUBLIC_CRS = "EPSG:4326"
-PUBLIC_SCHEMA_VERSION = 1
 PUBLIC_MANIFEST = "manifest.json"
 TRACTS_GEOJSON = "tracts.geojson"
 TRACTS_CSV = "tracts.csv"
 SITES_GEOJSON = "sites.geojson"
 SITES_CSV = "sites.csv"
-PUBLIC_FILES: tuple[str, ...] = (TRACTS_GEOJSON, TRACTS_CSV, SITES_GEOJSON, SITES_CSV)
+BASEMAP_GEOJSON = "basemap.geojson"
+PUBLIC_FILES: tuple[str, ...] = (
+    TRACTS_GEOJSON,
+    TRACTS_CSV,
+    SITES_GEOJSON,
+    SITES_CSV,
+    BASEMAP_GEOJSON,
+)
 
 TRACT_BASE_COLUMNS: tuple[str, ...] = ("geoid", "name", "population")
 SITE_COLUMNS: tuple[str, ...] = ("site_id", "source", "category", "name", "geoid")
 SITE_CSV_COLUMNS: tuple[str, ...] = (*SITE_COLUMNS, "longitude", "latitude")
+#: The curated roads layer's columns the basemap file publishes (``phillysim.basemap``).
+ROAD_COLUMNS: tuple[str, ...] = ("linearid", "name", "mtfcc", "route_type")
+#: The feature ID prefix of a road in the basemap file (``roads:<LINEARID>``).
+ROAD_ID_PREFIX = f"{ROADS_LAYER}:"
 FIELD_COMPANIONS: tuple[str, ...] = ("moe", "cv_tier", "reliability_action", "bin")
 COORDINATE_DECIMALS = 6
 
@@ -280,6 +304,66 @@ def source_records(
     return records
 
 
+# --- the basemap ---------------------------------------------------------------------------
+
+
+def basemap_features(
+    spine: gpd.GeoDataFrame,
+    roads: gpd.GeoDataFrame | None,
+    *,
+    boundary_name: str,
+) -> gpd.GeoDataFrame:
+    """The basemap as one table in WGS 84, one row per feature, ``feature_id`` unique:
+    first the county boundary (the spine's polygons dissolved in their own CRS, which is
+    the projected analysis CRS for the real pipeline), then the roads sorted by identifier.
+
+    Every row carries the same columns (:data:`BASEMAP_COLUMNS`); the boundary's road
+    columns are null. ``roads`` may be ``None`` (a pipeline without a roads source).
+    """
+    if len(spine) == 0:
+        raise PublishError("spine holds no tract polygons to dissolve into a boundary")
+    boundary = spine.geometry.union_all()
+    if boundary.geom_type not in {"Polygon", "MultiPolygon"}:
+        raise PublishError(f"the dissolved spine is a {boundary.geom_type}, not a polygon")
+    frames = [
+        gpd.GeoDataFrame(
+            {
+                "feature_id": pd.array([COUNTY_BOUNDARY_LAYER], dtype="string"),
+                "layer": pd.array([COUNTY_BOUNDARY_LAYER], dtype="string"),
+                "name": pd.array([str(boundary_name)], dtype="string"),
+                **{
+                    column: pd.array([None], dtype="string")
+                    for column in ROAD_COLUMNS
+                    if column != "name"
+                },
+            },
+            geometry=[boundary],
+            crs=spine.crs,
+        ).to_crs(PUBLIC_CRS)
+    ]
+    if roads is not None and len(roads):
+        missing = [column for column in ROAD_COLUMNS if column not in roads.columns]
+        if missing:
+            raise PublishError(f"roads lack public column(s) {missing}")
+        if roads["linearid"].isna().any() or roads["linearid"].astype(str).duplicated().any():
+            raise PublishError("road identifiers must be present and unique")
+        lines = gpd.GeoDataFrame(
+            {
+                "feature_id": pd.array(
+                    ROAD_ID_PREFIX + roads["linearid"].astype(str), dtype="string"
+                ),
+                "layer": pd.array([ROADS_LAYER] * len(roads), dtype="string"),
+                **{column: roads[column].astype("string").to_numpy() for column in ROAD_COLUMNS},
+            },
+            geometry=roads.geometry.to_numpy(),
+            crs=roads.crs,
+        ).to_crs(PUBLIC_CRS)
+        frames.append(lines.sort_values("feature_id", kind="stable"))
+    table = pd.concat(frames, ignore_index=True)
+    frame = gpd.GeoDataFrame(table, geometry="geometry", crs=PUBLIC_CRS)
+    return frame[[*BASEMAP_COLUMNS, "geometry"]].reset_index(drop=True)
+
+
 # --- the zone ------------------------------------------------------------------------------
 
 
@@ -302,15 +386,19 @@ def build_public_zone(
     sources: list[dict[str, Any]],
     descriptions: Mapping[str, str],
     bounds: tuple[float, float, float, float],
+    boundary_name: str,
+    roads: gpd.GeoDataFrame | None = None,
     decimals: int = COORDINATE_DECIMALS,
     classes: int = binning.BIN_CLASSES,
     method: str = binning.BIN_METHOD,
 ) -> dict[str, Any]:
     """Write the whole public zone into ``out`` (an existing, empty directory) and gate it.
 
-    Returns the public manifest. Raises :class:`PublishError` for inputs that cannot be
-    published and :class:`~phillysim.publish.gate.PublishGateError` if the written zone
-    fails the gate (in which case the caller must not install it).
+    ``boundary_name`` names the dissolved spine in the basemap file; ``roads`` is the
+    curated roads layer (``None`` publishes a boundary-only basemap). Returns the public
+    manifest. Raises :class:`PublishError` for inputs that cannot be published and
+    :class:`~phillysim.publish.gate.PublishGateError` if the written zone fails the gate
+    (in which case the caller must not install it).
     """
     if not sources:
         raise PublishError("a public zone needs at least one source to derive its bucket from")
@@ -363,6 +451,14 @@ def build_public_zone(
     points["latitude"] = points.geometry.y.round(decimals)
     points = points[[*SITE_CSV_COLUMNS, "geometry"]]
 
+    # Basemap: the boundary from the spine, the roads from the curated layer.
+    basemap = basemap_features(spine, roads, boundary_name=boundary_name)
+    layer_counts = {
+        layer: int((basemap["layer"] == layer).sum())
+        for layer in (COUNTY_BOUNDARY_LAYER, ROADS_LAYER)
+        if (basemap["layer"] == layer).any()
+    }
+
     # Labels: derived from the sources, identical for every file of the zone.
     bucket = derive_bucket(record["license_bucket"] for record in sources)
     label = label_of(bucket).payload()
@@ -413,6 +509,19 @@ def build_public_zone(
         len(points),
         csv_bytes(points.drop(columns=["geometry"])),
     )
+    payloads[BASEMAP_GEOJSON] = (
+        "basemap",
+        "geojson",
+        len(basemap),
+        json_bytes(
+            feature_collection(
+                basemap,
+                key="feature_id",
+                decimals=decimals,
+                members={**members, "table": "basemap"},
+            )
+        ),
+    )
 
     out.mkdir(parents=True, exist_ok=True)
     files: dict[str, Any] = {}
@@ -437,7 +546,12 @@ def build_public_zone(
         "sources": sources,
         "fields": fields,
         "bins": bins,
-        "columns": {"tracts": columns, "sites": list(SITE_CSV_COLUMNS)},
+        "columns": {
+            "tracts": columns,
+            "sites": list(SITE_CSV_COLUMNS),
+            "basemap": list(BASEMAP_COLUMNS),
+        },
+        "basemap": {"file": BASEMAP_GEOJSON, "layers": layer_counts},
         "files": files,
     }
     if any(field["qa_only"] for field in fields):
@@ -460,10 +574,13 @@ def publish_zone(
     raw_snapshots: Mapping[str, str],
     citations: Mapping[str, str],
     descriptions: Mapping[str, str],
+    boundary_name: str,
+    roads: gpd.GeoDataFrame | None = None,
 ) -> dict[str, Any]:
     """The ``publish`` stage body shared by both pipelines: provenance from the declared raw
     snapshot inputs, parameters from the stage, the zone written to the stage's single
-    output (the ``public`` directory, installed atomically by the runner)."""
+    output (the ``public`` directory, installed atomically by the runner). ``roads`` is
+    the curated roads layer for the basemap, or ``None`` for a boundary-only basemap."""
     if int(ctx.params["public_schema_version"]) != PUBLIC_SCHEMA_VERSION:
         raise PublishError(
             f"stage parameter public_schema_version {ctx.params['public_schema_version']!r} != "
@@ -484,6 +601,8 @@ def publish_zone(
         sources=sources,
         descriptions=descriptions,
         bounds=tuple(float(b) for b in ctx.params["bounds"]),  # type: ignore[arg-type]
+        boundary_name=boundary_name,
+        roads=roads,
         decimals=int(ctx.params["coordinate_decimals"]),
         classes=int(ctx.params["bin_classes"]),
         method=str(ctx.params["bin_method"]),

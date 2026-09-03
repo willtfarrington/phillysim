@@ -5,12 +5,12 @@ site") renders the public zone and nothing else. :func:`build_site` takes the
 installed ``public/`` directory of either pipeline, re-runs the publish gate on
 it (a zone that fails the gate is never built into a site), copies its files
 **verbatim** into ``<out>/data/`` (digests re-checked against the manifest, so
-map, table, and download are the same bytes), derives the one basemap layer the
-page needs so far, the county boundary (the union of the published tract
-polygons: ADR-0005's minimal public-domain basemap, first cut; the roads layer is
-EP-8b), and lays the page sources and the vendored MapLibre GL JS beside them.
-Nothing in the built site refers to any host but its own: no tiles, fonts,
-scripts, or analytics are fetched at runtime.
+map, table, and download are the same bytes; since EP-8b the basemap,
+ADR-0005's county boundary plus major roads, is one of those public files
+rather than something derived here), and lays the page sources and the
+vendored MapLibre GL JS beside them. Nothing in the built site refers to any
+host but its own: no tiles, fonts, scripts, or analytics are fetched at
+runtime.
 
 The build is deterministic: every byte comes from the zone, the sources, and
 the vendored library, so a rebuilt site is byte-identical and ``site.json``
@@ -31,27 +31,18 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from shapely.geometry import shape
-from shapely.ops import unary_union
-
 from phillysim.config import find_repo_root
 from phillysim.manifest import sha256_file
-from phillysim.publish.export import (
-    PUBLIC_FILES,
-    PUBLIC_MANIFEST,
-    TRACTS_GEOJSON,
-    geometry_member,
-    json_bytes,
-)
+from phillysim.publish.export import BASEMAP_GEOJSON, PUBLIC_FILES, PUBLIC_MANIFEST, json_bytes
 from phillysim.publish.gate import check_public_zone
 
-SITE_SCHEMA_VERSION = 1
+#: 1 was EP-8a's (the boundary derived at build time); 2 takes the basemap from the zone.
+SITE_SCHEMA_VERSION = 2
 SITE_DIR_NAME = "site"
 DIST_DIR_NAME = "dist"
 DATA_DIR_NAME = "data"
 VENDOR_DIR_NAME = "vendor"
 SITE_MANIFEST = "site.json"
-BASEMAP_GEOJSON = "basemap.geojson"
 #: The page sources copied from ``site/`` (everything else there is documentation).
 PAGE_FILES: tuple[str, ...] = ("index.html", "main.js", "styles.css")
 #: The vendored map library, pinned in ``site/vendor/maplibre-gl/VENDOR.md``.
@@ -64,7 +55,6 @@ MAPLIBRE_FILES: tuple[str, ...] = (
     "LICENSE.txt",
 )
 MAPLIBRE_VERSION = "6.7.0"
-COUNTY_BOUNDARY_LAYER = "county_boundary"
 
 #: MIME types the standard server does not know (or knows wrongly) that the page needs.
 MIME_TYPES: dict[str, str] = {
@@ -95,39 +85,6 @@ def site_source_dir(start: Path | None = None) -> Path:
     raise SiteBuildError(f"no site sources found ({SITE_DIR_NAME}/{PAGE_FILES[0]} is missing)")
 
 
-def county_boundary(tracts: dict[str, Any], *, decimals: int) -> dict[str, Any]:
-    """The union of the published tract polygons as one FeatureCollection (one feature: the
-    county boundary), carrying the tract file's license and attribution members in-file.
-
-    Derived from the public file only, so its label is the tract file's label (the same
-    sources, the same bucket); the page draws it as the basemap's boundary line.
-    """
-    polygons = [
-        shape(feature["geometry"])
-        for feature in tracts["features"]
-        if feature.get("geometry") is not None
-    ]
-    if not polygons:
-        raise SiteBuildError(f"{TRACTS_GEOJSON} holds no geometry to derive a boundary from")
-    union = unary_union(polygons)
-    feature = {
-        "type": "Feature",
-        "id": COUNTY_BOUNDARY_LAYER,
-        "geometry": geometry_member(union, decimals),
-        "properties": {"layer": COUNTY_BOUNDARY_LAYER, "tracts": len(polygons)},
-    }
-    return {
-        "type": "FeatureCollection",
-        "license": tracts["license"],
-        "attribution": tracts["attribution"],
-        "pipeline": tracts["pipeline"],
-        "public_schema_version": tracts["public_schema_version"],
-        "derived_from": TRACTS_GEOJSON,
-        "layer": COUNTY_BOUNDARY_LAYER,
-        "features": [feature],
-    }
-
-
 def _copy_checked(src: Path, dst: Path, expected_sha256: str) -> None:
     shutil.copyfile(src, dst)
     actual = sha256_file(dst)
@@ -149,7 +106,8 @@ def build_site(
     Runs the publish gate on the zone first (``bounds`` as for :func:`check_public_zone`)
     and refuses a zone that fails it. Returns the site manifest also written to
     ``<out>/site.json``: the schema version, the pipeline, the public files with their
-    digests, the basemap record, the page and vendor files with their digests.
+    digests, the basemap record (the zone's file and its layer counts), the page and
+    vendor files with their digests.
     """
     source = site_source_dir() if source is None else source
     problems = check_public_zone(public, bounds=bounds)
@@ -184,10 +142,6 @@ def build_site(
                 _copy_checked(src, dst, manifest["files"][name]["sha256"])
             public_files[name] = sha256_file(dst)
 
-        tracts = json.loads((public / TRACTS_GEOJSON).read_text("utf-8"))
-        basemap = county_boundary(tracts, decimals=int(manifest["coordinate_decimals"]))
-        (data_dir / BASEMAP_GEOJSON).write_bytes(json_bytes(basemap))
-
         page_files: dict[str, str] = {}
         for name in PAGE_FILES:
             shutil.copyfile(source / name, staging / name)
@@ -208,10 +162,9 @@ def build_site(
             "attribution": manifest["attribution"],
             "public_files": public_files,
             "basemap": {
-                "file": BASEMAP_GEOJSON,
-                "layers": [COUNTY_BOUNDARY_LAYER],
-                "derived_from": TRACTS_GEOJSON,
-                "sha256": sha256_file(data_dir / BASEMAP_GEOJSON),
+                "file": manifest["basemap"]["file"],
+                "layers": dict(manifest["basemap"]["layers"]),
+                "sha256": public_files[BASEMAP_GEOJSON],
             },
             "page_files": page_files,
             "vendor": {"maplibre-gl": {"version": MAPLIBRE_VERSION, "files": vendor_files}},

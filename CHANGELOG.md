@@ -10,6 +10,65 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-8b — basemap roads: TIGER major-roads source, roads layer, contrast
+  check; M2 closes** (Planning Baseline v1.0; the second half of EP-8):
+  - `phillysim.adapters.tiger_roads`: the fifth real source, the TIGER/Line
+    2025 county roads file (`tl_2025_42101_roads.zip`, 1.35 MB, US public
+    domain, the same Census terms page archived and checked), stored as
+    delivered and filtered at first read to the primary and secondary
+    feature classes (MTFCC S1100 / S1200); contract, allowlist, guard
+    limits, and citation like the other Census adapters. Registered with
+    `acquire` / `validate` (the `sources` parameter bump re-runs `acquire`,
+    which re-uses the four existing snapshots). Data card
+    `docs/data-cards/tiger-roads.md`; DATA-LICENSES record; CI sample (48
+    major roads crossing the six sample tracts plus 4 local-road controls)
+    cut by `build_samples.py`.
+  - `phillysim.basemap`: the real pipeline's `basemap` stage between
+    `snap_retailers` and `metrics`: the curated roads layer
+    `curated/basemap_roads.parquet` (`linearid`, `name`, `mtfcc`,
+    `route_type`, geometry in EPSG:26918; 426 roads, 1,044 km for the pinned
+    snapshot) with invariants enforced in-stage (CRS, unique identifiers,
+    vocabularies, valid lines inside the county bounds, every road touching
+    the spine) and a report `intermediate/basemap.json` (0.0 m outside the
+    tracts).
+  - **Public schema version 2:** `publish` writes `basemap.geojson`, one
+    file with a `layer` property per feature (the `county_boundary`
+    dissolved from the spine, the `roads` from the curated layer, keyed by
+    `feature_id`), the manifest gains `basemap` (file and per-layer counts)
+    and a `basemap` column list; the label is derived from the zone's
+    sources as for every other file (Bucket A on the real pipeline). The
+    gate now declares the version it checks (a version 1 zone is refused,
+    not read) and checks the basemap's layers, counts, shapes, and
+    columns; one negative test per new rule. The fixture publishes a
+    boundary-only basemap (no synthetic roads source; the page handles
+    both shapes). Data dictionary updated (version history, basemap file
+    and columns, curated roads layer, raw source section).
+  - `site build` copies the basemap verbatim like every other public file
+    (nothing is derived at build time any more; site schema version 2
+    records the layer counts). The page draws the roads as a filtered line
+    layer from the same GeoJSON source, gray `#767676`, 1.6 px for primary
+    and 1.0 px for secondary roads, **above the tract fills and beneath the
+    tract outlines, the county boundary, and the sites** (beneath 80 %-opaque
+    fills a road shows through at 1.25:1, so the brief's "under the fills"
+    wording could not meet the contrast spec); a basemap note under the
+    legend names the layers and counts; `data-basemap-layers` on the root
+    element reports what was drawn. The contrast table in `site/README.md`
+    is measured from the page's constants by a test: 3.60:1 against the
+    lightest class, 4.17:1 against the map ground, 3.22:1 against the
+    no-value gray, 3.79:1 against the county boundary (all required at 3:1);
+    the ratios against the mid classes and the tract outline are recorded
+    as the limit of a single gray on a full-range palette.
+  - Tests: `tests/contracts/test_tiger_roads.py`, `tests/test_basemap.py`
+    (invariants, one negative each, the stage body, the real layer with
+    `--real-data-root`), the publish, site-build, browser, and real-pipeline
+    suites extended (the real pipeline on the samples now runs eight stages
+    and its zone is built into a site and driven in the browser: both
+    basemap layers present, no error, nothing off-origin, axe clean);
+    `conftest.py` owns the sample transport and the sample-built zone and
+    site fixtures.
+  - **M2 closes** with this packet (roadmap/README.md): the slice is
+    reproducible from a fresh clone, the license buckets are applied and
+    gated, and the minimal page renders the zone over the ADR-0005 basemap.
 - **EP-8a — minimal slice page** (Planning Baseline v1.0; M2; EP-8 was
   split at pickup into EP-8a / EP-8b, the roads layer of the basemap being
   the other half):

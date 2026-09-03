@@ -19,9 +19,10 @@ trigger (§Upgrade-only-when).
 - Static site: MapLibre GL JS (vendored in `site/vendor/`, digests recorded;
   no Node toolchain, vanilla ES module); project data as plain GeoJSON
   (~408 tracts, sub-MB gzipped — tiles don't pay off); minimal public-domain
-  basemap (ADR-0005); built from a gated public zone by `phillysim site
-  build` and served by `phillysim site serve` (EP-8a); GitHub Pages
-  artifact-only deploy (not before M7; OQ-H).
+  basemap (ADR-0005: county boundary + TIGER major roads, one gated public
+  file since EP-8b, about 140 KB gzipped); built from a gated public zone
+  by `phillysim site build` and served by `phillysim site serve` (EP-8a);
+  GitHub Pages artifact-only deploy (not before M7; OQ-H).
 
 ## Data flow
 
@@ -54,13 +55,14 @@ pipeline from EP-5a on (recorded at the EP-9 checkpoint, 2026-09-02):
 | 3 | `spine` | normalization to the 2020-tract spine | `curated/tracts_spine.parquet` | computed; real (EP-5b, `phillysim.spine`): TIGER geometry in the analysis CRS EPSG:26918 (ADR-0007) + CenPop population and centers, invariants enforced in-stage |
 | 4 | `demographics` | normalization (ACS estimates + MOE on the spine) | `intermediate/acs_tracts.parquet` | computed; real (EP-5b): pinned ACS variables + MOE joined one-to-one, nulls kept |
 | 4b | `snap_retailers` (real pipeline only, EP-6) | normalization (one destination source classified and assigned to tracts) | `curated/snap_retailers.parquet` | real: USDA SNAP retailers as of the file's as-of date, store-format classification from the published mapping (`phillysim.classify`), tract assignment, stable site IDs, invariants enforced in-stage; the fixture has no per-source layer stages (its `destinations` reads the fake sources directly), and M4 adds one per destination source before `destinations` |
+| 4c | `basemap` (real pipeline only, EP-8b) | normalization (the basemap's roads in the analysis CRS) | `curated/basemap_roads.parquet` | real (`phillysim.basemap`): TIGER/Line 2025 primary and secondary roads from the county roads file (`tiger_roads`), reprojected, invariants enforced against the spine (every road touches a tract; none outside the county bounds); the county boundary needs no stage (`publish` dissolves the spine); the fixture publishes a boundary-only basemap |
 | 5 | `destinations` | normalization (destination points assigned to tracts) | `intermediate/destinations.parquet` | computed (fixture); real: M4, over the per-source layers |
 | 6 | `conflate` | destination-layer conflation | `intermediate/sites_conflated.parquet` | identity stub until M4 |
 | 7 | `hours` | hours parsing | `curated/sites.parquet` | oracle stub until M4 |
 | 8 | `network` | routing inputs (GTFS + street network) | `intermediate/network.json` | computed summary |
 | 9 | `travel_times` | travel-time matrices | `curated/travel_times.parquet` | precomputed stub until M3 |
 | 10 | `metrics` | transparent metrics + MOE propagation → analytic table | `curated/tract_metrics.parquet` | fixture: computed (CV tiers, time to nearest); real (EP-7, `phillysim.metrics.slice`): the QA-only straight-line slice metric to the nearest supermarket-format retailer, in the locked analytic shape; M5 replaces the body and keeps the column as QA |
-| 11 | `publish` | public-safe aggregates: license-bucketed GeoJSON/CSV (public zone) | `public/` (the whole zone, one atomic install: `manifest.json`, `tracts.geojson`, `tracts.csv`, `sites.geojson`, `sites.csv`) | both pipelines (EP-7, `phillysim.publish`): the analytic table widened onto the tracts with build-time bins, facility points, per-file license labels derived from the sources' manifests (ADR-0003), CSV formula-injection escaping, WGS 84, and the publish gate run on the staged zone before install; `phillysim gate` re-checks an installed zone (CI runs it on the fixture) |
+| 11 | `publish` | public-safe aggregates: license-bucketed GeoJSON/CSV (public zone) | `public/` (the whole zone, one atomic install: `manifest.json`, `tracts.geojson`, `tracts.csv`, `sites.geojson`, `sites.csv`, and since EP-8b `basemap.geojson`; public schema version 2) | both pipelines (EP-7, `phillysim.publish`): the analytic table widened onto the tracts with build-time bins, facility points, the basemap (county boundary dissolved from the spine plus the roads layer where the pipeline has one), per-file license labels derived from the sources' manifests (ADR-0003), CSV formula-injection escaping, WGS 84, and the publish gate run on the staged zone before install; `phillysim gate` re-checks an installed zone (CI runs it on the fixture) |
 
 The static site is built from the public zone and is not a pipeline stage.
 

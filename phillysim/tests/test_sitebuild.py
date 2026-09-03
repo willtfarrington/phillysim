@@ -1,10 +1,12 @@
-"""EP-8a: the site build and its dev server, on the fixture's public zone.
+"""EP-8a: the site build and its dev server, on the fixture's public zone (and, since
+EP-8b, on the real zone built from the committed samples).
 
-The built site holds the public files byte for byte, a county boundary derived
-from them, the page sources, and the vendored MapLibre at the digests recorded
-in ``site/vendor/maplibre-gl/VENDOR.md``; the build is deterministic, refuses
-a zone that fails the publish gate, and replaces only a previous build. The
-dev server answers with the MIME types module scripts and GeoJSON need. The
+The built site holds the public files byte for byte (the basemap among them
+since EP-8b: nothing is derived at build time any more), the page sources,
+and the vendored MapLibre at the digests recorded in
+``site/vendor/maplibre-gl/VENDOR.md``; the build is deterministic, refuses a
+zone that fails the publish gate, and replaces only a previous build. The dev
+server answers with the MIME types module scripts and GeoJSON need. The
 page's behaviour in a browser is ``test_site_browser.py``.
 """
 
@@ -18,20 +20,18 @@ import threading
 from pathlib import Path
 
 import pytest
-from shapely.geometry import shape
-from shapely.ops import unary_union
 from typer.testing import CliRunner
 
 from phillysim.cli import app
 from phillysim.fixtures.pipeline import FIXTURE_BOUNDS
 from phillysim.manifest import sha256_file
 from phillysim.publish import sitebuild
-from phillysim.publish.export import PUBLIC_FILES, PUBLIC_MANIFEST
+from phillysim.publish.export import BASEMAP_GEOJSON, PUBLIC_FILES, PUBLIC_MANIFEST
 
 runner = CliRunner()
 
 TOP_LEVEL = {"index.html", "main.js", "styles.css", "site.json", "data", "vendor"}
-DATA_FILES = {PUBLIC_MANIFEST, *PUBLIC_FILES, sitebuild.BASEMAP_GEOJSON}
+DATA_FILES = {PUBLIC_MANIFEST, *PUBLIC_FILES}
 
 
 def _files(root: Path) -> dict[str, str]:
@@ -51,8 +51,8 @@ def test_built_site_layout(built_site: tuple[Path, dict]) -> None:
     assert {p.name for p in (out / "data").iterdir()} == DATA_FILES
     vendor = out / sitebuild.VENDOR_DIR_NAME / sitebuild.MAPLIBRE_DIR
     assert {p.name for p in vendor.iterdir()} == set(sitebuild.MAPLIBRE_FILES)
-    assert report["site_schema_version"] == sitebuild.SITE_SCHEMA_VERSION
-    assert report["pipeline"] == "fixture"
+    assert report["site_schema_version"] == sitebuild.SITE_SCHEMA_VERSION == 2
+    assert report["pipeline"] == "fixture" and report["public_schema_version"] == 2
     assert report["work_in_progress"] is True
     assert json.loads((out / sitebuild.SITE_MANIFEST).read_text("utf-8")) == report
 
@@ -69,29 +69,34 @@ def test_public_files_are_copied_verbatim(
         assert report["public_files"][name] == manifest["files"][name]["sha256"]
 
 
-def test_basemap_is_the_county_boundary_with_the_tract_label(
+def test_basemap_is_the_zones_file_verbatim(
     built_site: tuple[Path, dict], fixture_public_zone: Path
 ) -> None:
+    """Nothing is derived at build time any more: the basemap is the zone's own file, and
+    the site manifest records its layers from the public manifest."""
     out, report = built_site
-    basemap = json.loads((out / "data" / sitebuild.BASEMAP_GEOJSON).read_text("utf-8"))
-    tracts = json.loads((fixture_public_zone / "tracts.geojson").read_text("utf-8"))
-    assert basemap["type"] == "FeatureCollection"
-    assert basemap["license"] == tracts["license"]
-    assert basemap["attribution"] == tracts["attribution"]
-    assert basemap["derived_from"] == "tracts.geojson"
-    assert basemap["layer"] == sitebuild.COUNTY_BOUNDARY_LAYER
-    assert "crs" not in basemap
-    (feature,) = basemap["features"]
-    assert feature["id"] == sitebuild.COUNTY_BOUNDARY_LAYER
-    assert feature["properties"]["tracts"] == len(tracts["features"])
-    boundary = shape(feature["geometry"])
-    union = unary_union([shape(f["geometry"]) for f in tracts["features"]])
-    assert boundary.geom_type == "Polygon"  # the fixture grid dissolves to one rectangle
-    assert boundary.symmetric_difference(union).area < 1e-12
-    minx, miny, maxx, maxy = boundary.bounds
-    assert FIXTURE_BOUNDS[0] <= minx <= maxx <= FIXTURE_BOUNDS[2]
-    assert FIXTURE_BOUNDS[1] <= miny <= maxy <= FIXTURE_BOUNDS[3]
-    assert report["basemap"]["sha256"] == sha256_file(out / "data" / sitebuild.BASEMAP_GEOJSON)
+    assert (out / "data" / BASEMAP_GEOJSON).read_bytes() == (
+        fixture_public_zone / BASEMAP_GEOJSON
+    ).read_bytes()
+    manifest = json.loads((fixture_public_zone / PUBLIC_MANIFEST).read_text("utf-8"))
+    assert report["basemap"] == {
+        "file": BASEMAP_GEOJSON,
+        "layers": {"county_boundary": 1},
+        "sha256": manifest["files"][BASEMAP_GEOJSON]["sha256"],
+    }
+    assert report["basemap"]["sha256"] == sha256_file(out / "data" / BASEMAP_GEOJSON)
+
+
+def test_sample_real_site_carries_the_roads(sample_built_site: tuple[Path, dict]) -> None:
+    """The site built from the sample-built real zone (EP-8b): the basemap file holds the
+    boundary and the roads, copied verbatim, and the report says so."""
+    out, report = sample_built_site
+    assert report["pipeline"] == "real" and report["license"]["bucket"] == "A"
+    assert report["basemap"]["layers"] == {"county_boundary": 1, "roads": 48}
+    basemap = json.loads((out / "data" / BASEMAP_GEOJSON).read_text("utf-8"))
+    assert len(basemap["features"]) == 49
+    assert report["basemap"]["sha256"] == sha256_file(out / "data" / BASEMAP_GEOJSON)
+    assert {p.name for p in (out / "data").iterdir()} == DATA_FILES
 
 
 def test_vendored_maplibre_matches_its_record(built_site: tuple[Path, dict]) -> None:
@@ -200,7 +205,8 @@ def test_cli_site_build_from_public_dir(fixture_public_zone: Path, tmp_path: Pat
         app, ["site", "build", "--public", str(fixture_public_zone), "--out", str(out)]
     )
     assert result.exit_code == 0, result.output
-    assert (out / "data" / sitebuild.BASEMAP_GEOJSON).is_file()
+    assert (out / "data" / BASEMAP_GEOJSON).is_file()
+    assert "basemap: data/basemap.geojson holds county_boundary (1)" in result.output
 
 
 def test_cli_site_build_refuses_empty_or_broken_zone(

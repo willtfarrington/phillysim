@@ -1,13 +1,14 @@
 # Data dictionary
 
-> **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7).** Schema
-> version **1**; public schema version **1** (EP-7). This document describes
-> the tables the pipeline produces. Instances today: the synthetic tinycity
-> fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
-> curated table, and, since EP-5b, EP-6, and EP-7, the real curated tract
-> spine, its ACS join, the SNAP retailer layer, the analytic table (holding
-> the QA-only slice metric), and the gated public zone in the gitignored data
-> root.
+> **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b).**
+> Schema version **1**; public schema version **2** (EP-7 wrote version 1;
+> EP-8b added the basemap file). This document describes the tables the
+> pipeline produces. Instances today: the synthetic tinycity fixture's golden
+> files (`phillysim/tests/fixtures/tinycity/`) for every curated table, and,
+> since EP-5b, EP-6, EP-7, and EP-8b, the real curated tract spine, its ACS
+> join, the SNAP retailer layer, the basemap roads layer, the analytic table
+> (holding the QA-only slice metric), and the gated public zone in the
+> gitignored data root.
 > The integer schema version is one of the manifest-recorded version axes
 > ([ADR-0006](../roadmap/adr/0006-versioning-axes.md)): any breaking change to
 > a table shape below bumps it, with a migration note here. Column names are
@@ -253,12 +254,13 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
 | `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract; real pipeline (EP-5b): `geoid` + the pinned `B01003_001E/M`, `B08201_002E/M` as float64, exactly one row per spine tract in spine order, suppressed cells null (ADR-0004), join cardinality enforced |
 | `intermediate/snap_retailers.json` | `snap_retailers` (real pipeline, EP-6) | nobody (report) | Counts for the SNAP retailer layer: rows, supermarket-format rows, by store type, by format class, tracts with any / with a supermarket-format retailer, points unassigned to a tract, mapping version, as-of date, CRS |
+| `intermediate/basemap.json` | `basemap` (real pipeline, EP-8b) | nobody (report) | Counts for the basemap roads layer: rows, by MTFCC class, by route type, unnamed roads, total length in km, length outside the spine's tracts in metres (0.0 for the pinned snapshot), CRS |
 | `intermediate/slice_metric.json` | `metrics` (real pipeline, EP-7) | nobody (report) | The QA slice metric's report: metric ID, category, methods version, tract and destination counts, null estimates, min / median / max distance in metres |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
 | `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
 
-## Public zone (`public/`) — public schema version 1 (EP-7)
+## Public zone (`public/`) — public schema version 2 (EP-7, EP-8b)
 
 Written as a whole by the `publish` stage of either pipeline
 (`phillysim.publish.export`; the zone directory is the stage's single
@@ -266,17 +268,18 @@ output, so the runner installs or replaces it atomically and a gate failure
 leaves nothing behind). Everything here is WGS 84, license-labeled per file,
 escaped, and checked by the publish gate (`phillysim.publish.gate`;
 `phillysim gate`) before it is installed and again in CI. The **public schema
-version** (`public_schema_version`, currently **1**) is a parameter of the
+version** (`public_schema_version`, currently **2**) is a parameter of the
 `publish` stage and a member of every public file; any change to the files,
-columns, or manifest shape below bumps it, with a note here. No file under
-any `public/` zone is tracked in the repository; the site (EP-8a, M6) reads
-these files and nothing else: `phillysim site build` re-runs the gate,
-copies the five files verbatim into `site/dist/data/`, and adds one derived
-file there, `basemap.geojson` (the county boundary as the union of the
-published tract polygons, carrying the tract file's `license` and
-`attribution` in-file and `derived_from: "tracts.geojson"`), plus
-`site.json` with every digest. `site/dist/` is a build output, not a zone,
-and is gitignored.
+columns, or manifest shape below bumps it, with a note here, and the gate
+refuses a zone whose version is not the one it checks (so a stale zone is
+rebuilt, never read). **Version history:** 1 (EP-7) the four tract and site
+files; 2 (EP-8b) adds `basemap.geojson`, the manifest's `basemap` member,
+and the `basemap` column list; no earlier file or column changed. No file
+under any `public/` zone is tracked in the repository; the site (EP-8a, M6)
+reads these files and nothing else: `phillysim site build` re-runs the
+gate, copies the six files verbatim into `site/dist/data/`, and adds
+`site.json` with every digest (nothing is derived at build time since
+version 2). `site/dist/` is a build output, not a zone, and is gitignored.
 
 | File | Contents |
 |---|---|
@@ -285,6 +288,18 @@ and is gitignored.
 | `tracts.csv` | The same rows and columns without geometry (the table-parity source) |
 | `sites.geojson` | FeatureCollection, one feature per published facility point, feature `id` = `site_id`, point geometry, properties = the sites columns minus coordinates |
 | `sites.csv` | The same rows with `longitude` / `latitude` columns |
+| `basemap.geojson` | FeatureCollection, the minimal public-domain basemap (ADR-0005), feature `id` = `feature_id`, one `layer` per feature: the `county_boundary` (one polygon feature, the spine's tract polygons dissolved) and the `roads` (one line feature per curated major road; absent from a pipeline without a roads source, as the fixture is). Since version 2 |
+
+**Basemap columns.** `feature_id` (`county_boundary` for the boundary,
+`roads:<linearid>` for a road), `layer` (`county_boundary` or `roads`),
+`name` (the boundary's name, `Philadelphia County` for the real pipeline;
+the road's TIGER `FULLNAME`, nullable), and for roads `linearid`, `mtfcc`
+(`S1100` primary, `S1200` secondary), `route_type` (TIGER `RTTYP`: `I`
+interstate, `U` US, `S` state, `C` county, `M` common name, `O` other); the
+boundary carries the road columns as nulls so every feature has the same
+properties. The boundary is drawn first, the roads follow sorted by
+identifier. The basemap has no CSV twin (nothing tabular to compare) and no
+`fields` entry (it carries no metric).
 
 **Tracts columns.** `geoid`, `name`, `population` (the spine's 2020 Census
 count, no MOE), then, for every tract-metric the analytic table holds, a
@@ -344,8 +359,9 @@ CSV with `\n` line ends; so a rebuilt zone is byte-identical.
 | `sources` | One record per source the zone derives from: `source`, `snapshot_id`, `license_bucket`, `license_note`, `synthetic`, `citation` (never a path) |
 | `fields` | One record per published metric column: `column`, `metric_id`, `category`, `mode`, `qa_only`, `description` |
 | `bins` | Per metric column: the edge record above |
-| `columns` | The ordered column lists of `tracts` and `sites` (the CSV headers) |
-| `files` | Per file: `table`, `format`, `rows`, `bucket`, `license`, `attribution`, `sources`, `sha256`, `bytes` |
+| `columns` | The ordered column lists of `tracts` and `sites` (the CSV headers) and, since version 2, `basemap` (the basemap properties) |
+| `basemap` | Since version 2: `file` (`basemap.geojson`) and `layers`, the feature count per layer present (`county_boundary` always 1; `roads` when the pipeline has a roads source) |
+| `files` | Per file: `table` (`tracts`, `sites`, or `basemap`), `format`, `rows`, `bucket`, `license`, `attribution`, `sources`, `sha256`, `bytes` |
 | `qa_note` | Present when any field is `qa_only`: the sentence that QA columns are not access measures |
 
 The gate (`phillysim.publish.gate.check_public_zone`) checks, in order: the
@@ -359,10 +375,43 @@ inside the declared bounds (which must equal the pipeline's when the caller
 supplies them); no CSV cell starts with a formula character; no file
 (manifest included) mentions a pipeline zone path, the state file, or an
 absolute path; names are slugs without prohibited terms and `qa_` columns
-are declared; and both formats of a table hold the same keys and row
-count, with the CSV header equal to the manifest's column list.
+are declared; both formats of a table hold the same keys and row count,
+with the CSV header equal to the manifest's column list; and, since version
+2, the manifest declares this gate's public schema version and a `basemap`
+member naming a listed file of table `basemap` whose features all sit in a
+declared layer with the declared counts, exactly one polygon county
+boundary among them, lines for the roads, and the basemap columns as every
+feature's properties.
 
-## Raw sources: the tract spine (EP-5a) and SNAP retailers (EP-6)
+## Basemap roads layer (`curated/basemap_roads.parquet`, GeoParquet) — real pipeline, EP-8b
+
+Written by the `basemap` stage (`phillysim.basemap`). One row per primary or
+secondary road of Philadelphia County from the TIGER/Line 2025 county roads
+file (MTFCC `S1100` / `S1200`; the local streets in the same file are
+dropped at the adapter's read), sorted by `linearid`; the pinned snapshot
+has **426** rows, 1,044 km. The geometry is the provider's, reprojected and
+nothing else: no clipping, no simplification. The county boundary the
+basemap also draws is not a layer here (the `publish` stage dissolves the
+spine's polygons). Data card:
+[docs/data-cards/tiger-roads.md](data-cards/tiger-roads.md).
+
+| Column | Type | Meaning |
+|---|---|---|
+| `linearid` | string | TIGER `LINEARID` (unique key) |
+| `name` | string, nullable | TIGER `FULLNAME` (every road of the pinned snapshot has one) |
+| `mtfcc` | string | `S1100` (primary road) or `S1200` (secondary road) |
+| `route_type` | string | TIGER `RTTYP`: `I`, `U`, `S`, `C`, `M`, `O` |
+| `geometry` | LineString / MultiLineString | The road centerline in the analysis CRS EPSG:26918 (ADR-0007); valid; within the county bounds |
+
+The layer's invariants (`phillysim.basemap.check_roads`), enforced by the
+stage on its own output: CRS as declared; `linearid` present and unique;
+`mtfcc` and `route_type` within their vocabularies; every geometry present,
+a line, valid, and inside the county bounds; every road intersecting the
+union of the spine's tracts (the county scope the provider's file promises;
+the stage report records the length outside it, 0.0 m for the pinned
+snapshot). `pytest --real-data-root DIR` runs them on a real data root.
+
+## Raw sources: the tract spine (EP-5a), SNAP retailers (EP-6), and the basemap roads (EP-8b)
 
 Real snapshots are stored **as delivered** by the provider (byte-for-byte,
 so `phillysim verify` and anyone else can check them against the source) and
@@ -406,6 +455,23 @@ attribute is kept; the contract requires:
 | `NAME`, `NAMELSAD` | string | Tract number and its legal/statistical description (`Census Tract 1.01`) |
 | `ALAND`, `AWATER` | integer ≥ 0 | Land and water area, square metres |
 | `geometry` | Polygon / MultiPolygon | Tract boundary, valid, within the county bounds, EPSG:4269 |
+
+### `raw/tiger_roads/<snapshot-id>/` — TIGER/Line 2025 county roads (EP-8b)
+
+File `tl_2025_42101_roads.zip`, the Census Bureau's roads layer for
+Philadelphia County (the Bureau distributes roads per county, so the file
+is county-scoped as delivered), read straight from the zip through pyogrio
+and filtered to the primary and secondary feature classes; the local
+streets, ramps, service drives, alleys, and walkways in the same file never
+leave the raw zone. Every TIGER attribute is kept; the contract requires:
+
+| Column | Type | Meaning |
+|---|---|---|
+| `LINEARID` | string | TIGER linear feature identifier, 10 to 16 digits (unique key) |
+| `FULLNAME` | string, nullable | The road's full name as the Bureau records it |
+| `RTTYP` | string | Route type: `C`, `I`, `M`, `O`, `S`, or `U` |
+| `MTFCC` | string | Feature class, `S1100` (primary) or `S1200` (secondary) after the filter |
+| `geometry` | LineString / MultiLineString | Road centerline, valid, within the county bounds, EPSG:4269 |
 
 ### `raw/cenpop/<snapshot-id>/` — CenPop2020 tract centers of population
 

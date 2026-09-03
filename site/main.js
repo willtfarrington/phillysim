@@ -1,11 +1,13 @@
-// phillysim slice page (EP-8a): the public zone drawn as a map and tables, nothing else.
+// phillysim slice page (EP-8a, EP-8b): the public zone drawn as a map and tables, nothing else.
 //
 // Everything rendered here comes from data/manifest.json and the files it registers
 // (docs/data-dictionary.md "Public zone"): the columns, the field descriptions, the
 // class edges (bins are computed at build time; this page never classifies), the QA
 // note, the sources' snapshot IDs (the vintage line), the license and attribution.
-// The basemap is data/basemap.geojson, the county boundary derived at site-build time.
-// No request leaves this origin. Vanilla ES module; MapLibre GL JS is vendored.
+// The basemap is data/basemap.geojson, a public file of the zone (public schema 2): one
+// `layer` property per feature, the county boundary and, when the pipeline has a roads
+// source, the major roads. No request leaves this origin. Vanilla ES module; MapLibre GL
+// JS is vendored.
 
 import * as maplibregl from "./vendor/maplibre-gl/maplibre-gl.mjs";
 
@@ -16,12 +18,28 @@ const FILES = {
   sites: DATA + "sites.geojson",
   basemap: DATA + "basemap.geojson",
 };
-const DOWNLOADS = ["tracts.geojson", "tracts.csv", "sites.geojson", "sites.csv", "manifest.json"];
+const DOWNLOADS = [
+  "tracts.geojson",
+  "tracts.csv",
+  "sites.geojson",
+  "sites.csv",
+  "basemap.geojson",
+  "manifest.json",
+];
 // Five-class sequential samples of viridis (CVD-safe family named in the accessibility
 // spec), light = low value, dark = high value; sampled evenly when a column has fewer
 // classes. Validation against CVD simulators is an M6 release-gate item.
 const PALETTE = ["#fde725", "#5ec962", "#21918c", "#3b528b", "#440154"];
 const NO_VALUE = "#d9d9d9";
+// The grayscale basemap and boundaries (ADR-0005; the contrast table in site/README.md is
+// measured from these constants by tests/test_site_browser.py): the map ground, the road
+// gray (3:1 or better against the lightest class, the ground, the no-value gray, and the
+// county boundary), the tract outline, and the county boundary.
+const MAP_BACKGROUND = "#f5f5f5";
+const ROAD_GRAY = "#767676";
+const TRACT_OUTLINE = "#555555";
+const COUNTY_BOUNDARY = "#1b1b1b";
+const BASEMAP_LAYERS = { boundary: "county_boundary", roads: "roads" };
 const MAPLIBRE_VERSION = "6.7.0";
 
 const html = document.documentElement;
@@ -190,7 +208,7 @@ function initMap(manifest, basemap, tracts, sites, onSelect) {
     style: {
       version: 8,
       sources: {},
-      layers: [{ id: "background", type: "background", paint: { "background-color": "#f5f5f5" } }],
+      layers: [{ id: "background", type: "background", paint: { "background-color": MAP_BACKGROUND } }],
     },
     bounds: manifest.bounds,
     fitBoundsOptions: { padding: 24, animate: false },
@@ -213,17 +231,33 @@ function initMap(manifest, basemap, tracts, sites, onSelect) {
       source: "tracts",
       paint: { "fill-color": NO_VALUE, "fill-opacity": 0.8 },
     });
+    // The roads sit above the fills (drawn beneath them they would show through at 1.3:1
+    // or worse, whatever their gray) and beneath the tract outlines, the county boundary,
+    // and the sites, so the meaningful boundaries and the data stay on top. Primary roads
+    // (MTFCC S1100) are drawn wider than secondary ones (S1200); the same gray for both.
+    map.addLayer({
+      id: "roads",
+      type: "line",
+      source: "basemap",
+      filter: ["==", ["get", "layer"], BASEMAP_LAYERS.roads],
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: {
+        "line-color": ROAD_GRAY,
+        "line-width": ["match", ["get", "mtfcc"], "S1100", 1.6, 1.0],
+      },
+    });
     map.addLayer({
       id: "tracts-outline",
       type: "line",
       source: "tracts",
-      paint: { "line-color": "#555555", "line-width": 0.6 },
+      paint: { "line-color": TRACT_OUTLINE, "line-width": 0.6 },
     });
     map.addLayer({
       id: "county-boundary",
       type: "line",
       source: "basemap",
-      paint: { "line-color": "#1b1b1b", "line-width": 1.8 },
+      filter: ["==", ["get", "layer"], BASEMAP_LAYERS.boundary],
+      paint: { "line-color": COUNTY_BOUNDARY, "line-width": 1.8 },
     });
     map.addLayer({
       id: "sites",
@@ -251,6 +285,29 @@ function initMap(manifest, basemap, tracts, sites, onSelect) {
 }
 
 // --- page ---------------------------------------------------------------------------------------
+
+function basemapLayers(basemap) {
+  const layers = new Set(basemap.features.map((feature) => feature.properties.layer));
+  return [...layers].sort();
+}
+
+function renderBasemapNote(manifest, basemap) {
+  const layers = basemapLayers(basemap);
+  html.dataset.basemapLayers = layers.join(" ");
+  const counts = manifest.basemap ? manifest.basemap.layers : {};
+  const boundary = basemap.features.find((f) => f.properties.layer === BASEMAP_LAYERS.boundary);
+  const parts = [];
+  if (boundary) parts.push(`the ${boundary.properties.name} boundary (the published tracts dissolved) in black`);
+  if (layers.includes(BASEMAP_LAYERS.roads)) {
+    const n = counts[BASEMAP_LAYERS.roads] || 0;
+    parts.push(`${n} primary and secondary roads (TIGER/Line, wider lines for primary roads) in gray`);
+  } else {
+    parts.push("no roads (this pipeline publishes no roads source)");
+  }
+  $("basemap-note").textContent =
+    `Basemap (data/basemap.geojson, public domain, grayscale): ${parts.join("; ")}. ` +
+    "Roads are drawn above the tract fills and beneath the tract outlines, the county boundary, and the sites.";
+}
 
 function renderVintage(manifest) {
   const list = $("vintage");
@@ -384,6 +441,7 @@ async function main() {
   $("sites-summary").textContent =
     `${siteRows.length} facility points the tract columns were computed against (already public upstream).`;
   renderColumns(manifest);
+  renderBasemapNote(manifest, basemap);
   renderVintage(manifest);
   renderAttribution(manifest);
   applyField();

@@ -64,13 +64,16 @@ its published store-format classification (EP-6), and carried through a
 deliberately trivial, QA-only slice metric into a license-labeled public
 zone that a publish gate checks before anything leaves the curated zone
 (`phillysim run`, then `phillysim gate`; EP-7), which a minimal static page
-renders as a map and a table with its vintage and attribution (`phillysim
-site build`, then `phillysim site serve`; EP-8a, checked by Playwright and
-axe in CI; see [site/README.md](site/README.md)). Snapshots and the public
-zone live in the gitignored data root; only fixture-scale public-domain
-samples are committed, and nothing is deployed. Progress is tracked in
-[CHANGELOG.md](CHANGELOG.md) and the packet tables in
-[roadmap/README.md](roadmap/README.md).
+renders as a map and a table with its vintage and attribution over a
+minimal public-domain basemap, the county boundary and the TIGER/Line major
+roads, published as a gated file of the same zone (`phillysim site build`,
+then `phillysim site serve`; EP-8a and EP-8b, checked by Playwright and axe
+in CI; see [site/README.md](site/README.md)). With EP-8b milestone M2 is
+done: the slice is reproducible from a fresh clone and its license buckets
+are applied. Snapshots and the public zone live in the gitignored data
+root; only fixture-scale public-domain samples are committed, and nothing
+is deployed. Progress is tracked in [CHANGELOG.md](CHANGELOG.md) and the
+packet tables in [roadmap/README.md](roadmap/README.md).
 
 ## Setup
 

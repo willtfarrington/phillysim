@@ -82,9 +82,10 @@ def test_run_fixture_end_to_end_matches_golden_tables(cli_env: Path, tinycity_di
     )
     gate = CliRunner().invoke(app, ["gate", "--fixture"])
     assert gate.exit_code == 0, gate.output
-    assert "publish gate: green (4 file(s) labeled, 8 source(s)" in gate.output
+    assert "publish gate: green (5 file(s) labeled, 8 source(s)" in gate.output
     assert "Bucket B (ODbL-1.0), 6 row(s)" in gate.output
     assert "Bucket B (ODbL-1.0), 13 row(s)" in gate.output
+    assert "basemap.geojson  Bucket B (ODbL-1.0), 1 row(s)" in gate.output  # boundary only
     validation = json.loads((cli_env / "intermediate" / "validation.json").read_text("utf-8"))
     assert set(validation) == set(fx.SOURCES)
     assert all(entry["violations"] == [] for entry in validation.values())

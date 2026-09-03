@@ -31,6 +31,10 @@ in CI or before a release. The checks:
    with a description that says so, and the manifest carries the QA note.
 7. **Parity.** A table published in two formats has the same rows in both
    (same keys, same count), and the CSV header is the manifest's column list.
+8. **Schema and basemap** (public schema version 2, EP-8b). The manifest
+   declares this gate's public schema version; the basemap file it names
+   holds exactly the layers the manifest counts, every feature in a declared
+   layer, one polygon county boundary, and lines for the roads.
 """
 
 from __future__ import annotations
@@ -49,6 +53,23 @@ from phillysim.stages import StageError
 
 PUBLIC_MANIFEST = "manifest.json"
 PUBLIC_CRS = "EPSG:4326"
+#: The public schema version this gate checks (docs/data-dictionary.md "Public zone"): 1
+#: was EP-7's four files, 2 adds ``basemap.geojson`` and the manifest's ``basemap`` member.
+PUBLIC_SCHEMA_VERSION = 2
+#: The basemap file's layers (the ``layer`` property of every feature) and its columns.
+COUNTY_BOUNDARY_LAYER = "county_boundary"
+ROADS_LAYER = "roads"
+BASEMAP_LAYERS: tuple[str, ...] = (COUNTY_BOUNDARY_LAYER, ROADS_LAYER)
+BASEMAP_COLUMNS: tuple[str, ...] = (
+    "feature_id",
+    "layer",
+    "name",
+    "linearid",
+    "mtfcc",
+    "route_type",
+)
+POLYGON_TYPES: frozenset[str] = frozenset({"Polygon", "MultiPolygon"})
+LINE_TYPES: frozenset[str] = frozenset({"LineString", "MultiLineString"})
 REQUIRED_MANIFEST_KEYS: tuple[str, ...] = (
     "pipeline",
     "schema_version",
@@ -63,13 +84,14 @@ REQUIRED_MANIFEST_KEYS: tuple[str, ...] = (
     "fields",
     "bins",
     "columns",
+    "basemap",
     "files",
 )
 FORMATS: frozenset[str] = frozenset({"geojson", "csv"})
 GEOMETRY_TYPES: frozenset[str] = frozenset(
     {"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"}
 )
-TABLE_KEYS: dict[str, str] = {"tracts": "geoid", "sites": "site_id"}
+TABLE_KEYS: dict[str, str] = {"tracts": "geoid", "sites": "site_id", "basemap": "feature_id"}
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 NUMBER_RE = re.compile(r"^-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$")
 QA_PREFIX = "qa_"
@@ -218,6 +240,11 @@ def check_public_zone(
         return problems
 
     # Manifest-level facts the file checks rely on.
+    if manifest["public_schema_version"] != PUBLIC_SCHEMA_VERSION:
+        problems.append(
+            f"manifest public_schema_version is {manifest['public_schema_version']!r}; this "
+            f"gate checks version {PUBLIC_SCHEMA_VERSION} (re-run the pipeline's publish stage)"
+        )
     if manifest["crs"] != PUBLIC_CRS:
         problems.append(f"manifest crs is {manifest['crs']!r}, expected {PUBLIC_CRS}")
     problems += check_bounds_value(manifest["bounds"])
@@ -310,6 +337,31 @@ def check_public_zone(
         for column in sorted(field_columns):
             if table == "tracts" and column not in names:
                 problems.append(f"published field {column!r} is not a tracts column")
+    basemap = manifest["basemap"]
+    basemap_layers: dict[str, int] = {}
+    basemap_file: str | None = None
+    if (
+        not isinstance(basemap, dict)
+        or not isinstance(basemap.get("file"), str)
+        or not isinstance(basemap.get("layers"), dict)
+    ):
+        problems.append("manifest basemap is not an object with a file and a layers object")
+    else:
+        basemap_file = basemap["file"]
+        if basemap_file not in files:
+            problems.append(f"manifest basemap file {basemap_file!r} is not a listed file")
+            basemap_file = None
+        elif files[basemap_file].get("table") != "basemap":
+            problems.append(f"manifest basemap file {basemap_file!r} is not the basemap table")
+        for layer, count in basemap["layers"].items():
+            if layer not in BASEMAP_LAYERS or not _is_number(count) or count < 0:
+                problems.append(f"manifest basemap layer {layer!r} is unknown or has no count")
+            else:
+                basemap_layers[str(layer)] = int(count)
+        if basemap_layers.get(COUNTY_BOUNDARY_LAYER) != 1:
+            problems.append("manifest basemap does not declare exactly one county boundary")
+        if list(columns.get("basemap", [])) != list(BASEMAP_COLUMNS):
+            problems.append("manifest columns for 'basemap' are not the basemap columns")
 
     # 5. The manifest is a public file too: it must leak no path either.
     for label, pattern in LEAK_PATTERNS:
@@ -378,6 +430,13 @@ def check_public_zone(
             rows, keys, found = _check_geojson(
                 name, data, entry, manifest, declared_bounds, key_column
             )
+            if str(table) == "basemap":
+                if name != basemap_file:
+                    problems.append(
+                        f"{where}: a basemap table the manifest's basemap does not name"
+                    )
+                else:
+                    found += _check_basemap(name, data, basemap_layers)
         else:
             rows, keys, found = _check_csv(name, data, entry, columns.get(str(table)), key_column)
         problems += found
@@ -474,6 +533,55 @@ def _check_geojson(
     if key_column is not None and len(keys) != len(features) - missing_key:
         problems.append(f"{where}: duplicate {key_column!r} keys")
     return len(features), (keys if key_column is not None else None), problems
+
+
+def _check_basemap(name: str, data: bytes, layers: dict[str, int]) -> list[str]:
+    """The basemap file's own rules: every feature in a declared layer, the declared counts
+    on disk, one polygon county boundary, lines for the roads, every feature's properties
+    the basemap columns."""
+    where = f"file {name!r}"
+    try:
+        payload = json.loads(data.decode("utf-8"))
+        features = payload["features"]
+        assert isinstance(features, list)
+    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, AssertionError):
+        return []  # _check_geojson already reported the malformed file
+    problems: list[str] = []
+    counts: dict[str, int] = dict.fromkeys(layers, 0)
+    undeclared: set[str] = set()
+    wrong_shape = wrong_columns = 0
+    for feature in features:
+        properties = feature.get("properties") if isinstance(feature, dict) else None
+        geometry = feature.get("geometry") if isinstance(feature, dict) else None
+        if not isinstance(properties, dict) or not isinstance(geometry, dict):
+            continue
+        layer = properties.get("layer")
+        if layer not in layers:
+            undeclared.add(str(layer))
+            continue
+        counts[layer] += 1
+        if set(properties) != set(BASEMAP_COLUMNS):
+            wrong_columns += 1
+        expected = POLYGON_TYPES if layer == COUNTY_BOUNDARY_LAYER else LINE_TYPES
+        if geometry.get("type") not in expected:
+            wrong_shape += 1
+        if layer == COUNTY_BOUNDARY_LAYER and properties.get("feature_id") != COUNTY_BOUNDARY_LAYER:
+            problems.append(f"{where}: the county boundary's feature_id is not its layer name")
+    if undeclared:
+        problems.append(f"{where}: feature(s) in undeclared layer(s) {sorted(undeclared)[:5]}")
+    for layer, declared in layers.items():
+        if counts[layer] != declared:
+            problems.append(
+                f"{where}: layer {layer!r} holds {counts[layer]} feature(s), "
+                f"manifest says {declared}"
+            )
+    if wrong_shape:
+        problems.append(
+            f"{where}: {wrong_shape} feature(s) whose geometry type does not fit their layer"
+        )
+    if wrong_columns:
+        problems.append(f"{where}: {wrong_columns} feature(s) without exactly the basemap columns")
+    return problems
 
 
 def _check_csv(

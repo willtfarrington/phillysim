@@ -1,6 +1,8 @@
 """EP-7: license buckets, build-time bins, CSV escaping, the public-zone export, and the
 publish gate: positive on the fixture pipeline's own public zone, then one negative per
-gate check (an intentionally mislabeled file first, the packet's acceptance criterion)."""
+gate check (an intentionally mislabeled file first, the packet's acceptance criterion).
+EP-8b: public schema version 2, the basemap file (boundary only on the fixture, boundary
+plus roads on the sample-built real zone), and the gate's rules for it."""
 
 from __future__ import annotations
 
@@ -11,7 +13,8 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import shape
+from shapely.geometry import LineString, shape
+from shapely.ops import unary_union
 
 from phillysim import runner
 from phillysim.fixtures import pipeline as fx
@@ -20,6 +23,7 @@ from phillysim.pipeline import PUBLISH_SOURCES, real_pipeline
 from phillysim.publish import bins, export, gate
 from phillysim.publish.bucket import BUCKET_A, BUCKET_B, LABELS, OSM_NOTICE, derive_bucket, label_of
 from phillysim.publish.export import (
+    BASEMAP_GEOJSON,
     PUBLIC_FILES,
     PUBLIC_MANIFEST,
     SITES_CSV,
@@ -27,11 +31,17 @@ from phillysim.publish.export import (
     TRACTS_CSV,
     TRACTS_GEOJSON,
     PublishError,
+    basemap_features,
     escape_cell,
     json_bytes,
     widen,
 )
-from phillysim.publish.gate import PublishGateError, check_public_zone
+from phillysim.publish.gate import (
+    BASEMAP_COLUMNS,
+    PUBLIC_SCHEMA_VERSION,
+    PublishGateError,
+    check_public_zone,
+)
 
 # --- buckets ----------------------------------------------------------------------------------
 
@@ -180,7 +190,8 @@ def test_fixture_zone_is_green_bucket_b_and_complete(zone: Path) -> None:
     assert _problems(zone) == []
     assert sorted(p.name for p in zone.iterdir()) == sorted([*PUBLIC_FILES, PUBLIC_MANIFEST])
     manifest = _manifest(zone)
-    assert manifest["pipeline"] == "fixture" and manifest["public_schema_version"] == 1
+    assert manifest["pipeline"] == "fixture"
+    assert manifest["public_schema_version"] == PUBLIC_SCHEMA_VERSION == 2
     assert manifest["license"]["bucket"] == BUCKET_B, "osm_network is Bucket B, so everything is"
     assert OSM_NOTICE in manifest["license"]["notices"]
     assert {s["source"] for s in manifest["sources"]} == set(fx.SOURCES)
@@ -192,7 +203,64 @@ def test_fixture_zone_is_green_bucket_b_and_complete(zone: Path) -> None:
         assert entry["sources"] == list(fx.SOURCES)
     assert manifest["files"][TRACTS_GEOJSON]["rows"] == manifest["files"][TRACTS_CSV]["rows"] == 6
     assert manifest["files"][SITES_GEOJSON]["rows"] == manifest["files"][SITES_CSV]["rows"] == 13
+    assert manifest["files"][BASEMAP_GEOJSON]["rows"] == 1, "the fixture's basemap: boundary only"
+    assert manifest["basemap"] == {"file": BASEMAP_GEOJSON, "layers": {"county_boundary": 1}}
+    assert manifest["columns"]["basemap"] == list(BASEMAP_COLUMNS)
     assert "qa_note" not in manifest, "the fixture publishes no QA column"
+
+
+def test_fixture_basemap_is_the_dissolved_grid_with_the_zone_label(zone: Path) -> None:
+    payload = json.loads((zone / BASEMAP_GEOJSON).read_text("utf-8"))
+    tracts = json.loads((zone / TRACTS_GEOJSON).read_text("utf-8"))
+    assert payload["table"] == "basemap" and "crs" not in payload
+    assert payload["license"] == tracts["license"]
+    assert payload["attribution"] == tracts["attribution"]
+    assert payload["public_schema_version"] == 2
+    (feature,) = payload["features"]
+    assert feature["id"] == "county_boundary"
+    assert feature["properties"] == {
+        "feature_id": "county_boundary",
+        "layer": "county_boundary",
+        "name": fx.FIXTURE_BOUNDARY_NAME,
+        "linearid": None,
+        "mtfcc": None,
+        "route_type": None,
+    }
+    boundary = shape(feature["geometry"])
+    union = unary_union([shape(f["geometry"]) for f in tracts["features"]])
+    assert boundary.geom_type == "Polygon"  # the fixture grid dissolves to one rectangle
+    assert boundary.symmetric_difference(union).area < 1e-12
+    assert boundary.exterior.is_ccw
+
+
+def test_basemap_features_with_and_without_roads(zone: Path) -> None:
+    """The basemap table: the boundary first, then the roads by identifier, every row with
+    the same columns; a spine without polygons or roads without identifiers are refused."""
+    spine = gpd.read_file(zone / TRACTS_GEOJSON)
+    boundary_only = basemap_features(spine, None, boundary_name="grid")
+    assert list(boundary_only.columns) == [*BASEMAP_COLUMNS, "geometry"]
+    assert len(boundary_only) == 1 and boundary_only.crs.to_epsg() == 4326
+    roads = gpd.GeoDataFrame(
+        {
+            "linearid": ["2", "1"],
+            "name": ["B St", None],
+            "mtfcc": ["S1200", "S1100"],
+            "route_type": ["M", "I"],
+        },
+        geometry=[LineString([(0, 0), (1, 1)]), LineString([(1, 0), (0, 1)])],
+        crs="EPSG:4326",
+    )
+    both = basemap_features(spine, roads, boundary_name="grid")
+    assert list(both["feature_id"]) == ["county_boundary", "roads:1", "roads:2"]
+    assert list(both["layer"]) == ["county_boundary", "roads", "roads"]
+    assert both["name"].tolist()[0] == "grid" and pd.isna(both["name"].tolist()[1])
+    assert both["linearid"].tolist()[1:] == ["1", "2"]
+    with pytest.raises(PublishError, match="present and unique"):
+        basemap_features(spine, pd.concat([roads, roads]), boundary_name="grid")
+    with pytest.raises(PublishError, match="lack public column"):
+        basemap_features(spine, roads.drop(columns=["mtfcc"]), boundary_name="grid")
+    with pytest.raises(PublishError, match="no tract polygons"):
+        basemap_features(spine.iloc[:0], None, boundary_name="grid")
 
 
 def test_fixture_zone_geojson_is_rfc7946_and_labeled_in_file(zone: Path) -> None:
@@ -246,7 +314,12 @@ def test_publish_declares_its_dag_provenance() -> None:
     real = real_pipeline()
     declared = {rel for rel in real["publish"].inputs if rel.startswith("raw/")}
     assert declared == {f"raw/{s}/2026-09-02" for s in PUBLISH_SOURCES}
-    assert declared <= set(real.upstream_raw(real["publish"].inputs[0]))
+    assert PUBLISH_SOURCES == ("cenpop", "snap_retailers", "tiger_roads", "tiger_tracts")
+    upstream_of_curated = set()
+    for rel in real["publish"].inputs:
+        if rel.startswith("curated/"):
+            upstream_of_curated.update(real.upstream_raw(rel))
+    assert declared <= upstream_of_curated, "every declared source feeds a curated input"
     assert real.upstream_raw("raw/acs/2026-09-02") == ("raw/acs/2026-09-02",)
 
 
@@ -374,6 +447,101 @@ def test_gate_blocks_broken_parity_between_formats(copy: Path) -> None:
     _assert_blocked(copy, "row(s) on disk, manifest says", "do not hold the same rows")
 
 
+def test_gate_blocks_a_version_1_zone(copy: Path) -> None:
+    """A zone from before the basemap (public schema version 1) is refused, not read."""
+    manifest = _manifest(copy)
+    manifest["public_schema_version"] = 1
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "public_schema_version is 1; this gate checks version 2")
+
+
+def test_gate_blocks_basemap_manifest_drift(copy: Path) -> None:
+    manifest = _manifest(copy)
+    manifest["basemap"]["layers"]["roads"] = 3
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "layer 'roads' holds 0 feature(s), manifest says 3")
+    manifest = _manifest(copy)
+    manifest["basemap"]["layers"] = {"county_boundary": 1, "water": 2}
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "layer 'water' is unknown")
+    manifest = _manifest(copy)
+    manifest["basemap"]["layers"] = {}
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "exactly one county boundary")
+    manifest = _manifest(copy)
+    manifest["basemap"]["file"] = TRACTS_GEOJSON
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "is not the basemap table", "the manifest's basemap does not name")
+    manifest = _manifest(copy)
+    manifest["columns"]["basemap"] = ["feature_id", "layer"]
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "columns for 'basemap' are not the basemap columns")
+    manifest = _manifest(copy)
+    del manifest["basemap"]
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "lacks required key(s) ['basemap']")
+
+
+def _rewrite_basemap(public: Path, edit) -> None:
+    """Apply ``edit`` to the basemap payload, write it, and re-record its digest."""
+    payload = json.loads((public / BASEMAP_GEOJSON).read_text("utf-8"))
+    edit(payload)
+    data = json_bytes(payload)
+    (public / BASEMAP_GEOJSON).write_bytes(data)
+    manifest = _manifest(public)
+    import hashlib
+
+    manifest["files"][BASEMAP_GEOJSON]["sha256"] = hashlib.sha256(data).hexdigest()
+    manifest["files"][BASEMAP_GEOJSON]["bytes"] = len(data)
+    _write_manifest(public, manifest)
+
+
+def test_gate_blocks_basemap_features_off_their_layer_shape(copy: Path) -> None:
+    def road_as_point(payload: dict) -> None:
+        payload["features"].append(
+            {
+                "type": "Feature",
+                "id": "roads:1",
+                "geometry": {"type": "Point", "coordinates": [0.5, 0.5]},
+                "properties": {
+                    "feature_id": "roads:1",
+                    "layer": "roads",
+                    "name": "x",
+                    "linearid": "1",
+                    "mtfcc": "S1100",
+                    "route_type": "I",
+                },
+            }
+        )
+
+    _rewrite_basemap(copy, road_as_point)
+    manifest = _manifest(copy)
+    manifest["basemap"]["layers"]["roads"] = 1
+    manifest["files"][BASEMAP_GEOJSON]["rows"] = 2
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "geometry type does not fit their layer")
+
+    def undeclared_layer(payload: dict) -> None:
+        payload["features"][-1]["properties"]["layer"] = "water"
+        del payload["features"][-1]["properties"]["route_type"]
+
+    _rewrite_basemap(copy, undeclared_layer)
+    _assert_blocked(copy, "undeclared layer(s) ['water']", "holds 0 feature(s), manifest says 1")
+
+    def boundary_columns_and_id(payload: dict) -> None:
+        payload["features"] = payload["features"][:1]
+        payload["features"][0]["properties"]["extra"] = 1
+        payload["features"][0]["properties"]["feature_id"] = "boundary"
+        payload["features"][0]["id"] = "boundary"
+
+    _rewrite_basemap(copy, boundary_columns_and_id)
+    manifest = _manifest(copy)
+    manifest["basemap"]["layers"] = {"county_boundary": 1}
+    manifest["files"][BASEMAP_GEOJSON]["rows"] = 1
+    _write_manifest(copy, manifest)
+    _assert_blocked(copy, "feature_id is not its layer name", "exactly the basemap columns")
+
+
 def test_gate_needs_a_manifest_and_a_directory(tmp_path: Path) -> None:
     assert check_public_zone(tmp_path / "nowhere") == ["public zone 'nowhere' is not a directory"]
     (tmp_path / "public").mkdir()
@@ -382,6 +550,30 @@ def test_gate_needs_a_manifest_and_a_directory(tmp_path: Path) -> None:
     assert "not valid JSON" in check_public_zone(tmp_path / "public")[0]
     (tmp_path / "public" / "manifest.json").write_text("{}", "utf-8")
     assert "lacks required key(s)" in check_public_zone(tmp_path / "public")[0]
+
+
+def test_sample_real_zone_publishes_the_roads_in_the_basemap(sample_public_zone: Path) -> None:
+    """The real pipeline on the committed samples: the basemap file carries the county
+    boundary and the 48 sample roads, Bucket A, every position inside the county bounds."""
+    bounds = tuple(real_pipeline()["publish"].params["bounds"])
+    assert check_public_zone(sample_public_zone, bounds=bounds) == []
+    manifest = _manifest(sample_public_zone)
+    assert manifest["basemap"]["layers"] == {"county_boundary": 1, "roads": 48}
+    entry = manifest["files"][BASEMAP_GEOJSON]
+    assert entry["bucket"] == BUCKET_A and entry["rows"] == 49
+    payload = json.loads((sample_public_zone / BASEMAP_GEOJSON).read_text("utf-8"))
+    roads = [f for f in payload["features"] if f["properties"]["layer"] == "roads"]
+    assert len(roads) == 48 and all(f["geometry"]["type"] == "LineString" for f in roads)
+    assert {f["properties"]["mtfcc"] for f in roads} == {"S1100", "S1200"}
+    for feature in roads:
+        properties = feature["properties"]
+        assert feature["id"] == properties["feature_id"] == "roads:" + properties["linearid"]
+    names = {f["properties"]["name"] for f in roads}
+    assert {"I- 95", "Market St", "Benjamin Franklin Brg"} <= names
+    for feature in roads:
+        for lon, lat in feature["geometry"]["coordinates"]:
+            assert bounds[0] <= lon <= bounds[2] and bounds[1] <= lat <= bounds[3]
+            assert len(str(lon).split(".")[-1]) <= 6
 
 
 def test_publish_stage_refuses_to_install_a_zone_the_gate_rejects(

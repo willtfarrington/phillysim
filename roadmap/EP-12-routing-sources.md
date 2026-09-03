@@ -1,6 +1,6 @@
 # EP-12 — Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path
 
-**Status:** [~] in progress (work done 2026-09-03; owner review and commit pending) · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [x] a4c8a38 (2026-09-03) · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The two sources the routing spike needs exist as real snapshots in the raw
@@ -261,9 +261,11 @@ The documents listed under components; `roadmap/README.md` packet row;
 No new ADR (ADR-0008, written by EP-11, holds the pins).
 
 ## Handoff payload (filled 2026-09-03)
-- **Packet:** EP-12 — work complete 2026-09-03, one session, at the S
-  estimate; Planning Baseline v1.0. Work commit and CI run: see "Owner
-  review" below (recorded once the owner has decided on the commit).
+- **Packet:** EP-12 — done at commit `a4c8a38` (+ this status commit),
+  2026-09-03, one session, at the S estimate; Planning Baseline v1.0. CI
+  run [33805499558](https://github.com/willtfarrington/phillysim/actions/runs/33805499558)
+  on `a4c8a38` green on `ubuntu-latest` and `windows-latest` (ubuntu 63 s, windows 118 s; the suite 516 passed, 3 skipped on both).
+  Owner review at the end of this payload.
 - **Files changed.** New: `phillysim/src/phillysim/adapters/osm.py`,
   `adapters/septa_gtfs.py`, `phillysim/src/phillysim/network.py`,
   `tests/contracts/test_osm_network.py`, `tests/contracts/test_septa_gtfs.py`,
@@ -421,9 +423,34 @@ No new ADR (ADR-0008, written by EP-11, holds the pins).
   ODbL notice and "© OpenStreetMap contributors" in the samples README and
   its manifest; CI stays offline; no machine identifier or absolute path
   in a tracked file).
-- `roadmap/README.md` packet row: updated with the work commit at the
-  handoff commit (see below).
+- `roadmap/README.md` packet row updated to `[x] a4c8a38`; the M3 heading
+  stays open (EP-13–EP-15 remain).
 - **Exact next packet: EP-13** (`roadmap/EP-13-routing-toolchain-harness.md`:
   the pinned JDK 21 and R5 jar, r5py behind the wheel-only rule in the
   `routing` group, the RSS sampler, run records, the smoke route on this
   packet's `intermediate/network/`, the CI performance smoke).
+
+### Owner review (2026-09-03)
+
+Five decisions put to the owner interactively at the end of the session
+(four deviations from or refinements of the brief, then the commit); **the
+recommended option was accepted for every one**:
+- **GTFS allowlist:** keep both release-asset hosts,
+  `objects.githubusercontent.com` (the packet's) and
+  `release-assets.githubusercontent.com` (the redirect target observed on
+  2026-09-03), beside `github.com` and the terms host `www3.septa.org`.
+- **Terms check reads visible text:** the download path now strips tags,
+  decodes entities, and folds whitespace before looking for an adapter's
+  phrases (Geofabrik's "created by OpenStreetMap Contributors" spans an
+  anchor); every earlier adapter still passes on its archived page; kept
+  for all adapters.
+- **Clip metadata kept as delivered** (the brief said "no metadata"): the
+  clip is a pure subset of the pinned extract, byte-identical on repeats
+  (asserted on a crafted extract; the CI sample rebuilt byte-identical
+  twice), and R5 ignores metadata; no rewrite.
+- **Bands and sample accepted:** the clip's count bands (4–8 million
+  nodes, 0.6–1.3 million ways) pinned from this session's measurement as
+  stage parameters; the 749 KB OSM CI sample committed as cut by the same
+  clip.
+- **Commit, push, CI, handoff:** yes. Work commit `a4c8a38`, CI run
+  33805499558 green on both platforms, then this status commit.

@@ -181,7 +181,7 @@ on a kill or an exhausted time box.
 |---|---|---|---|---|
 | EP-11 | [M3 refinement gate: decompose the routing spike into S packets](EP-11-m3-refinement-gate.md) | S | EP-10 (checkpoint) | [x] c6b5372 |
 | EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | [x] a4c8a38 |
-| EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [~] work complete 2026-09-03 (ADR-0008 jar pin amended with the owner; the smoke green); the status commit marks it done |
+| EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [x] e4c2c95 |
 | EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | [ ] |
 | EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [ ] |
 

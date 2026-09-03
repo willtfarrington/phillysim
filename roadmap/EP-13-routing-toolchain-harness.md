@@ -1,6 +1,6 @@
 # EP-13 — Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route
 
-**Status:** [~] work complete 2026-09-03 (the smoke green on the amended ADR-0008 jar pin); the status commit marks it done · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [x] e4c2c95 done 2026-09-03 · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The routing engine exists on the machine under the project's control and
@@ -241,11 +241,16 @@ ADR-0008 is referenced, not changed; a pin that must change goes back to
 the owner as an amendment.
 
 ## Handoff payload (filled 2026-09-03)
-- **Packet:** EP-13 — done at commit `<work-commit>` (+ the status commit),
+- **Packet:** EP-13 — done at commit `e4c2c95` (the work commit `5a21379`
+  plus the Linux CI fixes in `e4c2c95`: a platform-independent relative-path
+  rule, `kill_tree` leaving the child's exit status to the caller, the CLI
+  install test crafting the running platform's archive; + this status commit),
   2026-09-03, one session, at the S estimate (the stop condition below cost
   about ten minutes: a diagnosis, an owner decision, a jar reinstall, and a
-  re-run of the smoke); Planning Baseline v1.0. CI run: recorded in the
-  status commit. Owner review at the end of this payload.
+  re-run of the smoke); Planning Baseline v1.0. CI run
+  [33810585588](https://github.com/willtfarrington/phillysim/actions/runs/33810585588) on `e4c2c95` green on `ubuntu-latest` and
+  `windows-latest` (ubuntu 75 s, windows 118 s; 583 passed, 3 skipped on both,
+  without the routing group). Owner review at the end of this payload.
 - **Files changed.** New: `phillysim/src/phillysim/routing/{__init__,
   toolchain,sampler,records,harness,smoke}.py`, `tests/test_toolchain.py`,
   `tests/test_sampler.py`, `tests/test_records.py`,
@@ -367,8 +372,8 @@ the owner as an amendment.
   R5 leaves behind after a killed or failed child.
 - **CI performance smoke:** `phillysim run --fixture` under the sampler:
   **1.3 s wall, peak RSS 140 MiB** (146,747,392 B), 10 samples at 10 Hz on
-  Windows; the Linux numbers are printed in the CI log (recorded in the
-  status commit).
+  the development machine; in CI run 33810585588: Linux 0.7 s wall, peak RSS 215 MiB, 7 samples; Windows
+  1.5 s wall, peak RSS 136 MiB, 15 samples.
 - **Resource observations:** one session, at the S estimate. Network:
   270 MB for the gate's toolchain, 64 MB more for the amended jar (and 64 MB
   for the diagnostic's copy), about 260 MB of wheels; under a minute in all.
@@ -420,8 +425,8 @@ the owner as an amendment.
   run record; the routing child wrote only under `data/cache/r5py/` and
   `data/runs/`). The one precondition breached is the diagnostic's r5py
   fallback download, disclosed above and closed by code.
-- `roadmap/README.md` packet row updated to `[x] <work-commit>` in the
-  status commit; the M3 heading stays open (EP-14, EP-15 remain).
+- `roadmap/README.md` packet row updated to `[x] e4c2c95`; the M3 heading
+  stays open (EP-14, EP-15 remain).
 - **Exact next packet: EP-14** (`roadmap/EP-14-routing-run-matrix.md`: the
   pre-scripted run matrix over the 408 CenPop centers and the 1,609 SNAP
   retailers through this harness, launched as the first unattended night;
@@ -442,6 +447,5 @@ recommended option was accepted for every one**:
   labeled (gitignored; never committed).
 - **The allowlist:** `release-assets.githubusercontent.com` confirmed
   beside the brief's two hosts, as at EP-12.
-- **Commit, push, CI, handoff:** yes, once green. Work commit
-  `<work-commit>`, CI run recorded in the status commit, then the status
-  commit.
+- **Commit, push, CI, handoff:** yes, once green. Work commit `e4c2c95`,
+  CI run 33810585588 green on both platforms, then this status commit.

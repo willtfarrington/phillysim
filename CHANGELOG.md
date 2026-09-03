@@ -10,6 +10,16 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **Roadmap: EP-10 authored** (2026-09-03, interactively with the owner):
+  the second checkpoint packet, `roadmap/EP-10-checkpoint-2.md`, due with
+  M2 done. Scope decided with the owner: a fresh-clone re-run that includes
+  a full real acquisition (the refresh-drift check), docs sync over the
+  real pipeline's files, a license-label sweep on the real published
+  output, budgets with peak RSS still deferred to M3, a dependency-triage
+  checklist, the estimate-accuracy rows for EP-5a through EP-9, and a
+  pre-read of the M3 refinement gate, which EP-10 authors as its own
+  documentation-only packet, EP-11. README "Checkpoints" table and
+  milestones.md "Spikes & gates" updated.
 - **EP-8b — basemap roads: TIGER major-roads source, roads layer, contrast
   check; M2 closes** (Planning Baseline v1.0; the second half of EP-8):
   - `phillysim.adapters.tiger_roads`: the fifth real source, the TIGER/Line

@@ -57,7 +57,9 @@ routing determinism remediation (M3).
   dictionary sync, license-label sweep, performance vs budgets, estimate-
   accuracy review; re-plan if triggers hit. Tracked in the README's
   "Checkpoints" table; the first is [EP-9](EP-9-checkpoint-1.md), after
-  EP-4b (M1 done) and before EP-5.
+  EP-4b (M1 done) and before EP-5; the second is
+  [EP-10](EP-10-checkpoint-2.md), after EP-8b (M2 done) and before the M3
+  refinement gate, which it authors as its own packet, EP-11.
 
 ## Refinement-gate carry-ins
 

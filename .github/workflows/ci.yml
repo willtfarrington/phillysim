@@ -4,7 +4,10 @@
 # host other than GitHub (checkout, action downloads) and PyPI (`uv sync
 # --locked`, resolved strictly from the committed lockfile). Live-API
 # acquisition happens only in the controlled refresh workflow, never here.
-# Actions are SHA-pinned; the token is read-only.
+# Actions are SHA-pinned; the token is read-only. The browser tests (EP-8a)
+# drive the runner's preinstalled Chrome or Edge through Playwright's
+# `channel` option, so no browser is downloaded either; the site's map
+# library is vendored in the repository.
 
 name: ci
 
@@ -49,3 +52,6 @@ jobs:
       # EP-7: the publish gate on the fixture's public zone (ADR-0003 license labels, bounds,
       # CSV escaping, no path leakage). Nothing under data/public/ is ever committed.
       - run: uv run phillysim gate --fixture
+      # EP-8a: the slice page built from the fixture's gated zone (the browser tests in pytest
+      # build their own copy and drive it through Playwright + axe). Nothing is deployed.
+      - run: uv run phillysim site build --fixture

@@ -1,0 +1,324 @@
+/* phillysim slice page (EP-8a). Muted grayscale chrome so the thematic layer owns the color
+   budget; all text at or above 4.5:1, controls and focus rings at or above 3:1, targets at or
+   above 24 CSS px, reflow to 320 px without horizontal page scroll (WCAG 2.2 AA; the
+   accessibility spec in roadmap/governance.md). */
+
+:root {
+  --ink: #1b1b1b;
+  --ink-muted: #4a4a4a;
+  --paper: #ffffff;
+  --paper-muted: #f4f4f4;
+  --rule: #767676;
+  --focus: #0b5fff;
+  --wip-bg: #fff4d6;
+  --wip-rule: #8a5a00;
+  --qa-bg: #eef2ff;
+  --qa-rule: #2c3e8f;
+  --map-bg: #f5f5f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color: var(--ink);
+  background: var(--paper);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 0 1rem 2rem;
+  max-width: 72rem;
+  margin-inline: auto;
+  /* Column slugs are long unbreakable words; wrap them anywhere so the page never scrolls
+     sideways at 320 px (the tables scroll inside their own containers instead). */
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  font-size: 1.6rem;
+  margin: 1rem 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.25rem;
+}
+
+a {
+  color: #0645ad;
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+.skip-link-after {
+  position: static;
+  display: inline-block;
+  margin: 0.25rem 0;
+  left: auto;
+  top: auto;
+  border: 0;
+  padding: 0.25rem 0;
+  clip: rect(0 0 0 0);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.skip-link-after:focus {
+  clip: auto;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--ink);
+}
+
+.wip {
+  background: var(--wip-bg);
+  border-left: 0.4rem solid var(--wip-rule);
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 0.25rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.5rem;
+  max-width: 100%;
+}
+
+.field-description {
+  margin: 0.5rem 0 0;
+  color: var(--ink);
+}
+
+.qa-note {
+  background: var(--qa-bg);
+  border-left: 0.4rem solid var(--qa-rule);
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0 0;
+}
+
+.map {
+  width: 100%;
+  height: min(60vh, 34rem);
+  min-height: 20rem;
+  background: var(--map-bg);
+  border: 1px solid var(--rule);
+}
+
+.map-status {
+  margin: 0 0 0.5rem;
+  color: var(--ink-muted);
+}
+
+html[data-map="unavailable"] .map {
+  display: none;
+}
+
+.map .maplibregl-ctrl-group button {
+  width: 32px;
+  height: 32px;
+}
+
+.map .maplibregl-ctrl-group button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.map .maplibregl-canvas:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.map .maplibregl-ctrl-attrib {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.8rem;
+}
+
+.map .maplibregl-ctrl-attrib a {
+  color: #0645ad;
+}
+
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--ink);
+  flex: none;
+}
+
+.legend-note {
+  color: var(--ink-muted);
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.table-summary {
+  margin: 0 0 0.5rem;
+  color: var(--ink-muted);
+}
+
+.table-scroll {
+  overflow: auto;
+  max-height: 60vh;
+  border: 1px solid var(--rule);
+}
+
+table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+caption {
+  text-align: left;
+  padding: 0.5rem;
+  font-weight: 600;
+  caption-side: top;
+}
+
+th,
+td {
+  border: 1px solid #b8b8b8;
+  padding: 0.3rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+th {
+  background: var(--paper-muted);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+td.num,
+th.num {
+  text-align: right;
+}
+
+tr.selected td {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.columns dt {
+  font-weight: 600;
+  margin-top: 0.5rem;
+  word-break: break-all;
+}
+
+.columns dd {
+  margin: 0 0 0 1rem;
+}
+
+.vintage,
+.attribution,
+.notices {
+  padding-left: 1.25rem;
+}
+
+.page-footer {
+  border-top: 1px solid var(--rule);
+  margin-top: 2rem;
+  padding-top: 0.5rem;
+  color: var(--ink);
+}
+
+.software {
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 40rem) {
+  body {
+    padding-inline: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .map {
+    height: 50vh;
+  }
+}

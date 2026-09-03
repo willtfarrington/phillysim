@@ -61,7 +61,9 @@ phillysim/
     publish/              the publication boundary: bucket (ADR-0003 labels derived from
                           the sources), bins (build-time classes), export (the public
                           zone: labeled, escaped, deterministic GeoJSON + CSV + manifest),
-                          gate (what must hold before anything leaves curated) (EP-7)
+                          gate (what must hold before anything leaves curated) (EP-7);
+                          sitebuild (the slice page built from a gated zone, the county
+                          boundary, the local dev server) (EP-8a)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
                           `demographics` (EP-5b), `snap_retailers` (EP-6), `metrics` +
                           `publish` (EP-7) on the pinned snapshots
@@ -94,6 +96,10 @@ phillysim/
                                 check on the samples, the rules that keep it QA-only (EP-7)
     test_publish.py             buckets, bins, escaping, the export, and the publish gate:
                                 green on the fixture's zone, one negative per check (EP-7)
+    test_sitebuild.py           the site build: verbatim copies, boundary geometry, vendored
+                                digests, determinism, refusals, CLI, the dev server (EP-8a)
+    test_site_browser.py        the fixture-built page in the machine's own Chrome or Edge:
+                                Playwright + axe, keyboard, reflow, fallbacks (EP-8a)
     contracts/            harness unit tests; tinycity sources; the three spine sources and
                           the SNAP retailer source on the committed samples (EP-5a, EP-6)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
@@ -348,6 +354,33 @@ distance to the nearest supermarket-format SNAP retailer, metric ID
 the gate enforces the flag that says so
 ([method card](../docs/method-cards/qa-straight-line.md)). Nothing under any
 `public/` zone is committed or deployed.
+
+## The slice page (EP-8a)
+
+The repository root's [`site/`](../site/README.md) holds the page sources
+(vanilla ES module + vendored MapLibre GL JS) and `phillysim site build`
+turns a **gated** public zone into a static site under `site/dist/`
+(gitignored): the gate is re-run, the five public files are copied byte for
+byte, the county boundary is derived from the published tracts as the
+basemap's first cut, and `site.json` records every digest; the build is
+deterministic. `phillysim site serve` serves it on loopback. The page reads
+`manifest.json` for everything it shows (columns, descriptions, bin edges,
+the QA note, sources and snapshot IDs, license and attribution) and makes no
+request to any other host. It is labeled work in progress and is not
+deployed (roadmap open question OQ-H).
+
+```
+uv run phillysim site build --fixture    # from data/fixture/public/
+uv run phillysim site build              # from data/public/ (the real slice)
+uv run phillysim site serve              # http://127.0.0.1:8000/
+```
+
+`tests/test_site_browser.py` drives the fixture-built page through
+Playwright in the machine's own Chrome or Edge (Playwright's `channel`
+option: nothing is downloaded) and asserts the map and tables render
+offline, zero axe-core violations, the keyboard order, 320 px reflow,
+reduced motion, and the no-WebGL fallback; CI runs it on both platforms and
+fails, rather than skips, if no browser can be launched.
 
 ## Resource baselines
 

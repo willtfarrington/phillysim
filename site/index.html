@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" data-state="loading" data-map="pending">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>phillysim slice page (work in progress)</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="vendor/maplibre-gl/maplibre-gl.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#table-section">Skip to the data table</a>
+
+  <header class="page-header">
+    <h1>phillysim slice page</h1>
+    <p class="wip" role="note" id="wip-note">
+      <strong>Work in progress.</strong> This page checks that the publication path works end to
+      end: it draws the public files exactly as built. Nothing on it is an access measure, a
+      finding, a score, or a ranking, and nothing here should be read as one.
+    </p>
+  </header>
+
+  <main>
+    <section class="controls" aria-labelledby="controls-heading">
+      <h2 id="controls-heading" class="visually-hidden">Column shown on the map</h2>
+      <div class="field-row">
+        <label for="field">Column shown on the map</label>
+        <select id="field" name="field"></select>
+      </div>
+      <p id="field-description" class="field-description"></p>
+      <p id="qa-note" class="qa-note" hidden></p>
+    </section>
+
+    <section class="map-section" aria-labelledby="map-heading">
+      <h2 id="map-heading">Map of tracts and sites</h2>
+      <p id="map-status" class="map-status" role="status" aria-live="polite">Loading the public files…</p>
+      <div id="map" class="map"></div>
+      <a class="skip-link skip-link-after" href="#table-section">Skip past the map</a>
+      <div class="legend-block">
+        <h3 id="legend-heading">Legend</h3>
+        <ol id="legend" class="legend" aria-labelledby="legend-heading"></ol>
+        <p class="legend-note">
+          Classes are computed when the files are built (edges recorded in the manifest), so the
+          map, this legend, the table below, and the CSV files agree. Color is never the only
+          carrier: every value is in the table.
+        </p>
+      </div>
+    </section>
+
+    <section id="table-section" class="table-section" aria-labelledby="tracts-heading">
+      <h2 id="tracts-heading">Tracts table</h2>
+      <p id="tracts-summary" class="table-summary"></p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Tracts table, scrollable">
+        <table id="tracts-table">
+          <caption id="tracts-caption"></caption>
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <h3 id="columns-heading">Columns</h3>
+      <dl id="columns" class="columns" aria-labelledby="columns-heading"></dl>
+    </section>
+
+    <section class="table-section" aria-labelledby="sites-heading">
+      <h2 id="sites-heading">Sites table</h2>
+      <p id="sites-summary" class="table-summary"></p>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Sites table, scrollable">
+        <table id="sites-table">
+          <caption id="sites-caption"></caption>
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="downloads" aria-labelledby="downloads-heading">
+      <h2 id="downloads-heading">Files</h2>
+      <p>The same public files this page draws from, byte for byte:</p>
+      <ul id="downloads"></ul>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <h2 id="vintage-heading">Data vintage</h2>
+    <ul id="vintage" class="vintage" aria-labelledby="vintage-heading"></ul>
+    <h2 id="attribution-heading">Attribution and license</h2>
+    <p id="license"></p>
+    <ul id="attribution" class="attribution" aria-labelledby="attribution-heading"></ul>
+    <ul id="notices" class="notices"></ul>
+    <p class="software">
+      Map rendering by <a href="https://maplibre.org/" rel="noopener">MapLibre GL JS</a>
+      <span id="maplibre-version"></span>, vendored with this page under its BSD-3-Clause license
+      (<a href="vendor/maplibre-gl/LICENSE.txt">license text</a>). The basemap is the county
+      boundary derived from the published tract polygons; no tiles, fonts, scripts, or analytics
+      are fetched from any other host.
+    </p>
+    <p class="software">
+      <a href="https://github.com/willtfarrington/phillysim" rel="noopener">phillysim</a> measures
+      access to health-relevant community resources across Philadelphia at the 2020 census-tract
+      level. It does not simulate, predict, or advise.
+    </p>
+  </footer>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

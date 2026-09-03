@@ -10,6 +10,41 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-8a — minimal slice page** (Planning Baseline v1.0; M2; EP-8 was
+  split at pickup into EP-8a / EP-8b, the roads layer of the basemap being
+  the other half):
+  - `site/`: a static page (vanilla ES module, MapLibre GL JS 6.7.0 vendored
+    under `site/vendor/` with recorded digests, BSD-3-Clause) that renders a
+    public zone and nothing else: the tracts colored by the selected
+    column's build-time class over the county boundary, the facility
+    points, a legend from the manifest's bin edges, an HTML table of every
+    published column (and one of the sites), the data-vintage line from the
+    sources' snapshot IDs and citations, and the attribution and license
+    block. Labeled work in progress; QA-only columns render under the
+    manifest's QA note; no request leaves the page's origin. Not deployed
+    (OQ-H).
+  - `phillysim.publish.sitebuild` and the CLI group `phillysim site build
+    [--fixture | --data-root DIR | --public DIR] [--out DIR]` / `site serve
+    [--out DIR] [--port N] [--host H]`: the site is built only from a zone
+    that passes the publish gate (re-run at build time), the public files
+    are copied byte for byte (digests re-checked), the county boundary is
+    derived from the published tract polygons as `data/basemap.geojson`
+    (labeled with the tract file's license), `site.json` records every
+    digest, and the build is deterministic; the dev server is the standard
+    library's, bound to loopback, with the MIME types module scripts and
+    GeoJSON need.
+  - Tests: `tests/test_sitebuild.py` (layout, verbatim copies, boundary
+    geometry, vendored digests against `VENDOR.md`, no off-origin loads,
+    determinism, refusal of a failing zone, CLI, MIME types) and
+    `tests/test_site_browser.py` (Playwright + axe on the fixture-built
+    page in the machine's own Chrome or Edge: map + tables rendered
+    offline, vintage and attribution from the manifest, column switching,
+    zero axe violations, keyboard order and 24 px targets, 320 px reflow,
+    reduced motion, no-WebGL fallback; fails rather than skips in CI). CI
+    adds `phillysim site build --fixture`. The suite's no-network guard now
+    allows loopback only. Dev dependencies `playwright` and
+    `axe-playwright-python`; `.gitattributes` keeps the vendored bytes
+    exact; screenshot `docs/images/slice-page-fixture.png`.
 - **EP-7 — thin-slice metric + public zone + license bucketing** (Planning
   Baseline v1.0; M2):
   - `phillysim.metrics.slice`: the real pipeline's `metrics` stage

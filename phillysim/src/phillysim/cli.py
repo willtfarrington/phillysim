@@ -8,7 +8,8 @@ fresh stages), ``status`` reports every stage as fresh / stale / missing /
 incomplete, ``verify`` checks the raw zone against its manifests (EP-4a)
 and the stage state against the zones, and ``gate`` (EP-7) re-runs the publish
 gate on the installed public zone (license labels, bounds, escaping, no path
-leakage; CI runs it on the fixture).
+leakage; CI runs it on the fixture). ``site build`` / ``site serve`` (EP-8a)
+build the static slice page from a gated public zone and serve it locally.
 
 Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
 EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
@@ -37,6 +38,7 @@ from phillysim.fixtures.tinycity import Variant, write_fixture
 from phillysim.manifest import verify_raw_zone
 from phillysim.pipeline import real_pipeline
 from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
+from phillysim.publish import sitebuild
 from phillysim.publish.export import PUBLIC_MANIFEST, PUBLIC_ZONE
 from phillysim.publish.gate import check_public_zone
 from phillysim.runner import StateError, verify_state
@@ -315,3 +317,102 @@ def gate(
         f"{len(manifest['sources'])} source(s), pipeline {manifest['pipeline']!r}, "
         f"methods {manifest['methods_version']!r})"
     )
+
+
+# --- the slice page (EP-8a) ----------------------------------------------------------------------
+
+site_app = typer.Typer(
+    name="site",
+    help="Build and serve the static slice page from a gated public zone (EP-8a).",
+    no_args_is_help=True,
+    rich_markup_mode=None,
+)
+app.add_typer(site_app, name="site")
+
+OutOption = Annotated[
+    Path | None,
+    typer.Option("--out", help="Write the site here (default: <repo>/site/dist, gitignored)."),
+]
+
+
+def _site_dist(out: Path | None) -> Path:
+    if out is not None:
+        return out.expanduser().resolve()
+    return sitebuild.site_source_dir() / sitebuild.DIST_DIR_NAME
+
+
+@site_app.command("build")
+def site_build(
+    fixture: FixtureOption = False,
+    data_root: DataRootOption = None,
+    public: Annotated[
+        Path | None,
+        typer.Option("--public", help="Build from this public-zone directory (gated on its own)."),
+    ] = None,
+    out: OutOption = None,
+) -> None:
+    """Build the static slice page: re-run the publish gate on the public zone, copy its files
+    verbatim, derive the county-boundary basemap, lay the page and the vendored MapLibre beside
+    them. Replaces a previous build at the output directory; refuses anything else there.
+
+    Exit status 1 if the zone fails the gate or there is no zone to build from.
+    """
+    if fixture and public is not None:
+        raise typer.BadParameter("--fixture and --public are mutually exclusive")
+    if public is not None:
+        zone, bounds, label = public.expanduser().resolve(), None, str(public)
+    else:
+        root, label = _resolve_root(fixture, data_root)
+        zone = root / PUBLIC_ZONE
+        params = _pipeline(fixture)["publish"].params
+        bounds = tuple(float(b) for b in params["bounds"])
+        label = f"{label}: {zone}"
+    dist = _site_dist(out)
+    typer.echo(f"site build: {label}")
+    if not zone.is_dir() or not any(zone.iterdir()):
+        typer.echo("no public zone to build from (run the pipeline through `publish` first)")
+        raise typer.Exit(code=1)
+    try:
+        report = sitebuild.build_site(zone, dist, bounds=bounds)
+    except sitebuild.SiteBuildError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for name, digest in sorted(report["public_files"].items()):
+        typer.echo(f"ok   data/{name:<16} {digest[:12]}")
+    typer.echo(
+        f"ok   data/{report['basemap']['file']:<16} {report['basemap']['sha256'][:12]} "
+        f"(derived: {', '.join(report['basemap']['layers'])})"
+    )
+    typer.echo(
+        f"site build: done at {dist} (pipeline {report['pipeline']!r}, "
+        f"MapLibre GL JS {report['vendor']['maplibre-gl']['version']}, work in progress)"
+    )
+    typer.echo("serve it with `phillysim site serve`; nothing here is deployed")
+
+
+@site_app.command("serve")
+def site_serve(
+    out: OutOption = None,
+    port: Annotated[int, typer.Option("--port", help="TCP port (0 = pick a free one).")] = 8000,
+    host: Annotated[
+        str, typer.Option("--host", help="Interface to bind; loopback by default.")
+    ] = "127.0.0.1",
+) -> None:
+    """Serve a built site over plain HTTP on loopback (the local dev server). Ctrl-C stops it."""
+    dist = _site_dist(out)
+    try:
+        server = sitebuild.serve(dist, port=port, host=host, log=typer.echo)
+    except sitebuild.SiteBuildError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    except OSError as exc:
+        typer.echo(f"FAIL cannot bind {host}:{port}: {exc}")
+        raise typer.Exit(code=1) from exc
+    bound_host, bound_port = server.server_address[:2]
+    typer.echo(f"serving {dist} at http://{bound_host}:{bound_port}/ (Ctrl-C to stop)")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        typer.echo("stopped")
+    finally:
+        server.server_close()

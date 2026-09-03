@@ -8,7 +8,7 @@
 # The ruff hooks shell out through `uv run --project phillysim` so they use the
 # lockfile-pinned ruff, the same one CI runs. `source material/` is vendored
 # upstream reference material and is never touched by any hook.
-exclude: ^source material/
+exclude: ^(source material/|site/vendor/)
 repos:
   - repo: local
     hooks:

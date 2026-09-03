@@ -269,8 +269,14 @@ escaped, and checked by the publish gate (`phillysim.publish.gate`;
 version** (`public_schema_version`, currently **1**) is a parameter of the
 `publish` stage and a member of every public file; any change to the files,
 columns, or manifest shape below bumps it, with a note here. No file under
-any `public/` zone is tracked in the repository; the site (EP-8, M6) reads
-these files and nothing else.
+any `public/` zone is tracked in the repository; the site (EP-8a, M6) reads
+these files and nothing else: `phillysim site build` re-runs the gate,
+copies the five files verbatim into `site/dist/data/`, and adds one derived
+file there, `basemap.geojson` (the county boundary as the union of the
+published tract polygons, carrying the tract file's `license` and
+`attribution` in-file and `derived_from: "tracts.geojson"`), plus
+`site.json` with every digest. `site/dist/` is a build output, not a zone,
+and is gitignored.
 
 | File | Contents |
 |---|---|

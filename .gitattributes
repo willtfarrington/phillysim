@@ -1,0 +1,4 @@
+# Vendored browser library: keep the bytes exactly as upstream published them on every
+# platform (no line-ending conversion), so the digests in site/vendor/maplibre-gl/VENDOR.md
+# hold on Windows and Linux alike.
+site/vendor/** -text

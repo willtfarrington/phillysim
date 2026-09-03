@@ -63,9 +63,12 @@ the curated tract spine (EP-5b), joined by the USDA SNAP retailer layer with
 its published store-format classification (EP-6), and carried through a
 deliberately trivial, QA-only slice metric into a license-labeled public
 zone that a publish gate checks before anything leaves the curated zone
-(`phillysim run`, then `phillysim gate`; EP-7). Snapshots and the public zone
-live in the gitignored data root; only fixture-scale public-domain samples
-are committed, and nothing is deployed. Progress is tracked in
+(`phillysim run`, then `phillysim gate`; EP-7), which a minimal static page
+renders as a map and a table with its vintage and attribution (`phillysim
+site build`, then `phillysim site serve`; EP-8a, checked by Playwright and
+axe in CI; see [site/README.md](site/README.md)). Snapshots and the public
+zone live in the gitignored data root; only fixture-scale public-domain
+samples are committed, and nothing is deployed. Progress is tracked in
 [CHANGELOG.md](CHANGELOG.md) and the packet tables in
 [roadmap/README.md](roadmap/README.md).
 
@@ -133,4 +136,6 @@ of it is authored by this project.
 Original code and text in this repository are MIT licensed — see
 [LICENSE](LICENSE). Published data outputs will carry their own per-file
 license labels (CC BY 4.0 or ODbL, by bucket) as described in
-[docs/DATA-LICENSES.md](docs/DATA-LICENSES.md).
+[docs/DATA-LICENSES.md](docs/DATA-LICENSES.md). The site vendors MapLibre
+GL JS under its BSD-3-Clause license
+([site/vendor/maplibre-gl/](site/vendor/maplibre-gl/VENDOR.md)).

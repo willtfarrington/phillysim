@@ -16,9 +16,12 @@ trigger (§Upgrade-only-when).
   JAVA_HOME set per-invocation), R5 jar pinned by checksum, heap 12 GB.
 - Typer-style CLI: `phillysim <stage>` over idempotent, manifest-checked
   stage functions; no orchestrator.
-- Static site: MapLibre GL JS; project data as plain GeoJSON (~408 tracts,
-  sub-MB gzipped — tiles don't pay off); minimal public-domain basemap
-  (ADR-0005); local dev server; GitHub Pages artifact-only deploy.
+- Static site: MapLibre GL JS (vendored in `site/vendor/`, digests recorded;
+  no Node toolchain, vanilla ES module); project data as plain GeoJSON
+  (~408 tracts, sub-MB gzipped — tiles don't pay off); minimal public-domain
+  basemap (ADR-0005); built from a gated public zone by `phillysim site
+  build` and served by `phillysim site serve` (EP-8a); GitHub Pages
+  artifact-only deploy (not before M7; OQ-H).
 
 ## Data flow
 

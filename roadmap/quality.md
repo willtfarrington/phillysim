@@ -27,8 +27,9 @@ Windows environment; canonicalized-value hashes cross-platform.
 | Geospatial invariants | CRS, geometry validity, county bounds, join cardinality, GEOID integrity | CI | yes since EP-5b (`tests/test_spine_invariants.py` on the committed samples; the same module runs on the real spine with `pytest --real-data-root DIR`, recorded in the packet handoff; the `spine` and `demographics` stages enforce the same checks in-stage); the SNAP retailer layer has its own set since EP-6 (`tests/test_destinations.py`; enforced in-stage) |
 | Golden mapping | the store-type → format-class table pinned row by row, its rules (format-based vocabulary, strict on unknown labels), and the method card it renders into | CI | yes since EP-6 (`tests/test_store_format.py`; a change is a methods-version bump) |
 | Integration | tinycity synthetic fixture through all 11 stages | CI | yes (`tests/integration/`, plus the `run` / `status` / `verify` / `gate --fixture` CI steps, EP-4b and EP-7); the real pipeline's seven stages run offline on the committed samples through a fake transport (EP-5a–EP-7) |
-| UI E2E | Playwright: map/table sync, panel focus flow, deep links, exports | CI | not yet (M6) |
-| Accessibility (automated) | axe-core on built site | CI | not yet (M6) |
+| UI E2E | Playwright: map/table sync, panel focus flow, deep links, exports | CI | seed since EP-8a (`tests/test_site_browser.py`: the fixture-built slice page renders map + tables offline, keyboard order, 320 px reflow, reduced motion, no-WebGL fallback; the machine's own Chrome or Edge, no browser download); panel, deep links, exports at M6 |
+| Accessibility (automated) | axe-core on built site | CI | yes since EP-8a (zero violations asserted in the same module, Windows and Linux) |
+| Site build | the page built only from a gated public zone, verbatim copies, deterministic bytes, vendored library digests, no off-origin loads | CI | yes since EP-8a (`tests/test_sitebuild.py`; the `site build --fixture` CI step) |
 | Performance smoke | stage runtimes/memory vs budgets on fixture | CI | not yet; baselines recorded in `phillysim/README.md` (EP-9); the CI test lands with the M3 spike |
 | Manual release checklist | below | per release | M7 |
 

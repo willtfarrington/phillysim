@@ -1,6 +1,22 @@
 # EP-8 — Minimal slice page
 
-**Status:** [ ] planned · **Milestone:** M2 · **Effort:** M (1–2 sessions, medium confidence) · **Parallel with:** —
+**Status:** split 2026-09-02 into [EP-8a](EP-8a-slice-page.md) and [EP-8b](EP-8b-basemap-roads.md) · **Milestone:** M2 · **Effort:** M (1–2 sessions, medium confidence), as authored · **Parallel with:** —
+
+> **This file names the set, not a packet.** The pickup pre-read on
+> 2026-09-02 (README "Packet sizing and splitting") found that this brief
+> holds two first-time subsystems: the static page itself, with its build
+> step, dev server, vendored map library, and a browser test harness
+> (Playwright + axe) that CI had never run; and a new raw source, the TIGER
+> roads the basemap's "major roads" need, which means an adapter, a terms
+> archive, contract tests, CI samples, a data card, and a public-zone layer
+> (the same shape of work EP-5a and EP-6 each filled a session with). It was
+> split at that boundary: **EP-8a** builds the page, the table, the
+> county-boundary basemap, the vintage and attribution blocks, and the
+> Playwright + axe check in CI; **EP-8b** adds the TIGER major-roads layer
+> to the basemap, meets the contrast spec against it, and carries this set's
+> milestone-level evidence (M2 closes with it). References to "EP-8"
+> elsewhere mean both parts; the text below is the brief as authored on
+> 2026-08-23.
 
 ## Outcome & value
 A minimal static page (MapLibre + vanilla JS/TS — no framework creep)

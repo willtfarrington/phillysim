@@ -1,6 +1,6 @@
 # EP-11 — M3 refinement gate: decompose the routing spike into S packets
 
-**Status:** [ ] planned · **Milestone:** M3 · **Effort:** S (1 session, high confidence) · **Parallel with:** —
+**Status:** [x] c6b5372 (done 2026-09-03) · **Milestone:** M3 · **Effort:** S (1 session, high confidence) · **Parallel with:** —
 
 ## Outcome & value
 After this packet the M3 routing spike exists as issue-ready packet files,
@@ -267,13 +267,201 @@ the document index row for EP-12 onward), `roadmap/milestones.md` (M3
 Packets column), `roadmap/open-questions.md` (OQ-C), `CHANGELOG.md`, a
 possible ADR-0008; this file's status and handoff.
 
-## Handoff payload (fill at session end)
-- packet ID + status; baseline/roadmap version
-- files changed; commands/tests run + results
-- the carry-in check; the answers to the eight questions and the gaps
-  closed; the packets authored (ID, slug, one line each, sequence)
-- resource observations
-- decisions/ADRs made; unresolved risks/questions
-- no-go areas touched? (must be none)
-- `roadmap/README.md` packet row updated to `[x] <commit>`
-- exact next packet: EP-12 (the first M3 packet as authored)
+## Handoff payload (filled 2026-09-03)
+- **Packet:** EP-11 — done at commit `c6b5372` (+ this status commit),
+  2026-09-03, one session; Planning Baseline v1.0. CI run
+  [33799859669](https://github.com/willtfarrington/phillysim/actions/runs/33799859669)
+  on `c6b5372` green on `ubuntu-latest` (55 s) and `windows-latest`
+  (132 s); the suite is unchanged (documentation only). Owner review at
+  the end of this payload.
+- **Files changed (documentation only; no module, test, data, or
+  dependency change):** new `roadmap/EP-12-routing-sources.md`,
+  `roadmap/EP-13-routing-toolchain-harness.md`,
+  `roadmap/EP-14-routing-run-matrix.md`, `roadmap/EP-15-routing-verdict.md`,
+  `roadmap/adr/0008-routing-toolchain-pins.md`; changed
+  `roadmap/README.md` (the "How to read" pointer; the document index row
+  for EP-12–EP-15 and the ADR-0008 mention; the "M3 — Routing spike"
+  paragraph and table with four rows; the "M4–M8" placeholder naming the
+  procedure and the next gate), `roadmap/milestones.md` (M3 row's
+  Packets column; the "Spikes & gates" M3 bullet; the EP-11 packet count
+  under "What this implies (EP-10)"; a new "M5 — routing outputs and the
+  sensitivity runs" carry-in), `roadmap/open-questions.md` (OQ-C: the
+  measurement, the band, the owner EP-15), `CHANGELOG.md`, this file.
+- **Commands/tests run + results.** Working clone: `uv run pytest` →
+  **461 passed, 3 skipped** in 30.6 s (unchanged); `pre-commit run
+  --all-files` all hooks passed (after `git add -A`; `site/dist/` is
+  ignored, no scratch build dir existed); each authored packet checked
+  against `_TEMPLATE.md` by script: every heading present in the
+  template's order, the sizing note absent, the header line S; the diff
+  and the five new files scanned for user names, machine identifiers,
+  and absolute paths → none (the one hit, `LOCALAPPDATA`, is the
+  environment-variable name r5py reads its cache directory from). No
+  routing was run, nothing was downloaded into the data root, no JDK
+  installed, no code changed. Pin values were read from the providers'
+  release records over the network (Adoptium's API and the
+  `temurin21-binaries` release, the `r5py/r5` and `septadev/GTFS` release
+  assets through `gh api`, r5py's source on GitHub, Geofabrik's region
+  page and the `.md5` sibling of the dated extract, SEPTA's developer
+  page) and wheel availability was checked with `uv pip compile
+  --only-binary :all:` for Windows and Linux on Python 3.13 in the
+  scratchpad (nothing installed).
+- **Carry-in check (scope item 1).** `milestones.md` "Refinement-gate
+  carry-ins" read on 2026-09-03: the entries are M4 (SNAP follow-ups),
+  M5 (supermarket-format sensitivity), M5 / M6 (the QA slice column and
+  the public schema), and M5 (OQ-I reliability conventions). **None
+  names M3; nothing to apply or delete.** One new entry was added by
+  this gate for the M5 gate (routing outputs and the sensitivity runs;
+  EP-15 completes it with the verdict).
+- **The eight questions, answered (owner-reviewed; recorded in
+  ADR-0008).**
+  1. *Toolchain.* Temurin JDK **21.0.12.1+1** (Windows x64 zip
+     205,073,461 B, SHA-256 `f9d6e191…8b4e`; Linux tarball recorded for
+     the WSL2 fallback) and the R5 jar **`r5-v7.6-r5py-all.jar`** from the
+     `r5py/r5` release `v7.6-r5py` (65,104,016 B, SHA-256 `bb3935be…0eb5`,
+     the jar r5py 1.1.7 pins in its own `util/classpath.py`), installed
+     by a `phillysim toolchain install` verb through the guarded download
+     path into `<repo>/phillysim/.jdk/jdk-21.0.12.1+1/` and
+     `<repo>/phillysim/.r5/` (gitignored: `.jdk/` and `*.jar` already,
+     `.r5/` added by EP-13); `JAVA_HOME` set only in the routing child
+     process's environment, plus `JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=8`,
+     the 12 GB heap, and r5py's cache and temporary directory under the
+     data root. **r5py 1.1.7, JPype1 1.7.1, and psutil 7.2.2 resolve as
+     wheels** on Windows and Linux for Python 3.13 (with rasterio,
+     scikit-learn, geohexgrid, simplification, joblib, requests,
+     filelock, configargparse; none is `GDAL` or `fiona`, so the
+     dependency policy test stays green); they go in an optional
+     `routing` dependency group that CI never installs, because
+     **importing r5py starts the JVM** (`r5/transport_network.py` calls
+     `start_jvm()` at import) and would download the jar if absent.
+     psutil and pyosmium become core dependencies (the sampler; the clip).
+  2. *Determinism band.* Measured pair by pair between a core run and
+     its repeat on the pinned Windows environment, in integer minutes,
+     with the canonicalized-value digest and the byte digest both
+     recorded; **within band = every pair identical, or ≥ 99.9 % of
+     pairs identical with no difference above 1 minute**; the measured
+     numbers become AM-2's documented variance band; wider goes to the
+     owner. Repeats: three smoke runs (EP-13), one repeat of each core
+     run in the first night (EP-14); the second night's stage run is a
+     cross-night repeat verified by the M5 gate.
+  3. *Hand-check tolerance.* Ten OD pairs by rule, two departures
+     (08:30, 17:30) on the pinned Wednesday, both modes = 40 checks
+     against a public trip planner by hand (never a data source; only
+     the tally and minute differences recorded); **walk within 3 min or
+     15 %, walk+transit within 10 min or 25 % (the larger); gate 32 of
+     40**. Reference: SEPTA's own planner for transit, a general planner
+     for walking.
+  4. *Run matrix.* Origins the 408 CenPop centers; destinations **all
+     1,609 SNAP retailers** (the 164 supermarket-format rows are a
+     subset; R5's cost is in origins and departures); runs `walk-48-wed`,
+     `transit-48-wed` (core), their repeats, `walk-30-wed`,
+     `transit-30-wed`, `transit-48-sat`; **the ≤ 8 h wall applies to the
+     two core runs together**; the rest run the same night, timed and
+     reported for M5, not judged. Block-group origins are M5's.
+  5. *Extent, feeds, snapshot IDs.* The Geofabrik **dated** extract
+     `pennsylvania-260831.osm.pbf` (345,912,530 B; provider MD5
+     `a779d2ef14c8addce6eac207ab9cd851`; no sub-region exists), stored
+     as delivered, **clipped to the county bounds + 5 km** with pyosmium
+     (`osmium` 4.3.1, wheels on both platforms) into
+     `intermediate/network/`; the whole-state build is the recorded
+     fallback. SEPTA GTFS from the GitHub release **`v202609060`**
+     (`gtfs_public.zip`, 21,555,258 B, SHA-256 `4d3fa20e…07ab`; bus/metro
+     authoritative 2026-09-06 to 2027-02-20, rail to 2026-10-17), **both
+     feeds**; terms page `www3.septa.org/developer/` archived and checked
+     for the two "SEPTA reserves the right …" sentences; never
+     republished; the CI sample for GTFS is synthetic for that reason.
+     Pinned dates **Wednesday 2026-09-23, Saturday 2026-09-26**.
+     **Snapshot IDs become per-source** (`SNAPSHOT_IDS`; the five keep
+     `2026-09-02`).
+  6. *Fixture stubs.* **Stay stubs; CI never runs the JVM.** The CI
+     performance-smoke test (EP-13) measures `run --fixture` wall and
+     peak process-tree RSS under the sampler; a test asserts no
+     CI-imported module imports r5py.
+  7. *Outputs and publication.* Run records under `<data root>/runs/
+     routing/<night>/<run>/`; on go the matrix becomes
+     `curated/travel_times.parquet` in the dictionary's shape through a
+     registered `travel_times` stage (Bucket B by derivation); **nothing
+     is published in the spike**, so the public zone stays Bucket A until
+     M5.
+  8. *Time box.* Three attended spike sessions = EP-13, EP-14, EP-15;
+     EP-12 (the two adapters) precedes the box as ingest work; nights
+     outside it; **the one extension = one further attended packet plus
+     one night**; EP-15's session calls KILLED-BY-EVIDENCE or
+     TIMEBOX-EXHAUSTED and the owner confirms interactively; the fallback
+     packet is authored by EP-15 and follows it.
+- **Gaps the pre-read found, closed:** JDK build, R5 release, and
+  checksums pinned (ADR-0008); the band and the tolerance stated
+  (ADR-0008, OQ-C); the two routing sources' adapters, allowlists, guard
+  limits (1 GiB for the PBF, which is not an archive; 128 MiB / 1 GiB /
+  ratio 50 / 50 members for the nested GTFS zip), terms sentences, data
+  cards, DATA-LICENSES records, and CI samples specified (EP-12); the
+  single `SNAPSHOT_ID` replaced by per-source IDs (EP-12); the fixture
+  stub shapes stay the generator's by decision (question 6) and the real
+  matrix shape is the dictionary's (EP-14); the CI performance-smoke
+  measurement defined (EP-13); peak RSS measured first by EP-13's smoke
+  route. Two gaps found here and written into the packets: r5py's
+  default walking speed is 3.6 km/h and must be set on every call
+  (EP-13); r5py expires its cache after two weeks, so a network rebuild
+  between nights must be accounted for (EP-13, EP-14).
+- **Packets authored (sequence):** EP-12 `routing-sources` (OSM +
+  GTFS adapters, per-source snapshot IDs, the clipped network; no JVM)
+  → EP-13 `routing-toolchain-harness` (pins installed, routing group,
+  sampler, records, smoke route, CI performance smoke) → EP-14
+  `routing-run-matrix` (plan file, driver, rehearsal, first night) →
+  EP-15 `routing-verdict` (criteria, band, hand check, concordance,
+  code, M3 closes; the fallback packet only on a kill). Sources precede
+  the toolchain because the smoke route needs a real PBF and tinycity
+  has none; the brief's expected shape was adjusted on that evidence.
+  **Count: four S packets after the gate** (three in the attended box),
+  against the milestone's "3 attended"; recorded in `milestones.md` for
+  the checkpoint after EP-15.
+- **Resource observations:** trivial (documentation); one session.
+  Network: provider metadata only (release records, one 32-byte MD5
+  file, two HTML pages). The packets carry the spike's budgets.
+- **Decisions / ADRs made:** ADR-0008 (accepted, owner-reviewed).
+  Routine (agent's call, logged): the four packets share one `routing`
+  package namespace proposal; the plan file is tracked and tested
+  against ADR-0008; the first night carries the repeats so the second
+  night can be the pipeline's stage run; the GTFS CI sample is
+  synthetic; the OSM CI sample is a real clip under the ODbL notice; the
+  concordance engine is built in EP-15 so a kill inherits working
+  fallback code; the M5 carry-in was pre-authored here rather than left
+  to EP-15 alone.
+- **Unresolved risks / questions:** Geofabrik's retention of dated
+  daily extracts is not documented (yearly files persist; the
+  `260831` file may be removed before EP-12 runs → EP-12's stop
+  condition re-pins with the owner). The SEPTA download bypasses the
+  page's click-through form by using SEPTA's own GitHub release; the
+  agreement text is what is archived and accepted (DATA-LICENSES will
+  say so). The rail feed's authoritative window ends 2026-10-17: the
+  pinned dates stay valid because the feed is pinned, but a later
+  refresh moves the dates (ADR-0008). Whether the clipped network's
+  build fits the budget is what EP-13 measures. The third checkpoint
+  falls due after EP-15 and takes the next free integer at that time
+  (on a kill, the owner decides whether the fallback packet precedes
+  it). For M6: the ODbL notice legal review (unchanged).
+- **No-go areas touched:** none (no PHI, no secret, nothing deployed,
+  nothing under a `public/` zone or `site/dist/` committed, no
+  dependency, code, or data change, no source downloaded, no JDK
+  installed).
+- `roadmap/README.md` packet row updated to `[x] c6b5372`; the M3
+  heading stays open (EP-12–EP-15 remain).
+- **Exact next packet: EP-12** (`roadmap/EP-12-routing-sources.md`).
+
+### Owner review (2026-09-03)
+
+Twelve decisions put to the owner interactively at the end of the
+session (the eight questions, with question 5 split into extent, feeds
+and dates, and snapshot IDs; the decomposition with ADR-0008; commit and
+push); **the recommended option was accepted for every one**:
+- Q1 project-local toolchain under `phillysim/` with the pins above;
+  Q2 the band; Q3 the tolerance and the forty checks; Q4 the wall on the
+  two core runs with the sensitivities timed, not judged; Q5a the dated
+  extract clipped to the county + 5 km; Q5b both feeds at `v202609060`
+  with 2026-09-23 / 2026-09-26; Q5c per-source snapshot IDs; Q6 stubs
+  stay and CI never runs the JVM; Q7 run records plus the curated
+  matrix on go, nothing published; Q8 the box EP-13–EP-15 with one
+  extension and EP-15 calling the code for the owner to confirm.
+- **EP-12–EP-15 and ADR-0008 accepted as authored;** ADR-0008's status
+  set to accepted.
+- **Commit, push, CI, handoff:** yes. Work commit `c6b5372`, CI run
+  33799859669 green on both platforms, then this status commit.

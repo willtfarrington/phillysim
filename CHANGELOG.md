@@ -52,7 +52,9 @@ recorded separately in manifests once the pipeline exists.
 ### Added
 
 - **EP-11 — M3 refinement gate executed** (2026-09-03, documentation
-  only, interactively with the owner). The carry-in check: none names M3.
+  only, interactively with the owner; work commit `c6b5372`, CI run
+  33799859669 green on both platforms; every recommended option accepted
+  at the owner review). The carry-in check: none names M3.
   The routing spike decomposed into four S packets, one session each,
   from `_TEMPLATE.md`: `roadmap/EP-12-routing-sources.md` (the OSM
   extract via Geofabrik, the first Bucket B source of the real pipeline,

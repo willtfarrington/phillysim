@@ -139,7 +139,7 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | [x] b61d060 |
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [x] 907f8f8 |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [x] bf9df7f |
-| EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [~] |
+| EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
 | EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [ ] |
 
 ### M3–M8 · `[ ]` refinement gates pending

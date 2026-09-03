@@ -34,7 +34,7 @@ against fixture data once M1's schema contract is stable.
 | M0 | Governed public repo: hygiene, licensing docs, claims matrix, honest reframe (README + repo description), CI skeleton | All M0 packets' acceptance criteria met; repo presentable at any commit | EP-1, EP-2 | 3–4 | high |
 | M1 | Pipeline skeleton runs end-to-end on tinycity synthetic fixture: manifest engine, zones, CLI, contract tests | `phillysim run --fixture` green in offline CI | EP-3, EP-4a, EP-4b | 4–6 | high |
 | M2 | Thin vertical slice on real data: TIGER/ACS spine + SNAP adapter → tract-joined GeoParquet → trivial public-safe GeoJSON + minimal page | Slice reproducible from fresh clone; license buckets applied | EP-5 … EP-8 | 4–6 | high |
-| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | [EP-11](EP-11-m3-refinement-gate.md) (the gate, authored by EP-10), then EP-12 onward as EP-11 authors them | 3 attended (+ unattended runs) | medium |
+| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | [EP-11](EP-11-m3-refinement-gate.md) (the gate, authored by EP-10), then, as EP-11 authored them on 2026-09-03: [EP-12](EP-12-routing-sources.md) (the two routing sources), [EP-13](EP-13-routing-toolchain-harness.md) (toolchain and harness), [EP-14](EP-14-routing-run-matrix.md) (run matrix and the first unattended night), [EP-15](EP-15-routing-verdict.md) (the verdict; the fallback packet only on a kill); pins and decision numbers in [ADR-0008](adr/0008-routing-toolchain-pins.md) | 3 attended (+ unattended runs) | medium |
 | M4 | All v1 sources snapshotted, conflated (POI dedup), hours parsed with QA report | Adapter contract tests green; hours-coverage % published; conflation QA reviewed | refinement gate after EP-8 | 5–7 | medium |
 | M5 | Metrics + MOE + reliability tiers + sensitivity runs + SRAM like-for-like validation | Golden tests green; validation memo written; method cards drafted | refinement gate (carry-ins below) | 5–7 | medium |
 | M6 | Public-safe accessible site: map + parity table + panel + methods/data cards + exports | Playwright+axe green; internal keyboard/NVDA dry run passes | refinement gate | 6–10 | medium (first NVDA loop included) |
@@ -50,7 +50,13 @@ routing determinism remediation (M3).
 - **M3 routing spike**: run matrix pre-scripted in session 1; long runs
   unattended overnight (excluded from the 3-session box); outcome codes
   KILLED-BY-EVIDENCE vs TIMEBOX-EXHAUSTED (one owner-approved extension
-  allowed before fallback).
+  allowed before fallback). Decomposed by EP-11 (2026-09-03): the sources
+  packet EP-12 precedes the box; the box is EP-13 (toolchain, harness,
+  smoke route), EP-14 (the matrix as a plan file, rehearsed, then the
+  first night), EP-15 (the verdict, which calls the code and authors the
+  fallback packet on a kill); the extension is one further attended
+  packet plus one night; the numbers each criterion is read against are
+  in ADR-0008.
 - **PMTiles smoke test**: only if the v1.x basemap enhancement is pursued.
 - **Checkpoint packets**: every ~5 packets, a recurring S-sized checkpoint:
   integration re-run on fixtures (+ real spine once it exists), docs/data-
@@ -130,6 +136,37 @@ this entry:
   `qa_only` fields only under their description or not at all. A change to
   the public files or manifest shape bumps `public_schema_version` (a
   `publish` stage parameter) with a dictionary note.
+```
+
+### M5 — routing outputs and the sensitivity runs (deferred by EP-11, 2026-09-03; EP-15 completes it with the verdict)
+
+Paste into the first M5 packet that consumes travel times (and the M5
+sensitivity packet for the second and third items), then delete this
+entry:
+
+```markdown
+- The routing spike's night records (`<data root>/runs/routing/`, EP-14)
+  hold the wall time and peak process-tree RSS of every run, including
+  the slow-walk (3.0 km/h) and Saturday-window runs, which were timed but
+  not judged in M3; size M5's sensitivity runs (slow-walk, threshold grid,
+  Saturday market metrics) and its unattended nights from those numbers,
+  not from the core runs alone.
+- The block-group population-weighted centroid sensitivity (methodology.md
+  "Units and origins") multiplies the origin count by roughly three and
+  needs a routing night of its own; it was never in the spike.
+- On a go verdict EP-15 registered the real `travel_times` stage and
+  launched its first run as a second night: confirm that run finished,
+  that `curated/travel_times.parquet` is in the dictionary's shape, and
+  that its canonicalized-value digest equals the first night's core
+  digests (the cross-night determinism repeat), before any metric reads
+  it; the third checkpoint's fresh-clone re-run now includes an
+  unattended routing stage and must plan for it.
+- The all-retailer matrix (408 × 1,609) already exists from the spike;
+  the SRAM comparison reads it, and the supermarket-format layer is its
+  subset.
+- The fixture pipeline's `network` and `travel_times` stubs stay stubs
+  (EP-11, question 6); the real bodies are tested by their run records
+  and the CI performance smoke measures the fixture stages only.
 ```
 
 ### M5 — reliability conventions (OQ-I; deferred by EP-3, 2026-09-02)
@@ -226,7 +263,12 @@ the 40–50 contingency), or raise the two sinkhole-watch milestones now
 (M4 5–7 → 6–8, M6 6–10 → 8–12, total 39–51). **Owner decision
 (2026-09-03): the first.** The table is unchanged; the high bound is the
 planning number from here on, and each gate's packet count replaces its
-milestone's range at the checkpoint that follows it.
+milestone's range at the checkpoint that follows it. **EP-11's count
+(2026-09-03):** four S packets after the gate (EP-12 to EP-15), of which
+three (EP-13 to EP-15) are the attended spike box and one (EP-12, the two
+source adapters) is ingest work the spike needs; against the "3 attended"
+estimate that is 4 attended sessions plus the gate, and the checkpoint
+after EP-15 records the actual.
 
 **Re-plan trigger evaluation (EP-10, 2026-09-03).** (1) Kill criterion
 fired: none exists before the M3 spike; not fired. (2) Checkpoint finds

@@ -51,6 +51,33 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-11 — M3 refinement gate executed** (2026-09-03, documentation
+  only, interactively with the owner). The carry-in check: none names M3.
+  The routing spike decomposed into four S packets, one session each,
+  from `_TEMPLATE.md`: `roadmap/EP-12-routing-sources.md` (the OSM
+  extract via Geofabrik, the first Bucket B source of the real pipeline,
+  and SEPTA GTFS pinned to a release tag, never republished; per-source
+  snapshot IDs; the clipped network), `EP-13-routing-toolchain-harness.md`
+  (Temurin JDK 21.0.12.1+1 and the r5py R5 7.6 jar by checksum,
+  project-local; r5py 1.1.7 in an optional `routing` group, never
+  imported in CI; the process-tree RSS sampler with the 22 GB kill; run
+  records; the smoke route; the CI performance-smoke test),
+  `EP-14-routing-run-matrix.md` (the plan file, the `route matrix`
+  driver, the rehearsal, the first unattended night), and
+  `EP-15-routing-verdict.md` (every criterion against the records, the
+  determinism band, the forty-check hand check, the walk concordance
+  against the OSMnx + scipy fallback engine, go / KILLED-BY-EVIDENCE /
+  TIMEBOX-EXHAUSTED, M3 closes). New `roadmap/adr/0008-routing-toolchain-pins.md`
+  records the pins, extents, dates, and decision numbers the owner
+  fixed at the gate (JDK and jar checksums, the dated Pennsylvania
+  extract clipped to the county plus 5 km, SEPTA release `v202609060`
+  with both feeds, the pinned Wednesday 2026-09-23 and Saturday
+  2026-09-26, per-source snapshot IDs, the wall criterion on the two
+  core runs, the determinism band, the hand-check tolerance, no
+  publication in the spike, the time box). `roadmap/README.md` "M3 —
+  Routing spike" table filled; `milestones.md` M3 row, "Spikes & gates",
+  the EP-11 packet count, and a new M5 carry-in; `open-questions.md`
+  OQ-C points at EP-15 with the measurement fixed.
 - **Roadmap: EP-11 authored by EP-10** (2026-09-03): the M3 refinement
   gate, `roadmap/EP-11-m3-refinement-gate.md`, a documentation-only S
   packet that applies the M3 carry-ins (none as of that date), fixes the

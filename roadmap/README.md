@@ -23,7 +23,8 @@ were all resolved before this roadmap was drafted.
   per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), each
   sized for **one** bounded coding-agent session. EP-1–EP-8 cover M0–M2; later
   milestones stay at outcome level until their **refinement gate**, where new
-  EP files are authored (the M3 gate is [EP-11](EP-11-m3-refinement-gate.md)). **At a refinement gate, first apply that
+  EP files are authored (the M3 gate is [EP-11](EP-11-m3-refinement-gate.md),
+  which authored EP-12–EP-15 on 2026-09-03). **At a refinement gate, first apply that
   milestone's entries under "Refinement-gate carry-ins" in
   [milestones.md](milestones.md)** — they are deferred obligations from
   earlier packets, with the text to paste into the new EP files.
@@ -75,7 +76,8 @@ were all resolved before this roadmap was drafted.
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
 | [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md); EP-5 split into [EP-5a](EP-5a-spine-acquisition.md) / [EP-5b](EP-5b-spine-curated.md); EP-8 split into [EP-8a](EP-8a-slice-page.md) / [EP-8b](EP-8b-basemap-roads.md)); later EPs authored at refinement gates |
 | [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11); later checkpoints take the next free integer |
-| [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward |
+| [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward; its pins and decision numbers are [ADR-0008](adr/0008-routing-toolchain-pins.md) |
+| [EP-12](EP-12-routing-sources.md) … [EP-15](EP-15-routing-verdict.md) | The M3 routing spike as authored by EP-11 (2026-09-03): the two routing sources ([EP-12](EP-12-routing-sources.md)), the toolchain and harness ([EP-13](EP-13-routing-toolchain-harness.md)), the run matrix and the first unattended night ([EP-14](EP-14-routing-run-matrix.md)), the verdict ([EP-15](EP-15-routing-verdict.md)); a walk-only fallback packet is authored by EP-15 only on a kill |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
 
 ## Milestones and work packets
@@ -161,22 +163,38 @@ process-tree RSS ≤ 22 GB, determinism within band, sanity gates); go =
 walk+transit within budgets, kill = the documented walk-only fallback
 invoked. A gate packet belongs to the milestone it refines (unlike a
 checkpoint, which belongs to none): EP-11 is the M3 refinement gate,
-authored by EP-10 on 2026-09-03 from its pre-read; it applies the
-`milestones.md` carry-ins first (none name M3 as of that date) and authors
-the spike's packets from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one
-session each, numbered from EP-12, adding their rows here.
+authored by EP-10 on 2026-09-03 from its pre-read. It applied the
+`milestones.md` carry-ins first (none named M3), fixed the spike's inputs,
+sources, pins, and decision numbers in
+[ADR-0008](adr/0008-routing-toolchain-pins.md) with the owner, and authored
+the four packets below from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one
+session each: the sources first (adapter work without a JVM), the toolchain
+and harness next (whose smoke route needs the clipped network), then the
+pre-scripted run matrix launched as an unattended night, then the verdict.
+The attended spike box of milestones.md (three sessions) is EP-13 to EP-15;
+unattended nights are outside it; one owner-approved extension is one
+further attended packet and one more night. EP-15 closes this heading
+with the go/no-go evidence and authors the walk-only fallback packet only
+on a kill or an exhausted time box.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
 | EP-11 | [M3 refinement gate: decompose the routing spike into S packets](EP-11-m3-refinement-gate.md) | S | EP-10 (checkpoint) | [ ] |
+| EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | [ ] |
+| EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [ ] |
+| EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | [ ] |
+| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [ ] |
 
 ### M4–M8 · `[ ]` refinement gates pending
 
 No packet files exist yet. The M4 (full ingest) gate and later gates follow
-the procedure EP-11 establishes for M3: a documentation-only S packet per
-milestone that applies that milestone's carry-ins first and authors its
-packets from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one session each,
-taking the next free integers.
+the procedure EP-11 established for M3 on 2026-09-03: a documentation-only
+S packet per milestone that applies that milestone's carry-ins first,
+reads the documents its pre-read lists, puts every hard-to-reverse value in
+an ADR with the owner (as ADR-0008 does for M3), and authors its packets
+from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one session each, taking
+the next free integers and adding their rows here. The M4 gate is the
+next gate due (M4 parallels M3 and depends on M2 only).
 
 ## Phase overview
 

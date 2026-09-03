@@ -47,11 +47,14 @@ Bbox/county filter at ingest (early-filtering rule). ACS variables limited to
 those methodology.md names; anything more requires a methods-version bump.
 
 ## Acceptance criteria & evidence
-- [ ] `phillysim run --stage spine` from a fresh clone reproduces the
-  checksummed curated spine.
-- [ ] Invariant tests green; MOE columns present.
+- [x] `phillysim run --stage spine` from a fresh clone reproduces the
+  checksummed curated spine. (EP-5b handoff, 2026-09-02: fresh clone of
+  `b61d060` reproduced the spine byte-for-byte, digest recorded there.)
+- [x] Invariant tests green; MOE columns present. (EP-5b, CI run
+  33699313284 on the samples; manual run on the real spine recorded.)
 - Evidence: contract + invariant suites in CI (fixtures); a real run
-  documented in the handoff.
+  documented in the handoff. (EP-5a handoff: acquisition; EP-5b handoff:
+  spine.)
 
 ## Tests / validation
 Contract + invariant suites (CI on fixtures; real run manual, recorded).

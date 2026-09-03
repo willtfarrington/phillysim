@@ -42,8 +42,8 @@ were all resolved before this roadmap was drafted.
   rule (EP-5–EP-8). At pickup, the session reads the packet and decides
   whether it fits one session; if not, it is **split before any work
   starts**, using the convention below. EP-5 was split into EP-5a / EP-5b
-  by the EP-9 pre-read on 2026-09-02; EP-6 was read at pickup the same
-  day, judged to fit one session, and did; EP-7–EP-8 are still M.
+  by the EP-9 pre-read on 2026-09-02; EP-6 and EP-7 were each read at
+  pickup the same day, judged to fit one session, and did; EP-8 is still M.
 - **L** is no longer a valid packet size. The one L packet, EP-4, was split
   on 2026-09-02 into EP-4a and EP-4b at the engine/runner boundary its own
   brief allowed.
@@ -135,7 +135,7 @@ set.
 | EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | [x] 39a6828 |
 | EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | [x] b61d060 |
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [x] 907f8f8 |
-| EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [ ] |
+| EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [x] bf9df7f |
 | EP-8 | [Minimal slice page](EP-8-slice-page.md) | M | EP-7 | [ ] |
 
 ### M3–M8 · `[ ]` refinement gates pending

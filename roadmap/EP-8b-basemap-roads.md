@@ -1,6 +1,6 @@
 # EP-8b — Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes
 
-**Status:** [~] in progress (work complete 2026-09-03; owner review pending) · **Milestone:** M2 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-8 (2026-09-02, pickup pre-read; EP-8a is the other half)
+**Status:** [x] 5cb5092 (done 2026-09-03) · **Milestone:** M2 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-8 (2026-09-02, pickup pre-read; EP-8a is the other half)
 
 ## Outcome & value
 The minimal public-domain basemap ADR-0005 describes, complete for v1:
@@ -94,11 +94,14 @@ basemap made concrete; site README (contrast table); CHANGELOG;
 `roadmap/README.md` (row and the M2 heading); this file's handoff.
 
 ## Handoff payload (filled 2026-09-03)
-- **Packet:** EP-8b — done at commit `EP8B_COMMIT` (+ this status commit).
+- **Packet:** EP-8b — done at commit `5cb5092` (+ this status commit).
   Planning Baseline v1.0. The second half of the EP-8 split; it fit one
-  session. CI run EP8B_CI_RUN on `EP8B_COMMIT` (Windows and Linux: pytest
-  with the browser modules, ruff, the four fixture-pipeline steps, `gate
-  --fixture`, `site build --fixture`).
+  session. CI run
+  [33710988366](https://github.com/willtfarrington/phillysim/actions/runs/33710988366)
+  on `5cb5092` green on `windows-latest` and `ubuntu-latest` (pytest with
+  the browser modules, ruff, the four fixture-pipeline steps, `gate
+  --fixture`, `site build --fixture`; no browser download, CI hosts
+  unchanged).
 - **Files changed:** new `phillysim/src/phillysim/adapters/tiger_roads.py`,
   `phillysim/src/phillysim/basemap.py`,
   `phillysim/tests/contracts/test_tiger_roads.py`,
@@ -146,8 +149,16 @@ basemap made concrete; site README (contrast table); CHANGELOG;
   no console error, no request off the dev server's origin, six downloads.
   **Second data root** (scratch, from empty): 8 stages in 17.5 s wall
   including the 122 MB acquisition; every public and curated digest equal
-  to the working clone's (below). **Fresh-clone rehearsal of `EP8B_COMMIT`:**
-  EP8B_FRESH_CLONE.
+  to the working clone's (below). **Fresh-clone rehearsal of `5cb5092`** (scratch directory, `git clone -c
+  core.longpaths=true` from GitHub, deleted afterwards): clone 1 s; `uv
+  sync --locked` 7 s; `uv run pytest` 461 passed, 3 skipped (41 s, cold
+  caches); `phillysim run` acquired all five sources (7.5 s incl. 122 MB;
+  the roads zip 1,352,071 bytes in 0.3 s), validate 3.1 s, spine 0.2 s,
+  demographics 0.8 s, snap_retailers 2.3 s, basemap 0.3 s, metrics 0.0 s,
+  publish 0.5 s (16 s wall); second `run` 0 ran / 8 skipped; `status` 8
+  fresh; `verify` 8 of 8; `gate` green; `site build` reports
+  `county_boundary (1), roads (426)`; `git status` clean; data root 121 MB;
+  every digest below identical to the working clone's; 75 s in all.
 - **Reproducibility reference (byte-identical between the working clone,
   the second root, and the fresh clone):** `public/basemap.geojson` sha256
   `04141abb6aba057f8f8bbd26e9544876541dbb9881284a125f7b209a7320eafd`
@@ -259,7 +270,7 @@ basemap made concrete; site README (contrast table); CHANGELOG;
   sample is a US-public-domain subset with its status documented; the only
   prose claim added says the basemap is orientation and nothing is derived
   from it).
-- `roadmap/README.md` packet row updated to `[x] EP8B_COMMIT`; the **M2
+- `roadmap/README.md` packet row updated to `[x] 5cb5092`; the **M2
   heading closed** with the go/no-go evidence and the phase table's "First
   data" row marked done.
 - **Exact next packet: the second checkpoint, EP-10** (the next free

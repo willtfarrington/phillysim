@@ -125,7 +125,7 @@ refinement gate, and takes the next free integer.
 |---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
 
-### M2 — Spine + first source end-to-end · `[x] EP8B_COMMIT`
+### M2 — Spine + first source end-to-end · `[x] 5cb5092`
 
 Go/no-go: slice reproducible from a fresh clone; license buckets applied.
 Met 2026-09-03 with EP-8b: the eight-stage real pipeline reproduces the
@@ -148,7 +148,7 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [x] 907f8f8 |
 | EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [x] bf9df7f |
 | EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
-| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [~] |
+| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [x] 5cb5092 |
 
 ### M3–M8 · `[ ]` refinement gates pending
 

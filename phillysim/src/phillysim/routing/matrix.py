@@ -67,6 +67,8 @@ from phillysim.routing.toolchain import Toolchain
 
 NIGHT_FILE = "night.json"
 DRIVER_LOG = "driver.log"
+#: A detached launch's redirected streams (``launch.log``, ``launch.err``) may pre-exist.
+LAUNCH_PREFIX = "launch."
 MATRIX_FILE = "travel_times.parquet"
 MATRIX_INFO_FILE = "matrix.json"
 NIGHT_SCHEMA_VERSION = 1
@@ -280,9 +282,13 @@ class Night:
         now: datetime | None = None,
     ) -> Night:
         directory.mkdir(parents=True, exist_ok=True)
-        if any(directory.iterdir()):
+        # A detached launch redirects its standard streams into the night directory before
+        # the driver starts (the README's launch step): those files are allowed, nothing else.
+        stray = [p.name for p in directory.iterdir() if not p.name.startswith(LAUNCH_PREFIX)]
+        if stray:
             raise PlanError(
-                f"night directory {directory.name} is not empty and has no {NIGHT_FILE}"
+                f"night directory {directory.name} is not empty ({', '.join(sorted(stray))}) "
+                f"and has no {NIGHT_FILE}"
             )
         write_points(points, directory / POINTS_FILE)
         n_origins = int((points["role"] == ROLE_ORIGIN).sum())

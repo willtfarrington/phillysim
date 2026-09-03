@@ -706,11 +706,25 @@ def test_route_matrix_help_and_refusals(tmp_path: Path) -> None:
     assert not (tmp_path / "runs").exists()
 
 
-def test_night_class_refuses_a_non_empty_directory_without_a_record(tmp_path: Path) -> None:
+def test_night_class_accepts_launch_logs_but_refuses_other_files(tmp_path: Path) -> None:
+    points = pd.DataFrame({"role": ["origin"], "id": ["o"], "lon": [0.0], "lat": [0.0]})
+    (tmp_path / "launched").mkdir()
+    (tmp_path / "launched" / "launch.log").write_text("", "utf-8")  # Start-Process's redirects
+    (tmp_path / "launched" / "launch.err").write_text("", "utf-8")
+    night = Night.create(
+        tmp_path / "launched",
+        small_plan(),
+        origins_subset=None,
+        points=points,
+        inputs={},
+        windows={},
+        continue_after_kill=False,
+        roots={},
+    )
+    assert night.state == "running" and (tmp_path / "launched" / NIGHT_FILE).is_file()
     (tmp_path / "night").mkdir()
     (tmp_path / "night" / "stray").write_text("x", "utf-8")
-    points = pd.DataFrame({"role": ["origin"], "id": ["o"], "lon": [0.0], "lat": [0.0]})
-    with pytest.raises(PlanError, match="not empty"):
+    with pytest.raises(PlanError, match=r"not empty \(stray\)"):
         Night.create(
             tmp_path / "night",
             small_plan(),

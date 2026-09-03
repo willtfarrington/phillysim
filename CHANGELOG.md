@@ -10,6 +10,46 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-6 — SNAP retailer adapter + supermarket-format classification**
+  (Planning Baseline v1.0; M2):
+  - `phillysim.adapters.snap` (`snap_retailers`): the USDA SNAP Retailer
+    Locator historical file (2005–2025, as of 2025-12-31) acquired through
+    the guarded path with dual URLs for the FNS→FNA rename (the pre-rename
+    host redirects; the FNA download redirects to a content-delivery host,
+    allowlisted), stored as delivered (24 MB zip, read in place), Bucket A;
+    at first read: Philadelphia County and open authorization spells only
+    (1,609 retailers). No USDA terms page is reachable by the guarded path,
+    so the archived page is the provider's data page in force, checked for
+    its official-site banner and its as-of sentence (a vintage change stops
+    acquisition). Contract: store types within the mapped vocabulary (a new
+    label is the stop condition), county / state fixed, WGS 84 points inside
+    the county bounds, unique record ID.
+  - `phillysim.classify.store_format`: the published, versioned store-type →
+    format-class mapping (`store-formats-1`; 17 USDA labels → `supermarket`,
+    `grocery`, `combination`, `convenience`, `specialty`, `farmers_market`,
+    `other`; `supermarket` = USDA `Supermarket` + `Super Store`, AM-4),
+    packaged as `store_formats.csv`, strict on unknown labels, rendered into
+    the first method card `docs/method-cards/store-formats.md` (a test keeps
+    the two in sync; `python -m phillysim.classify.store_format` re-renders).
+  - `phillysim.destinations`: the real pipeline's `snap_retailers` stage →
+    `curated/snap_retailers.parquet` (GeoParquet in EPSG:26918, keyed by
+    `snap_retailers:<record id>`, store type, format class,
+    `supermarket_format`, containing tract, coordinates as delivered,
+    authorization date) with its invariants enforced in-stage, plus the
+    count report `intermediate/snap_retailers.json`. One layer serves both
+    the supermarket-format destinations and the all-SNAP-retailer variant
+    kept for M5's SRAM comparison.
+  - Tests: golden mapping test, SNAP source contract on a committed sample
+    (26 retailers inside the six sample tracts + 5 control rows), layer
+    invariants (one negative per check), the real-pipeline integration test
+    through five stages; data card `docs/data-cards/snap-retailers.md` with
+    the sanity check against USDA's year-end totals.
+  - Runner: a stage that now declares an output it never produced is stale
+    (`changed: declared outputs`); `acquire` takes the source list and
+    snapshot ID as parameters, so registering a source re-runs it for the
+    new source only; the Windows install retry now waits up to about 14 s.
+    `build_samples.py` pins the dBASE header date so the TIGER sample is
+    byte-identical on any day.
 - **EP-5b — curated tract spine + geospatial invariants + analysis-CRS ADR**
   (Planning Baseline v1.0; second half of the EP-5 set, which is now
   complete):

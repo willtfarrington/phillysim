@@ -49,9 +49,16 @@ phillysim/
                           bounded backoff, capped streaming, archive guards, terms archive,
                           manifest, admission (EP-5a)
     adapters/             real source adapters: base (Adapter, Philadelphia constants),
-                          tiger, cenpop, acs; ADAPTERS registry (EP-5a)
+                          tiger, cenpop, acs (EP-5a), snap (USDA SNAP retailers, EP-6);
+                          ADAPTERS registry
+    classify/             project-derived, format-based classifications: store_format
+                          (USDA store type -> format class, the packaged, versioned
+                          mapping table rendered into docs/method-cards/) (EP-6)
+    destinations.py       destination layers on the spine: the classified SNAP retailer
+                          point layer and its invariants (EP-6)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
-                          `demographics` (EP-5b) on the pinned snapshots
+                          `demographics` (EP-5b), `snap_retailers` (EP-6) on the pinned
+                          snapshots
     spine.py              the curated tract spine, the analysis CRS (ADR-0007), and the
                           geospatial invariants every later packet inherits (EP-5b)
     contracts.py          source-contract harness (schema/license/geometry) + the
@@ -73,13 +80,17 @@ phillysim/
     test_tinycity_fixture.py    determinism + committed-golden checks
     test_spine_invariants.py    geospatial invariants on the samples (CI) and, with
                                 `--real-data-root DIR`, on the real spine (manual) (EP-5b)
-    contracts/            harness unit tests; tinycity sources; the three spine sources on
-                          the committed samples (EP-5a)
+    test_store_format.py        golden mapping test: the store-type table, its rules, and
+                                the method card it renders into (EP-6)
+    test_destinations.py        the SNAP retailer layer on the samples and its invariants,
+                                one negative per check (EP-6)
+    contracts/            harness unit tests; tinycity sources; the three spine sources and
+                          the SNAP retailer source on the committed samples (EP-5a, EP-6)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
-                          real pipeline's acquire + validate on a fake transport (EP-5a)
+                          real pipeline's five stages on a fake transport (EP-5a–EP-6)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
-    fixtures/spine-samples/     real-shaped, public-domain subsets of the three spine
+    fixtures/spine-samples/     real-shaped, public-domain subsets of the four real
                                 snapshots + the script that cuts them (README explains)
 ```
 
@@ -194,22 +205,28 @@ asserts. CI runs `run`, `status`, and `verify --fixture` on Windows and Linux
 
 Without `--fixture`, the verbs use the real pipeline (`phillysim.pipeline`,
 name `real`) on the resolved data root. It shares the fixture pipeline's
-stage names, zones, and output paths, so the architecture.md stage table
-describes both, but the two never meet: the state file records its
-pipeline's name and refuses the other one, and the roots differ
-(`<data root>/` versus `<data root>/fixture/`). Four stages exist so far:
-`acquire` and `validate` (EP-5a), `spine` and `demographics` (EP-5b).
+stage names, zones, and output paths where the two overlap, so the
+architecture.md stage table describes both, but the two never meet: the
+state file records its pipeline's name and refuses the other one, and the
+roots differ (`<data root>/` versus `<data root>/fixture/`). Five stages
+exist so far: `acquire` and `validate` (EP-5a), `spine` and `demographics`
+(EP-5b), `snap_retailers` (EP-6; the first per-source destination layer,
+which the fixture pipeline has no counterpart for).
 
 - `acquire` brings in the pinned snapshot (`phillysim.pipeline.SNAPSHOT_ID`,
-  currently `2026-09-02`) of each spine source: TIGER/Line 2025 tracts
-  (`tiger_tracts`), CenPop2020 tract centers (`cenpop`), and the ACS 5-year
-  2020–2024 tables B01003 and B08201 (`acs`), each into
-  `raw/<source>/<snapshot-id>/` with the archived terms page and a manifest.
-  A snapshot already in the raw zone is verified and re-used, never
-  re-downloaded (and never replaced: a tampered one fails the stage). It also
-  writes `intermediate/acquisition.json` (URLs, bytes, attempts, timings,
-  filter placement, guard limits per source). A controlled refresh is a
-  change to `SNAPSHOT_ID`, recorded in the changelog; older snapshots stay.
+  currently `2026-09-02`) of each registered source: TIGER/Line 2025 tracts
+  (`tiger_tracts`), CenPop2020 tract centers (`cenpop`), the ACS 5-year
+  2020–2024 tables B01003 and B08201 (`acs`), and the USDA SNAP Retailer
+  Locator historical file (`snap_retailers`, EP-6), each into
+  `raw/<source>/<snapshot-id>/` with the archived terms page (for USDA, the
+  provider's data page in force) and a manifest. A snapshot already in the
+  raw zone is verified and re-used, never re-downloaded (and never replaced:
+  a tampered one fails the stage); the source list and snapshot ID are stage
+  parameters, so registering a source re-runs the stage for the new one
+  only. It also writes `intermediate/acquisition.json` (URLs, bytes,
+  attempts, timings, filter placement, guard limits per source). A
+  controlled refresh is a change to `SNAPSHOT_ID`, recorded in the
+  changelog; older snapshots stay.
 - `validate` reads each snapshot through its adapter, which applies the
   Philadelphia County filter (state files are stored as delivered and
   filtered at first read; see the adapter docstrings and
@@ -230,12 +247,22 @@ pipeline's name and refuses the other one, and the roots differ
   (`B01003_001`, `B08201_002`) one-to-one to the spine into
   `intermediate/acs_tracts.parquet`, suppressed cells left null (ADR-0004),
   and checks the join cardinality the same way.
+- `snap_retailers` (EP-6, `phillysim.destinations`) builds
+  `curated/snap_retailers.parquet` (GeoParquet, analysis CRS): every SNAP
+  retailer in the county authorized as of the file's as-of date, keyed by
+  `snap_retailers:<record id>`, with USDA's store type, the project's
+  format class from the packaged mapping (`phillysim.classify.store_format`,
+  rendered into `docs/method-cards/store-formats.md`), a
+  `supermarket_format` flag, and the tract containing the point; it enforces
+  the layer's invariants on its output and writes a count report to
+  `intermediate/snap_retailers.json`. Its parameters are `crs`,
+  `mapping_version`, and `as_of`.
 
-`phillysim run` (or `run --stage spine`) needs the network once (about 97 MB
-from `www2.census.gov` and `www.census.gov`, seconds on a fast connection)
-and the real-run preflight thresholds; afterwards `run`, `status`, and
-`verify` are offline and take about a second each. The invariants can be
-re-run on a real data root by hand:
+`phillysim run` (or `run --stage snap_retailers`) needs the network once
+(about 121 MB: 97 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
+`www.fna.usda.gov`, seconds on a fast connection) and the real-run preflight
+thresholds; afterwards `run`, `status`, and `verify` are offline and take a
+few seconds each. The invariants can be re-run on a real data root by hand:
 
 ```
 uv run pytest tests/test_spine_invariants.py --real-data-root ../data -s

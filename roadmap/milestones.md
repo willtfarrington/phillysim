@@ -66,6 +66,43 @@ Items that earlier packets deferred to a later milestone's refinement gate.
 deletes the entry here and records the deletion in the new packet's handoff.
 The roadmap README's reading order points here, so no one has to remember.
 
+### M4 — SNAP retailer follow-ups (deferred by EP-6, 2026-09-02)
+
+Paste into the M4 packet that conflates destination sources (under
+"Scope → in" and "Implementation notes"), then delete this entry:
+
+```markdown
+- OSM `shop=supermarket` cross-check of the SNAP supermarket-format layer
+  (methodology.md "Destination layers"; deferred by EP-6): report agreement
+  and disagreement counts in the conflation QA, never reclassify a SNAP
+  row from OSM evidence without a methods-version note.
+- Two SNAP rows USDA attributes to Philadelphia County but geocodes outside
+  every tract (`snap_retailers:873249`, `snap_retailers:903932`; null
+  `geoid` in `curated/snap_retailers.parquet`, named in the SNAP data
+  card): decide drop / re-geocode / keep, and record it.
+- Thirteen pairs of SNAP retailers share identical coordinates; conflation
+  must treat them as distinct authorizations unless another source shows
+  otherwise.
+- USDA's own `Farmers' Market` rows (7 open in the county) overlap the
+  City's farmers'-market layer: conflate, do not double count.
+```
+
+### M5 — supermarket-format sensitivity (deferred by EP-6, 2026-09-02)
+
+Paste into the M5 sensitivity packet, then delete this entry:
+
+```markdown
+- Sensitivity of the supermarket-format results to the class boundary:
+  re-run with USDA `Large Grocery Store` (22 open rows in the county at
+  2025-12-31) added to `supermarket`; report the difference, do not change
+  the published mapping (`store-formats-1`) without a version bump.
+- The all-SNAP-retailer variant for the SRAM comparison is the whole
+  `curated/snap_retailers.parquet` table (1,609 rows as of 2025-12-31);
+  SRAM's vintage and universe must be matched to it explicitly (the
+  historical file omits USDA's `Direct Marketing Farmer` and `Internet
+  Retailer` types, which SRAM may include).
+```
+
 ### M5 — reliability conventions (OQ-I; deferred by EP-3, 2026-09-02)
 
 The tinycity fixture and `phillysim.contracts.ANALYTIC_TABLE` encode four

@@ -10,7 +10,11 @@ from ``--fixture``.
 
 EP-5a registers ``acquire`` and ``validate`` for the three spine sources;
 EP-5b adds ``spine`` and ``demographics`` (bodies in :mod:`phillysim.spine`,
-which also holds the geospatial invariants and the analysis CRS); later
+which also holds the geospatial invariants and the analysis CRS); EP-6 adds
+the ``snap_retailers`` source to ``acquire`` / ``validate`` and the
+``snap_retailers`` stage (body in :mod:`phillysim.destinations`), the first
+per-source destination layer, which the fixture pipeline has no counterpart
+for (its ``destinations`` stage reads its fake sources directly); later
 packets append the rest.
 
 Snapshot IDs are pinned in :data:`SNAPSHOT_ID` rather than taken from the
@@ -31,8 +35,10 @@ import time
 from dataclasses import replace
 from typing import Any
 
-from phillysim.adapters import ADAPTERS
+from phillysim.adapters import ADAPTERS, snap
+from phillysim.classify.store_format import MAPPING_VERSION
 from phillysim.contracts import check_frame
+from phillysim.destinations import SNAP_REPORT, SNAP_RETAILERS, snap_retailers
 from phillysim.download import Acquisition, Opener, acquire_snapshot, urllib_open
 from phillysim.manifest import SCHEMA_VERSION, read_manifest, verify_snapshot
 from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, TRACT_COUNT, demographics, spine
@@ -59,8 +65,9 @@ def make_acquire(opener: Opener):
     """The ``acquire`` stage body bound to a transport (the default is the real one)."""
 
     def acquire(ctx: StageContext) -> None:
-        """Acquire the pinned snapshot of every spine source through the guarded path, or
-        re-use the verified snapshot already in the raw zone; write the acquisition report."""
+        """Acquire the pinned snapshot of every registered source through the guarded path,
+        or re-use the verified snapshot already in the raw zone; write the acquisition
+        report."""
         quarantine_zone = ctx.root / "quarantine"
         report: dict[str, Any] = {"snapshot_id": SNAPSHOT_ID, "sources": {}}
         for source in SOURCES:
@@ -112,8 +119,8 @@ def make_acquire(opener: Opener):
 
 
 def validate(ctx: StageContext) -> None:
-    """Read every admitted spine snapshot through its adapter (county filter applied) and
-    check it against its contract; any violation fails the stage."""
+    """Read every admitted snapshot through its adapter (county filter applied) and check
+    it against its contract; any violation fails the stage."""
     report: dict[str, Any] = {}
     failures: list[str] = []
     for source in SOURCES:
@@ -158,8 +165,16 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 "acquire",
                 make_acquire(opener),
                 outputs=(*RAW_SNAPSHOTS, ACQUISITION),
-                params={"timeout_s": 60, "attempts": 3},
-                description="acquire the pinned spine snapshots through the guarded path",
+                # The source set and snapshot ID are parameters so that registering a new
+                # source (EP-6 added snap_retailers) or a controlled refresh changes the
+                # fingerprint and re-runs the stage, which re-uses every existing snapshot.
+                params={
+                    "timeout_s": 60,
+                    "attempts": 3,
+                    "snapshot_id": SNAPSHOT_ID,
+                    "sources": list(SOURCES),
+                },
+                description="acquire the pinned snapshots through the guarded path",
             ),
             Stage(
                 "validate",
@@ -167,7 +182,7 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 inputs=RAW_SNAPSHOTS,
                 outputs=(VALIDATION,),
                 params={"schema_version": SCHEMA_VERSION},
-                description="check every spine source against its contract",
+                description="check every source against its contract",
             ),
             Stage(
                 "spine",
@@ -185,6 +200,19 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 outputs=(ACS_TRACTS,),
                 params={"schema_version": SCHEMA_VERSION},
                 description="ACS estimates and margins of error joined one-to-one to the spine",
+            ),
+            Stage(
+                "snap_retailers",
+                snap_retailers,
+                inputs=(SPINE, _raw(snap.SOURCE), VALIDATION),
+                outputs=(SNAP_RETAILERS, SNAP_REPORT),
+                params={
+                    "crs": ANALYSIS_CRS,
+                    "mapping_version": MAPPING_VERSION,
+                    "as_of": snap.AS_OF,
+                },
+                description="SNAP retailer point layer: store-format classification, tract "
+                "assignment, stable site IDs, invariants enforced",
             ),
         ],
     )

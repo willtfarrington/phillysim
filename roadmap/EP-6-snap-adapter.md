@@ -1,6 +1,6 @@
 # EP-6 — SNAP retailer adapter + supermarket-format classification
 
-**Status:** [ ] planned · **Milestone:** M2 · **Effort:** M (1–2 sessions, medium confidence) · **Parallel with:** —
+**Status:** [~] in progress (2026-09-02; pickup pre-read: fits one session, not split) · **Milestone:** M2 · **Effort:** M (1–2 sessions, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 SNAP retailer acquisition (manifest-recorded), Philadelphia filter, a
@@ -38,10 +38,13 @@ Store-type mapping is a published, versioned artifact (methods axis): keep it
 in config, render it into the method-card stub.
 
 ## Acceptance criteria & evidence
-- [ ] Classified point layer reproducible from fresh clone.
-- [ ] Mapping table renders into the method-card stub.
-- [ ] Philadelphia counts sanity-checked against the source's own totals
-  (recorded in handoff).
+- [x] Classified point layer reproducible from fresh clone (working clone
+  and fresh-clone digests in the handoff).
+- [x] Mapping table renders into the method-card stub
+  (`docs/method-cards/store-formats.md`; `tests/test_store_format.py` keeps
+  it in sync).
+- [x] Philadelphia counts sanity-checked against the source's own totals
+  (recorded in handoff and in the SNAP data card).
 - Evidence: contract tests + golden mapping test green.
 
 ## Tests / validation

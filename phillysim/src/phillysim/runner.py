@@ -253,6 +253,10 @@ def stage_status(root: Path, state: State | None, stage: Stage) -> StageStatus:
     if problem is not None:
         kind = MISSING if problem.endswith("is absent") else STALE
         return StageStatus(stage.name, kind, problem)
+    if set(record.outputs) != set(stage.outputs):
+        # The stage now declares different outputs than it produced (a source was
+        # registered, say): the recorded ones may be intact, but the run is not complete.
+        return StageStatus(stage.name, STALE, "changed: declared outputs")
     try:
         current, _ = fingerprint(root, stage)
     except MissingInputError as exc:
@@ -318,12 +322,13 @@ def _scrub(text: str, root: Path) -> str:
     return text
 
 
-def _replace_with_retry(source: Path, target: Path, attempts: int = 6) -> None:
+def _replace_with_retry(source: Path, target: Path, attempts: int = 10) -> None:
     """``os.replace`` with a short, bounded retry on ``PermissionError``.
 
     On Windows a virus scanner or indexer can hold a freshly written file for a
     moment; the first real acquisition (a 13 MB zip, EP-5a) failed its install
-    on exactly that. The retry waits 0.25 s, 0.5 s, ... and then gives up.
+    on exactly that, and a 24 MB zip (EP-6) outlasted six attempts. The retry
+    waits 0.25 s, 0.5 s, ... (about 14 s in all) and then gives up.
     """
     for attempt in range(1, attempts + 1):
         try:

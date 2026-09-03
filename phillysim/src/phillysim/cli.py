@@ -209,7 +209,7 @@ def status(
         typer.echo(f"FAIL {exc}")
         raise typer.Exit(code=1) from exc
     for row in rows:
-        typer.echo(f"{row.status:<11}{row.name:<14}{row.detail}")
+        typer.echo(f"{row.status:<11}{row.name:<16}{row.detail}")
     counts = {
         kind: sum(1 for r in rows if r.status == kind)
         for kind in ("fresh", "stale", "missing", "incomplete")

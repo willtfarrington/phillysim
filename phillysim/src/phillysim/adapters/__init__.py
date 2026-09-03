@@ -1,4 +1,5 @@
-"""Real source adapters (EP-5a): the three spine sources, one module each.
+"""Real source adapters: the three spine sources (EP-5a) and the first destination
+source, USDA SNAP retailers (EP-6), one module each.
 
 Each module declares how its source is acquired (:class:`~phillysim.download.SnapshotSpec`
 with the adapter's own allowlist and guard limits), what the loaded table must
@@ -9,11 +10,11 @@ is the registry the real pipeline iterates, keyed by source name.
 
 from __future__ import annotations
 
-from phillysim.adapters import acs, cenpop, tiger
+from phillysim.adapters import acs, cenpop, snap, tiger
 from phillysim.adapters.base import Adapter
 
 ADAPTERS: dict[str, Adapter] = {
-    adapter.name: adapter for adapter in (acs.ADAPTER, cenpop.ADAPTER, tiger.ADAPTER)
+    adapter.name: adapter for adapter in (acs.ADAPTER, cenpop.ADAPTER, snap.ADAPTER, tiger.ADAPTER)
 }
 
 __all__ = ["ADAPTERS", "Adapter"]

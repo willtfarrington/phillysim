@@ -16,7 +16,9 @@ source" success evidence.
 | `tiger_tracts` | [tiger-tracts.md](tiger-tracts.md) | Tract boundaries and names (the spine's geometry) | EP-5a / EP-5b |
 | `cenpop` | [cenpop.md](cenpop.md) | 2020 Census population and population-weighted centers (the routing origins) | EP-5a / EP-5b |
 | `acs` | [acs.md](acs.md) | ACS 5-year estimates with margins of error (denominators and context) | EP-5a / EP-5b |
+| `snap_retailers` | [snap-retailers.md](snap-retailers.md) | SNAP-authorized retailers with USDA store types (the supermarket-format layer and the all-retailer variant) | EP-6 |
 
-Destination sources (SNAP retailers, farmers' markets, meal sites), transit,
-and the street network get cards with their adapters (EP-6, M3, M4). Method
-cards, per metric, are a separate set (methodology.md) and start with EP-7.
+The remaining destination sources (farmers' markets, meal sites), transit,
+and the street network get cards with their adapters (M3, M4). Method cards
+are a separate set under [docs/method-cards/](../method-cards/); the first,
+the store-format classification, arrived with EP-6.

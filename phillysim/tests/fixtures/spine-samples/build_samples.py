@@ -20,6 +20,8 @@ order.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import re
 import shutil
 import tempfile
@@ -27,12 +29,14 @@ import zipfile
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
 
-from phillysim.adapters import ADAPTERS, acs, cenpop, tiger
+from phillysim.adapters import ADAPTERS, acs, cenpop, snap, tiger
 from phillysim.adapters.base import CENSUS_TERMS_FILE, CENSUS_TERMS_PHRASE
 from phillysim.config import Settings
 from phillysim.manifest import build_manifest, read_manifest, write_manifest
 from phillysim.pipeline import SNAPSHOT_ID
+from phillysim.spine import SPINE
 
 HERE = Path(__file__).resolve().parent
 SAMPLE_TRACTS: tuple[str, ...] = (
@@ -111,7 +115,13 @@ def build_tiger(root: Path) -> Path:
             for member in members:
                 info = zipfile.ZipInfo(member.name, date_time=ZIP_TIME)
                 info.compress_type = zipfile.ZIP_DEFLATED
-                zf.writestr(info, member.read_bytes())
+                data = member.read_bytes()
+                if member.suffix == ".dbf":
+                    # The dBASE header stamps the day of writing in bytes 1-3 (YY MM DD,
+                    # year minus 1900); pin it so the sample is byte-identical on any day.
+                    year, month, day = ZIP_TIME[:3]
+                    data = data[:1] + bytes((year - 1900, month, day)) + data[4:]
+                zf.writestr(info, data)
     (target / CENSUS_TERMS_FILE).write_bytes(_terms_excerpt(real / CENSUS_TERMS_FILE))
     _manifest(target, real, len(SAMPLE_TRACTS))
     return target
@@ -153,6 +163,92 @@ def build_acs(root: Path) -> Path:
     return target
 
 
+#: SNAP control rows (EP-6): closed Philadelphia spells, another county, another state.
+SNAP_CLOSED_PHILADELPHIA = 2
+SNAP_OTHER_COUNTY = 2
+SNAP_OTHER_STATE = 1
+
+
+def build_snap(root: Path) -> Path:
+    """Current Philadelphia retailers inside the sample tracts, plus control rows.
+
+    Needs the curated spine in the data root (``phillysim run --stage spine``) to find
+    which retailers fall inside :data:`SAMPLE_TRACTS`; rows are written in the
+    provider's column order and quoting, the member name and header unchanged.
+    """
+    real, target = _real(root, snap.SOURCE), _out(snap.SOURCE)
+    everything = snap.read_all(real)
+    spine = gpd.read_parquet(root / SPINE)
+    spine = spine[spine["geoid"].isin(SAMPLE_TRACTS)]
+    current = snap.read(real)
+    points = gpd.GeoDataFrame(geometry=current.geometry.to_crs(spine.crs))
+    inside = gpd.sjoin(points, spine[["geometry"]], how="inner", predicate="within")
+    keep_ids = set(current.loc[inside.index.unique(), "Record ID"])
+    if len(keep_ids) < 10:
+        raise SystemExit(f"snap: only {len(keep_ids)} current retailers in the sample tracts")
+
+    def first(mask, n: int):
+        rows = everything[mask]
+        return rows.iloc[rows["Record ID"].astype("int64").argsort(kind="stable").to_numpy()[:n]]
+
+    philadelphia = (everything["State"] == "PA") & (everything["County"] == "PHILADELPHIA")
+    controls = [
+        first(philadelphia & everything["End Date"].notna(), SNAP_CLOSED_PHILADELPHIA),
+        first(
+            (everything["State"] == "PA")
+            & (everything["County"] == "ADAMS")
+            & everything["End Date"].isna(),
+            SNAP_OTHER_COUNTY,
+        ),
+        first((everything["State"] == "DE") & everything["End Date"].isna(), SNAP_OTHER_STATE),
+    ]
+    control_keys = {
+        (row["Record ID"], row["Authorization Date"])
+        for part in controls
+        for _, row in part.iterrows()
+    }
+    is_control = pd.Series(
+        [
+            (r, a) in control_keys
+            for r, a in zip(everything["Record ID"], everything["Authorization Date"], strict=True)
+        ],
+        index=everything.index,
+    )
+    wanted = everything[
+        (everything["Record ID"].isin(keep_ids) & everything["End Date"].isna()) | is_control
+    ]
+    expected = len(keep_ids) + sum(len(part) for part in controls)
+    if len(wanted) != expected:
+        raise SystemExit(f"snap: expected {expected} rows, selected {len(wanted)}")
+
+    buffer = io.StringIO(newline="")
+    writer = csv.writer(buffer, lineterminator="\r\n")
+    writer.writerow(snap.COLUMNS)
+    for _, row in wanted.iterrows():
+        writer.writerow(["" if value is None or value != value else value for value in row])
+    with zipfile.ZipFile(target / snap.FILE_NAME, "w", zipfile.ZIP_DEFLATED) as zf:
+        info = zipfile.ZipInfo(snap.MEMBER, date_time=ZIP_TIME)
+        info.compress_type = zipfile.ZIP_DEFLATED
+        zf.writestr(info, ("﻿" + buffer.getvalue()).encode("utf-8"))
+    (target / snap.PAGE_FILE).write_bytes(_page_excerpt(real / snap.PAGE_FILE))
+    _manifest(target, real, len(keep_ids))
+    return target
+
+
+def _page_excerpt(real_page: Path) -> bytes:
+    html = real_page.read_text("utf-8", errors="replace")
+    fragments = []
+    for phrase in snap.PAGE_PHRASES:
+        match = re.search(r"<(p|span|div)[^>]*>[^<]*" + re.escape(phrase) + r".{0,80}?</\1>", html)
+        fragments.append(match.group(0) if match else f"<p>{phrase}</p>")
+    return (
+        "<!-- Excerpt for the CI sample: the fragments of the provider's data page archived\n"
+        f"     beside the real {SNAPSHOT_ID} snapshot that the adapter checks (its manifest\n"
+        "     records the URL); the full page lives only in the gitignored raw zone. -->\n"
+        "<html><body>\n" + "\n".join(fragments) + "\n</body></html>\n"
+    ).encode("utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data-root", type=Path, default=None)
@@ -163,9 +259,11 @@ def main() -> None:
             tiger.SOURCE: build_tiger,
             cenpop.SOURCE: build_cenpop,
             acs.SOURCE: build_acs,
+            snap.SOURCE: build_snap,
         }[source](root)
         frame = ADAPTERS[source].read(target)
-        print(f"{source}: {len(frame)} tract(s) after the county filter -> {target}")
+        unit = "retailer(s)" if source == snap.SOURCE else "tract(s)"
+        print(f"{source}: {len(frame)} {unit} after the county filter -> {target}")
 
 
 if __name__ == "__main__":

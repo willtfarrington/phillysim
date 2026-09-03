@@ -9,7 +9,7 @@ this matrix ships with the repo.
 
 | Source | Role | License/terms | Status | Notes |
 |---|---|---|---|---|
-| USDA SNAP retailer file | Supermarket-format destination points (typed store formats) | US public domain | committed | Point-level; classification vocabulary format-based only |
+| USDA SNAP retailer file | Supermarket-format destination points (typed store formats) | US public domain | committed; acquired 2026-09-02 (EP-6) | Point-level; classification vocabulary format-based only; FNS→FNA rename 2026-06-01 handled by dual URLs; no USDA terms page reachable by the guarded path (data page archived instead; DATA-LICENSES) |
 | City Farmers' Markets (ODP/ArcGIS) | Market destinations, day/season fields | City of Philadelphia terms (see caveat) | committed | Free-text hours → parser + QA packet |
 | City Free Food & Meal Sites (ODP/ArcGIS) | Meal-site destinations, structured per-day hours | City terms (see caveat) | committed | Delisting policy applies (governance.md) |
 | USDA SRAM (2025 data, 2020 tracts) | External comparator | US public domain | comparator | Like-for-like vs project all-SNAP-retailer variant ONLY; universe = all SNAP retailers incl. convenience/dollar |

@@ -1,10 +1,11 @@
 # Data dictionary
 
-> **Status: seeded (EP-3); first real instances (EP-5b).** Schema version
-> **1**. This document describes the tables the pipeline produces. Instances
-> today: the synthetic tinycity fixture's golden files
-> (`phillysim/tests/fixtures/tinycity/`) for every table, and, since EP-5b,
-> the real curated tract spine and its ACS join in the gitignored data root.
+> **Status: seeded (EP-3); first real instances (EP-5b, EP-6).** Schema
+> version **1**. This document describes the tables the pipeline produces.
+> Instances today: the synthetic tinycity fixture's golden files
+> (`phillysim/tests/fixtures/tinycity/`) for every table, and, since EP-5b
+> and EP-6, the real curated tract spine, its ACS join, and the SNAP retailer
+> layer in the gitignored data root.
 > The integer schema version is one of the manifest-recorded version axes
 > ([ADR-0006](../roadmap/adr/0006-versioning-axes.md)): any breaking change to
 > a table shape below bumps it, with a migration note here. Column names are
@@ -23,8 +24,9 @@ parameter. Which tables carry which CRS:
 | Tables | CRS | Why |
 |---|---|---|
 | Raw-source tables (`raw/tiger_tracts`, `raw/cenpop` below) | NAD 83, EPSG:4269 | as delivered by the Census Bureau; never rewritten |
-| Curated tract spine `geometry`; every analysis-zone geometry derived from it (sites, travel-time inputs, metrics, from EP-6 on) | EPSG:26918 | the analysis CRS; recorded in each GeoParquet file's metadata |
-| `centroid_lon` / `centroid_lat` in the spine; `longitude` / `latitude` in the sites table | degrees (NAD 83 as published; treated as WGS 84 at publication, ADR-0007 datum note) | the form routing origins and destinations take; `phillysim.spine.centroids_in` projects the spine's centers on demand |
+| Raw SNAP retailer table (`raw/snap_retailers` below) | WGS 84, EPSG:4326 | the provider's geocodes carry no stated datum; treated as WGS 84 (the difference from NAD 83 is far below the geocoding error) |
+| Curated tract spine `geometry`; every analysis-zone geometry derived from it or joined to it (the SNAP retailer layer since EP-6, sites, travel-time inputs, metrics) | EPSG:26918 | the analysis CRS; recorded in each GeoParquet file's metadata |
+| `centroid_lon` / `centroid_lat` in the spine; `longitude` / `latitude` in the SNAP retailer layer and the sites table | degrees (NAD 83 as published for the spine, the provider's geocodes for destinations; treated as WGS 84 at publication, ADR-0007 datum note) | the form routing origins and destinations take; `phillysim.spine.centroids_in` projects the spine's centers on demand |
 | Public zone (`public/`, GeoJSON / CSV) | WGS 84, EPSG:4326 | the publication boundary, and nowhere else |
 | The tinycity fixture's tables | the fixture's own geographic CRS (EPSG:4326, the fixture pipeline's `crs` parameter) | a synthetic grid outside Pennsylvania and outside UTM zone 18; the invariant module takes the expected CRS as an argument for this reason |
 
@@ -132,6 +134,38 @@ inside the county bounds; every `geoid` an eleven-digit Philadelphia County
 and (after `demographics`) one ACS row per tract, none unmatched.
 `pytest --real-data-root DIR` runs them on a real data root.
 
+## SNAP retailer layer (`snap_retailers.parquet`) — real pipeline, EP-6
+
+One row per SNAP-authorized retailer in Philadelphia County as of the source
+file's as-of date (`2025-12-31` for the pinned snapshot), written by the real
+pipeline's `snap_retailers` stage (`phillysim.destinations`) from the
+[`snap_retailers`](data-cards/snap-retailers.md) raw source and the spine.
+GeoParquet, geometry in the analysis CRS, sorted by `site_id`. The rows with
+`supermarket_format` true are the **supermarket-format** destination layer
+(AM-4); the whole table is the **all-SNAP-retailer** variant M5 compares
+with USDA's SRAM. Nothing is de-duplicated across sources (M4) and the file
+carries no hours. The layer's invariants (`check_snap_layer`) are enforced
+by the stage: CRS as declared, unique site IDs, classes from the published
+mapping, points inside the county bounds, assigned tracts in the spine.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `site_id` | string | `snap_retailers:<Record ID>` (unique key; the sites table's key form) |
+| `source` | string | `snap_retailers` |
+| `source_record_id` | string | USDA's Record ID |
+| `name` | string | Store name as published (untrusted text: escaped on output) |
+| `store_type` | string | USDA's store type label, verbatim (one of the 17 in the mapping) |
+| `format_class` | string | Project format class from the published mapping: `supermarket`, `grocery`, `combination`, `convenience`, `specialty`, `farmers_market`, or `other` ([method card](method-cards/store-formats.md)) |
+| `supermarket_format` | boolean | `format_class == "supermarket"` (USDA `Supermarket` or `Super Store`) |
+| `geoid` | string, nullable | Spine tract containing the point (point-in-polygon in the analysis CRS); null when no tract contains it (two rows in the pinned snapshot, named in the data card) |
+| `longitude`, `latitude` | float | The provider's coordinates, as delivered (degrees) |
+| `authorized_since` | timestamp | Start of the open authorization spell (the provider's Authorization Date) |
+| `geometry` | Point, EPSG:26918 | The coordinates projected into the analysis CRS |
+
+The stage also writes `intermediate/snap_retailers.json` (counts by store type
+and format class, tracts covered, unassigned points, mapping version, as-of
+date); the counts for the pinned snapshot are in the data card.
+
 ## Conflated sites (`sites.parquet`)
 
 One row per destination after conflation, keyed by a source-scoped site ID.
@@ -200,6 +234,7 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/acquisition.json` | `acquire` (real pipeline, EP-5a) | nobody (report) | Per-source acquisition report: snapshot ID, acquisition URL, whether an existing verified snapshot was re-used, each fetch's URL / bytes / attempts / seconds, the filter placement note, and the guard limits applied |
 | `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
 | `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract; real pipeline (EP-5b): `geoid` + the pinned `B01003_001E/M`, `B08201_002E/M` as float64, exactly one row per spine tract in spine order, suppressed cells null (ADR-0004), join cardinality enforced |
+| `intermediate/snap_retailers.json` | `snap_retailers` (real pipeline, EP-6) | nobody (report) | Counts for the SNAP retailer layer: rows, supermarket-format rows, by store type, by format class, tracts with any / with a supermarket-format retailer, points unassigned to a tract, mapping version, as-of date, CRS |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
 | `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
@@ -214,18 +249,35 @@ gate in EP-7 replaces it with per-file license-bucket labels and escaping
 ([docs/DATA-LICENSES.md](DATA-LICENSES.md)). No file under any `public/`
 zone is tracked in the repository.
 
-## Raw sources: the tract spine (EP-5a)
+## Raw sources: the tract spine (EP-5a) and SNAP retailers (EP-6)
 
 Real snapshots are stored **as delivered** by the provider (byte-for-byte,
 so `phillysim verify` and anyone else can check them against the source) and
 the Philadelphia County filter is applied when the adapter reads them; the
 tables below describe what the adapter's `read` returns, which is what the
 `validate` stage checks against the contract
-(`phillysim/src/phillysim/adapters/`). Coordinates in these tables are NAD 83
-(EPSG:4269) as delivered; the `spine` stage reprojects into the analysis CRS
-(EPSG:26918, [ADR-0007](../roadmap/adr/0007-analysis-crs.md)). Every snapshot
-directory also holds `terms.html`, the archived Census Bureau Open Government
-page (the terms in force), and a manifest with `license_bucket = "A"`.
+(`phillysim/src/phillysim/adapters/`). Coordinates in the Census tables are
+NAD 83 (EPSG:4269) as delivered; the `spine` stage reprojects into the
+analysis CRS (EPSG:26918, [ADR-0007](../roadmap/adr/0007-analysis-crs.md)).
+Every Census snapshot directory also holds `terms.html`, the archived Census
+Bureau Open Government page (the terms in force), and a manifest with
+`license_bucket = "A"`.
+
+### `raw/snap_retailers/<snapshot-id>/` — USDA SNAP Retailer Locator historical data (EP-6)
+
+`snap-retailer-locator-data2005-2025.zip` as delivered (one CSV member, read
+in place) plus `source-page.html`, the provider's data page in force
+(archived in lieu of a terms page; see the [data card](data-cards/snap-retailers.md)),
+and the manifest (`license_bucket = "A"`, dual URLs for the FNS→FNA
+rename). `read` returns the provider's fifteen columns verbatim as strings
+(whitespace stripped, blank cells null; `Latitude` / `Longitude` as float),
+filtered to `State = "PA"`, `County = "PHILADELPHIA"`, and open
+authorization spells (`End Date` null), sorted by numeric `Record ID`, with
+WGS 84 point geometry. Contract: `Record ID` unique and numeric; `Store
+Type` within the mapped vocabulary (a new label fails validation: the stop
+condition); `State`, `County` fixed; `Zip Code` five digits; `Authorization
+Date` `M/D/YYYY`; points inside the county bounds. 1,609 rows for the pinned
+snapshot.
 
 ### `raw/tiger_tracts/<snapshot-id>/` — TIGER/Line 2025 census tracts
 

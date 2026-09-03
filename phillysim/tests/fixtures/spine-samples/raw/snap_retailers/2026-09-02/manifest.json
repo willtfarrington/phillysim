@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-09-03T00:50:58Z",
+  "acquisition_url": "https://www.fna.usda.gov/sites/default/files/resource-files/snap-retailer-locator-data2005-2025.zip",
+  "acquisition_url_alt": "https://www.fns.usda.gov/sites/default/files/resource-files/snap-retailer-locator-data2005-2025.zip",
+  "files": {
+    "snap-retailer-locator-data2005-2025.zip": "a3dcfc10ab3a93f93441264f3a8695bde018db985c8a2948528ecaea213c8863",
+    "source-page.html": "211bebec3c3afa341e4ff535d827f69cea0f536e2b6656245204e549b7a04de6"
+  },
+  "license_bucket": "A",
+  "license_note": "US public domain: a work of the United States Government (17 U.S.C. section 105), published by USDA's Food and Nutrition Administration as public data on authorized SNAP retailers; USDA asks to be cited as the source. SNAP Retailer Locator Historical Data 2005-2025, current as of 2025-12-31; no terms page beyond the provider's data page exists on a host the guarded path can reach. CI SAMPLE: 26 Philadelphia County tracts plus control rows, subset from the 2026-09-02 snapshot; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-02",
+  "source": "snap_retailers",
+  "synthetic": false,
+  "terms_archive": "source-page.html"
+}

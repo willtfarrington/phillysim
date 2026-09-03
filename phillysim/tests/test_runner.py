@@ -195,6 +195,38 @@ def test_parameter_change_reruns_only_dependents(root: Path) -> None:
     assert (root / OUT).read_text("utf-8") == "3?\n"
 
 
+def test_newly_declared_output_makes_a_done_stage_stale(root: Path) -> None:
+    """A stage that now declares an output it never produced (a source registered after
+    the last run, EP-6) is stale even though its recorded outputs are intact."""
+    runner.run(root, make_pipeline())
+    extra = "intermediate/extra.txt"
+
+    def count_with_extra(ctx: StageContext) -> None:
+        _count(ctx)
+        ctx.output(extra).write_text("extra\n", "utf-8")
+
+    grown = Pipeline(
+        "toy",
+        [
+            Stage("upper", _upper, inputs=(RAW,), outputs=(UPPER,)),
+            Stage(
+                "count",
+                count_with_extra,
+                inputs=(UPPER,),
+                outputs=(COUNT, extra),
+                params={"suffix": "!"},
+            ),
+            Stage("publish", _publish, inputs=(COUNT,), outputs=(OUT,)),
+        ],
+    )
+    rows = {row.name: row for row in status(root, grown)}
+    assert rows["count"].status == STALE and rows["count"].detail == "changed: declared outputs"
+    report = runner.run(root, grown)
+    assert report.ran == ["count"] and report.skipped == ["upper", "publish"]
+    assert (root / extra).read_text("utf-8") == "extra\n"
+    assert all(row.status == FRESH for row in status(root, grown))
+
+
 def test_input_change_reruns_downstream_only_where_content_changed(root: Path) -> None:
     pipeline = make_pipeline()
     runner.run(root, pipeline)
@@ -355,7 +387,7 @@ def test_install_retries_a_transient_permission_error(root: Path, monkeypatch) -
     (root / RAW / "words.txt").write_text("four five\n", "utf-8")
     with pytest.raises(StageError, match="Access is denied"):
         runner.run(root, make_pipeline())
-    assert len(sleeps) == 2 + 5
+    assert len(sleeps) == 2 + 9
 
 
 # --- status and verify edge cases ----------------------------------------------------------

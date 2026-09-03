@@ -1,8 +1,9 @@
 # Data licenses
 
-> **Status: first snapshots acquired (EP-5a, 2026-09-02); nothing published.**
-> The three tract-spine sources have been acquired into the gitignored raw
-> zone with their terms pages archived (dated entries below). This document
+> **Status: four snapshots acquired (EP-5a and EP-6, 2026-09-02); nothing
+> published.** The three tract-spine sources and the USDA SNAP retailer file
+> have been acquired into the gitignored raw zone with their terms pages (or,
+> for USDA, the provider's data page in force) archived (dated entries below). This document
 > states the licensing rules the project has adopted and gains a per-source
 > record as each source is actually ingested. It mirrors the source matrix in
 > [roadmap/sources.md](../roadmap/sources.md); that matrix is the working
@@ -71,7 +72,7 @@ and SEPTA's terms are re-read and archived at every refresh.
 
 | Source | License/terms | Status |
 |---|---|---|
-| USDA SNAP retailer file | US public domain | committed |
+| USDA SNAP retailer file | US public domain | committed; acquired 2026-09-02 (record below) |
 | City Farmers' Markets (ODP/ArcGIS) | City terms — confirmed open, see above | committed |
 | City Free Food & Meal Sites (ODP/ArcGIS) | City terms — confirmed open, see above | committed |
 | USDA SRAM (2025 data, 2020 tracts) | US public domain | comparator |
@@ -134,9 +135,37 @@ changes, the acquisition stops and the snapshot is quarantined
 - **Attribution:** U.S. Census Bureau, American Community Survey 5-Year
   Estimates 2020–2024, tables B01003 and B08201.
 
+### 2026-09-02 — USDA SNAP Retailer Locator historical data (`snap_retailers`), Bucket A
+
+- **Acquired:** `https://www.fna.usda.gov/sites/default/files/resource-files/snap-retailer-locator-data2005-2025.zip`
+  (nationwide; Philadelphia County and open authorizations filtered at
+  read), 24,036,753 bytes, stored as delivered. The manifest's alternate URL
+  is the same path on `www.fns.usda.gov`, the pre-rename host (USDA's Food
+  and Nutrition Service became the Food and Nutrition Administration on
+  2026-06-01), which redirects to the FNA one; the FNA URL redirects in
+  turn to a content-delivery host, which the adapter allowlists.
+- **Terms in force:** US public domain, a work of the United States
+  Government (17 U.S.C. § 105), published by USDA as public data. **No
+  terms page could be archived through the guarded path:** USDA's
+  "Policies and Links" page (`https://www.usda.gov/about-usda/policies-and-links`),
+  which states that USDA web content is public-domain information that may
+  be freely distributed or copied with acknowledgement, answers HTTP 403 to
+  non-browser clients, and the FNA site carries no equivalent statement.
+  Archived beside the data instead: the provider's data page in force
+  (`https://www.fna.usda.gov/snap/retailer-locator/data`, archived
+  2026-09-02 as `source-page.html`), which the download path checks for its
+  "An official website of the United States government" banner and its
+  "This data is current as of Dec. 31, 2025" sentence, so that a vintage
+  change stops acquisition.
+- **Attribution:** U.S. Department of Agriculture, Food and Nutrition
+  Administration, SNAP Retailer Locator Historical Data 2005–2025 (as of
+  December 31, 2025). Store type definitions: USDA "SNAP Store Type
+  Definitions" (`https://www.fna.usda.gov/snap/store-definitions`).
+
 The committed CI samples under `phillysim/tests/fixtures/spine-samples/`
-are subsets of these three snapshots (six Philadelphia County tracts plus
-control rows) and inherit their public-domain status; their README says so.
+are subsets of these four snapshots (six Philadelphia County tracts, the
+retailers inside them, plus control rows) and inherit their public-domain
+status; their README says so.
 
 ## What ships with each snapshot
 

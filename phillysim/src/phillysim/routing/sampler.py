@@ -61,20 +61,36 @@ def tree_rss(process: psutil.Process) -> int | None:
 
 
 def kill_tree(process: psutil.Process, timeout: float = 10.0) -> list[int]:
-    """Kill every descendant (deepest first), then the process; wait for them. Returns the
-    PIDs killed."""
+    """Kill every descendant (deepest first), then the process; wait for the descendants and
+    for the process to stop running. Returns the PIDs killed.
+
+    The process itself is never reaped here: it is the caller's child, and the caller's
+    ``Popen.wait()`` must be the one to collect its exit status (on POSIX a ``waitpid`` from
+    here would leave ``Popen`` reading status 0 for a killed child).
+    """
     try:
         children = process.children(recursive=True)
-    except psutil.NoSuchProcess:
+    except psutil.Error:
         children = []
     killed: list[int] = []
     for member in [*reversed(children), process]:
         try:
             member.kill()
             killed.append(member.pid)
-        except psutil.NoSuchProcess:
+        except psutil.Error:
             continue
-    psutil.wait_procs([*children, process], timeout=timeout)
+    try:
+        psutil.wait_procs(children, timeout=timeout)
+    except psutil.Error:  # pragma: no cover - a descendant vanished mid-wait
+        pass
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if not process.is_running() or process.status() == psutil.STATUS_ZOMBIE:
+                break
+        except psutil.Error:
+            break
+        time.sleep(0.02)
     return killed
 
 

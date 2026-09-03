@@ -384,20 +384,28 @@ def test_check_reports_every_component(tmp_path: Path, crafted) -> None:
     assert not {c.name: c for c in old.checks}["jdk"].ok
 
 
-def test_cli_check_and_install_report(tmp_path: Path, crafted, monkeypatch) -> None:
-    _jdk, _jar, opener, pins = crafted
+def test_cli_check_and_install_report(tmp_path: Path, monkeypatch) -> None:
     runner = CliRunner()
     result = runner.invoke(app, ["toolchain", "check", "--home", str(tmp_path)])
     assert result.exit_code == 1, result.output
     assert "FAIL jdk" in result.output and "FAIL jar" in result.output
     assert "toolchain: not usable" in result.output
 
+    # The CLI installs for the platform it runs on: craft that platform's archive.
+    platform = tc.platform_key()
+    jdk = zip_bytes(jdk_members()) if platform == "windows" else tar_gz_bytes(linux_members())
+    jar = os.urandom(10_000)
+    pins = pins_for(jdk, jar, platform)
+    opener = FakeOpener({JDK_ARCHIVES[platform].url: jdk, JAR.url: jar})
     monkeypatch.setattr(tc, "urllib_open", opener)
     monkeypatch.setattr(tc, "java_version_string", good_probe)
     monkeypatch.setattr(tc, "JAR", pins[JAR.file_name])
-    monkeypatch.setitem(tc.JDK_ARCHIVES, "windows", pins[JDK_ARCHIVES["windows"].file_name])
+    monkeypatch.setitem(tc.JDK_ARCHIVES, platform, pins[JDK_ARCHIVES[platform].file_name])
     result = runner.invoke(
         app, ["toolchain", "install", "--home", str(tmp_path)], catch_exceptions=False
     )
     assert "verified against the pin" in result.output, result.output
-    assert Toolchain(tmp_path, "windows").java.is_file() or tc.platform_key() != "windows"
+    assert Toolchain(tmp_path, platform).java.is_file()
+    # The post-install check compares the jar against ADR-0008's digest, never a test pin,
+    # so the crafted jar is reported as not the pinned one.
+    assert "ok   jdk" in result.output and "FAIL jar" in result.output, result.output

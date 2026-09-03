@@ -34,7 +34,7 @@ import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 import pandas as pd
@@ -101,7 +101,7 @@ class RunPlan:
         if not self.origins or not self.destinations:
             raise ValueError("a plan needs at least one origin and one destination")
         for label, rel in self.inputs.items():
-            if Path(rel).is_absolute() or ".." in Path(rel).parts:
+            if not is_data_root_relative(rel):
                 raise ValueError(f"input {label!r}: {rel!r} is not a data-root-relative path")
 
     def to_dict(self) -> dict[str, Any]:
@@ -146,6 +146,15 @@ class RunPlan:
             destinations_description=data["destinations"].get("description", ""),
             note=data.get("note", ""),
         )
+
+
+def is_data_root_relative(rel: str) -> bool:
+    """Relative on every platform (no POSIX root, no drive letter, no ``..`` segment)."""
+    if PurePosixPath(rel).is_absolute() or PureWindowsPath(rel).is_absolute():
+        return False
+    if PureWindowsPath(rel).drive or rel.startswith(("/", "\\")):
+        return False
+    return ".." not in PurePosixPath(rel.replace("\\", "/")).parts
 
 
 def utc_stamp(now: datetime | None = None) -> str:

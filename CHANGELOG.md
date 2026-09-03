@@ -8,8 +8,58 @@ recorded separately in manifests once the pipeline exists.
 
 ## [Unreleased]
 
+### Changed
+
+- **EP-10 — checkpoint 2** (after M2, before the M3 refinement gate;
+  2026-09-03). Fresh clone of `main` at `deb21fc` re-run green, fixture
+  and real: `uv sync --locked`, 461 tests; `phillysim run --fixture` (11
+  ran, then 0 ran / 11 skipped), `status` (11 fresh), `verify` (8 of 8
+  snapshots, 11 of 11 stages), `gate` (Bucket B), `site build`; then the
+  real pipeline from an empty data root with a **fresh acquisition of all
+  five providers** (123 MB, every fetch one attempt): 8 stages in 15 s,
+  then 0 ran / 8 skipped, `status` 8 fresh, `verify` 5 of 5 and 8 of 8,
+  `gate` green (5 files Bucket A, 4 sources), `site build` with
+  `county_boundary (1), roads (426)`. **Every provider data file, curated
+  table, and public file is byte-identical to the recorded references**
+  (the refresh-drift check: no controlled refresh is due; the archived
+  terms pages differ per fetch as recorded since EP-5a and still carry
+  the checked sentences). License sweep on the real zone clean: every
+  file's bucket equals the bucket derived from its sources' manifests,
+  the attribution lines equal the adapters' citations and the
+  DATA-LICENSES records, the `license_note` texts equal the manifests',
+  the in-file labels equal the manifest's, nothing under any `public/`
+  zone or `site/dist/` is tracked. Documentation synced to the code:
+  `roadmap/quality.md` (five real sources under contract, the real
+  pipeline's eight stages in the integration row), `roadmap/architecture.md`
+  (the `acquire` row names all five sources), `docs/DATA-LICENSES.md`
+  (the labeling status names the roads snapshot and records the trace),
+  `docs/data-dictionary.md` (the contract note), the root README's
+  dictionary line. Resource baselines for the real pipeline from a fresh
+  clone appended to `phillysim/README.md` (peak RSS still deferred to the
+  M3 spike). Dependency triage: no open Dependabot PR, no open alert (the
+  eight alerts are the dismissed vendored-tree ones), `uv lock --check`
+  clean, MapLibre 6.7.0 and the SHA-pinned actions noted. `milestones.md`
+  "Estimate accuracy" gains EP-5a through EP-9 and the M2 roll-up (6 of
+  4–6: every packet one session, the split M packets two each), a new
+  implication note (plan against the high bounds; the gate's packet count
+  replaces the range), the re-plan trigger evaluation (none fired), and
+  the re-sizing proposal put to the owner. M3 gate pre-read recorded in
+  the EP-10 handoff (inputs, eight questions, the gaps in the planning
+  documents: no JDK / R5 pin values, no determinism band or hand-check
+  tolerance, no routing-source adapters, one `SNAPSHOT_ID` for all
+  sources).
+
 ### Added
 
+- **Roadmap: EP-11 authored by EP-10** (2026-09-03): the M3 refinement
+  gate, `roadmap/EP-11-m3-refinement-gate.md`, a documentation-only S
+  packet that applies the M3 carry-ins (none as of that date), fixes the
+  spike's inputs, sources (OSM via Geofabrik as the first Bucket B real
+  source; SEPTA GTFS never republished), pins, criteria, and outcome codes,
+  answers eight recorded questions with the owner, and authors the M3
+  packets from EP-12 onward as S packets. `roadmap/README.md` opens the
+  "M3 — Routing spike" heading with EP-11 as its first row; `milestones.md`
+  M3 row names it; the third checkpoint's due point recorded.
 - **Roadmap: EP-10 authored** (2026-09-03, interactively with the owner):
   the second checkpoint packet, `roadmap/EP-10-checkpoint-2.md`, due with
   M2 done. Scope decided with the owner: a fresh-clone re-run that includes

@@ -34,7 +34,7 @@ against fixture data once M1's schema contract is stable.
 | M0 | Governed public repo: hygiene, licensing docs, claims matrix, honest reframe (README + repo description), CI skeleton | All M0 packets' acceptance criteria met; repo presentable at any commit | EP-1, EP-2 | 3–4 | high |
 | M1 | Pipeline skeleton runs end-to-end on tinycity synthetic fixture: manifest engine, zones, CLI, contract tests | `phillysim run --fixture` green in offline CI | EP-3, EP-4a, EP-4b | 4–6 | high |
 | M2 | Thin vertical slice on real data: TIGER/ACS spine + SNAP adapter → tract-joined GeoParquet → trivial public-safe GeoJSON + minimal page | Slice reproducible from fresh clone; license buckets applied | EP-5 … EP-8 | 4–6 | high |
-| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | refinement gate after EP-8 | 3 attended (+ unattended runs) | medium |
+| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | [EP-11](EP-11-m3-refinement-gate.md) (the gate, authored by EP-10), then EP-12 onward as EP-11 authors them | 3 attended (+ unattended runs) | medium |
 | M4 | All v1 sources snapshotted, conflated (POI dedup), hours parsed with QA report | Adapter contract tests green; hours-coverage % published; conflation QA reviewed | refinement gate after EP-8 | 5–7 | medium |
 | M5 | Metrics + MOE + reliability tiers + sensitivity runs + SRAM like-for-like validation | Golden tests green; validation memo written; method cards drafted | refinement gate (carry-ins below) | 5–7 | medium |
 | M6 | Public-safe accessible site: map + parity table + panel + methods/data cards + exports | Playwright+axe green; internal keyboard/NVDA dry run passes | refinement gate | 6–10 | medium (first NVDA loop included) |
@@ -59,7 +59,10 @@ routing determinism remediation (M3).
   "Checkpoints" table; the first is [EP-9](EP-9-checkpoint-1.md), after
   EP-4b (M1 done) and before EP-5; the second is
   [EP-10](EP-10-checkpoint-2.md), after EP-8b (M2 done) and before the M3
-  refinement gate, which it authors as its own packet, EP-11.
+  refinement gate, which it authored as its own packet,
+  [EP-11](EP-11-m3-refinement-gate.md), on 2026-09-03; the third falls
+  due about five packets after EP-10 (with the M3 verdict packet or
+  EP-15, whichever comes first) and takes the next free integer.
 
 ## Refinement-gate carry-ins
 
@@ -188,16 +191,56 @@ packet handoffs; the ratio is actual ÷ estimate midpoint.
 | EP-4b | S, 1 (the other half of EP-4) | 1 | 1.0 | M1 go/no-go met |
 | M0 | 3–4 | 2 | 0.57 | Both packets one session each |
 | M1 | 4–6 | 3 | 0.60 | Both halves of the split L packet one session each |
+| EP-9 | S, 1 | 1 | 1.0 | Checkpoint 1 (2026-09-02); belongs to no milestone |
+| EP-5a | S, 1 (split from the M packet EP-5 by the EP-9 pre-read) | 1 | 1.0 | First real acquisition through the guarded path; network, three providers |
+| EP-5b | S, 1 (the other half of EP-5) | 1 | 1.0 | Curated spine, invariants, ADR-0007 |
+| EP-6 | M, 1–2 (read at pickup: fit one session, not split) | 1 | 0.67 | First destination source; a 24 MB nationwide file; the mapping and its method card |
+| EP-7 | M, 1–2 (read at pickup: fit one session, not split) | 1 | 0.67 | The publication boundary: bucket derivation, gate, bins, escaping |
+| EP-8a | S, 1 (split from the M packet EP-8 at pickup) | 1 | 1.0 | First browser page; Playwright + axe on both CI platforms |
+| EP-8b | S, 1 (the other half of EP-8) | 1 | 1.0 | Fifth source, public schema 2, measured contrast; M2 go/no-go met |
+| M2 | 4–6 (four M packets as authored, 4–8) | 6 | 1.20 | Every packet one session; the two split M packets took two sessions each, the two unsplit ones one each |
 
-**What this implies (EP-9).** Five of five packets, including both M-sized
-ones, landed in one session, and both milestones came in under their low
-bound. The M-sized estimates that remain (EP-6–EP-8; M2 total 4–6) are
-therefore more likely to sit at their low end than their high end, but they
-are not re-sized here: the M2 packets are the first with real data, network
-acquisition, and (EP-8) a browser page, none of which the record so far
-covers. The pickup pre-read stays the sizing instrument (EP-9's pre-read
-split EP-5 into EP-5a/EP-5b on the evidence in its handoff), and the next
-checkpoint re-evaluates with real-data actuals.
+**What this implies (EP-10, 2026-09-03).** Twelve of twelve packets have
+landed in one session each, which is now true by construction (the sizing
+rule and the pickup pre-read make a packet one session or split it before
+work starts), so the packet-level ratio no longer carries information; the
+milestone ranges do. The real-data actuals EP-9 said were missing are in:
+M2, the first milestone with network acquisition (five providers, 123 MB),
+real geometry, a browser page, and CI on two platforms, came in at **6 of
+4–6**, its high bound, where M0 and M1 came in under their low bounds. The
+reason is visible in the rows: the four M packets as authored (4–8
+sessions) resolved to two sessions each where the pre-read split them
+(EP-5, EP-8) and one each where it did not (EP-6, EP-7), a mean of 1.5,
+the M midpoint; none came in under a session. Real data, the network, and
+the browser did not blow any packet, but they used the whole session every
+time. For M3–M8 the reading is: the milestone ranges still contain the
+actual, and the high bound, not the low one, is the planning number from
+here on; the refinement gate's decomposition count (the number of S
+packets it authors) is a better estimate than the range and replaces it at
+the next checkpoint. The M3 attended estimate (3 sessions plus unattended
+runs) is the first to be tested against that rule: EP-11 records the
+count it authors. Re-sizing was proposed to the owner at EP-10: keep the
+M3–M8 ranges as written and plan against their high bounds (M3–M8 at the
+high bound is 33 sessions, total about 44 of the 34–46 baseline, inside
+the 40–50 contingency), or raise the two sinkhole-watch milestones now
+(M4 5–7 → 6–8, M6 6–10 → 8–12, total 39–51). **Owner decision
+(2026-09-03): the first.** The table is unchanged; the high bound is the
+planning number from here on, and each gate's packet count replaces its
+milestone's range at the checkpoint that follows it.
+
+**Re-plan trigger evaluation (EP-10, 2026-09-03).** (1) Kill criterion
+fired: none exists before the M3 spike; not fired. (2) Checkpoint finds
+drift: the fresh-clone re-run was green, fixture and real (461 tests; 11
+ran, then 11 skipped; 8 ran, then 8 skipped, with a fresh acquisition of
+the five providers), every provider data file, curated table, and public
+file byte-identical to the recorded references (no refresh drift); the
+license sweep found no contradiction; five documentation statements had
+fallen behind the code (the test matrix's source and stage counts, the
+architecture stage table's `acquire` row, the DATA-LICENSES labeling
+status, the dictionary's contract note, the root README's dictionary line)
+and were fixed in the packet; no code contradicted a document; not fired.
+(3) Two consecutive packets over estimate by more than 2×: no packet has
+exceeded its estimate; not fired.
 
 **Re-plan trigger evaluation (EP-9, 2026-09-02).** (1) Kill criterion
 fired: none exists before the M3 spike; not fired. (2) Checkpoint finds
@@ -208,6 +251,13 @@ pipeline logic exists yet" and the fixture README's description of `verify
 --fixture`) and were fixed in the packet; no code contradicted a document;
 not fired. (3) Two consecutive packets over estimate by more than 2×: no
 packet has exceeded its estimate; not fired.
+
+**What EP-9 implied (2026-09-02, superseded above).** Five of five
+packets, including both M-sized ones, landed in one session, and both
+milestones came in under their low bound; the M2 packets were not re-sized
+because they were the first with real data, network acquisition, and a
+browser page, and the next checkpoint was to re-evaluate with those
+actuals.
 
 ## Risks & contingencies
 

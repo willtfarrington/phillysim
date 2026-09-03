@@ -23,7 +23,7 @@ were all resolved before this roadmap was drafted.
   per packet (`EP-N-<slug>.md`, from [_TEMPLATE.md](_TEMPLATE.md)), each
   sized for **one** bounded coding-agent session. EP-1–EP-8 cover M0–M2; later
   milestones stay at outcome level until their **refinement gate**, where new
-  EP files are authored. **At a refinement gate, first apply that
+  EP files are authored (the M3 gate is [EP-11](EP-11-m3-refinement-gate.md)). **At a refinement gate, first apply that
   milestone's entries under "Refinement-gate carry-ins" in
   [milestones.md](milestones.md)** — they are deferred obligations from
   earlier packets, with the text to paste into the new EP files.
@@ -74,7 +74,8 @@ were all resolved before this roadmap was drafted.
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
 | [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md); EP-5 split into [EP-5a](EP-5a-spine-acquisition.md) / [EP-5b](EP-5b-spine-curated.md); EP-8 split into [EP-8a](EP-8a-slice-page.md) / [EP-8b](EP-8b-basemap-roads.md)); later EPs authored at refinement gates |
-| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authors as EP-11); later checkpoints take the next free integer |
+| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11); later checkpoints take the next free integer |
+| [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
 
 ## Milestones and work packets
@@ -118,14 +119,15 @@ sweep, performance vs budgets, estimate-accuracy review, re-plan if a
 trigger fires. They belong to no milestone; the packet that follows one
 depends on it. The first fell due with EP-4b (owner decision 2026-09-02)
 and closed on 2026-09-02; the second fell due with EP-8b (M2 done) and was
-authored on 2026-09-03 as EP-10, which also authors the M3 refinement gate
-as its own documentation-only packet, EP-11 (owner decision 2026-09-03);
-the third falls due about five packets after EP-10.
+authored on 2026-09-03 as EP-10 and closed the same day, authoring the M3
+refinement gate as its own documentation-only packet, EP-11 (owner
+decision 2026-09-03); the third falls due about five packets after EP-10
+(with the M3 verdict packet or EP-15, whichever comes first).
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
-| EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | [ ] |
+| EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | [~] |
 
 ### M2 — Spine + first source end-to-end · `[x] 5cb5092`
 
@@ -152,15 +154,29 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
 | EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [x] 5cb5092 |
 
-### M3–M8 · `[ ]` refinement gates pending
+### M3 — Routing spike · `[ ]`
 
-No packet files exist yet. With M2 done, the second checkpoint,
-[EP-10](EP-10-checkpoint-2.md), comes first (see "Checkpoints" above); it
-ends with a pre-read of the M3 refinement gate and authors the gate as a
-documentation-only S packet, EP-11, whose outcome is the M3 (routing spike)
-packet files from [_TEMPLATE.md](_TEMPLATE.md) — carry-ins first — as S
-packets, one session each, numbered from EP-12. The M4 (full ingest) gate
-and later gates follow the same procedure.
+Go/no-go: numeric criteria in [milestones.md](milestones.md) (wall ≤ 8 h,
+process-tree RSS ≤ 22 GB, determinism within band, sanity gates); go =
+walk+transit within budgets, kill = the documented walk-only fallback
+invoked. A gate packet belongs to the milestone it refines (unlike a
+checkpoint, which belongs to none): EP-11 is the M3 refinement gate,
+authored by EP-10 on 2026-09-03 from its pre-read; it applies the
+`milestones.md` carry-ins first (none name M3 as of that date) and authors
+the spike's packets from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one
+session each, numbered from EP-12, adding their rows here.
+
+| # | Packet | Size | Depends on | Status |
+|---|---|---|---|---|
+| EP-11 | [M3 refinement gate: decompose the routing spike into S packets](EP-11-m3-refinement-gate.md) | S | EP-10 (checkpoint) | [ ] |
+
+### M4–M8 · `[ ]` refinement gates pending
+
+No packet files exist yet. The M4 (full ingest) gate and later gates follow
+the procedure EP-11 establishes for M3: a documentation-only S packet per
+milestone that applies that milestone's carry-ins first and authors its
+packets from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one session each,
+taking the next free integers.
 
 ## Phase overview
 

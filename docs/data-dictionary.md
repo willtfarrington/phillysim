@@ -516,6 +516,7 @@ Column-level contracts for the eight tinycity sources live in
 shape of the real sources loosely (SNAP-like retailers with a format-based
 `store_type`; markets with free-text `hours` / `months`; meal sites with
 `<day>_open` / `<day>_close` in `HH:MM`; ACS columns as `<table>_<line>E` /
-`…M`). The three spine sources now have real contracts (above); the five
-destination, transit, and network sources keep their fixture contracts until
-their adapters land (EP-6, M3, M4).
+`…M`). The three spine sources, the SNAP retailer source (EP-6), and the
+roads source (EP-8b) have real contracts (above); the remaining destination,
+transit, and network sources keep their fixture contracts until their
+adapters land (M3, M4).

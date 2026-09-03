@@ -105,7 +105,7 @@ lint) is in [CONTRIBUTING.md](CONTRIBUTING.md).
 | [roadmap/](roadmap/) | Charter, scope, sources, methodology, architecture, governance, quality, milestones, work packets, ADRs |
 | [phillysim/README.md](phillysim/README.md) | The Python package: setup, layout, data-root configuration, locked stack |
 | [docs/CLAIMS.md](docs/CLAIMS.md) | Claims matrix: what the project may and may not say, mapped to evidence |
-| [docs/data-dictionary.md](docs/data-dictionary.md) | Table shapes and column meanings (schema version 1, seeded from the synthetic fixture) |
+| [docs/data-dictionary.md](docs/data-dictionary.md) | Table shapes and column meanings (schema version 1, seeded from the synthetic fixture; the real pipeline's tables and the public zone, public schema version 2) |
 | [docs/DATA-LICENSES.md](docs/DATA-LICENSES.md) | Per-source data licensing, the City's confirmed open-data position, and output license buckets |
 | [docs/policies.md](docs/policies.md) | Correction/feedback channel and delisting/takedown policy |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to report issues and propose changes |

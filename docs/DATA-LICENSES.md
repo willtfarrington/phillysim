@@ -74,13 +74,19 @@ it on the staged zone before the runner installs anything, and CI runs it
 on the fixture's zone on every push. Field details are in the
 [data dictionary](data-dictionary.md) ("Public zone").
 
-**Labeling status (EP-7, 2026-09-02).** Nothing has been published. Two
-public zones exist, both gitignored and gated green: the fixture pipeline's
-(Bucket B throughout, because its synthetic `osm_network` source is Bucket
-B; it is the CI evidence for the ODbL path) and the real pipeline's thin
-slice (Bucket A, CC BY 4.0, derived from the TIGER/Line, CenPop, and USDA
-SNAP snapshots; the ACS snapshot feeds nothing published yet). No file under
-any `public/` zone is tracked in the repository. The eight synthetic tinycity
+**Labeling status (EP-7, 2026-09-02; EP-8b, 2026-09-03).** Nothing has
+been published. Two public zones exist, both gitignored and gated green:
+the fixture pipeline's (Bucket B throughout, because its synthetic
+`osm_network` source is Bucket B; it is the CI evidence for the ODbL path)
+and the real pipeline's thin slice (Bucket A, CC BY 4.0, derived from the
+TIGER/Line tracts, CenPop, USDA SNAP, and, since EP-8b, TIGER/Line roads
+snapshots; the ACS snapshot feeds nothing published yet). The EP-10
+checkpoint (2026-09-03) traced every file of the real zone, rebuilt from a
+fresh clone, to those four snapshots' manifests and the records below:
+each file's bucket equals the bucket derived from its sources, the
+attribution lines equal the adapters' citations and the records'
+attribution entries, and the `license_note` texts equal the manifests'.
+No file under any `public/` zone is tracked in the repository. The eight synthetic tinycity
 manifests carry bucket labels (seven Bucket A; `osm_network` Bucket B, as
 OSM-shaped content), and each source's contract pins its bucket: the
 contract suite checks them on every test run and the `validate` stage on

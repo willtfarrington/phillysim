@@ -462,6 +462,31 @@ gains 1.7 MB (data root 120 MB); `curated/basemap_roads.parquet` is 272 KB;
 to 461 tests in about 30 s, the sample-built real zone and its browser run
 included.
 
+**EP-10 checkpoint (2026-09-03, same machine): the whole real pipeline
+from a fresh clone of `main` at `deb21fc`, cold caches, empty data root.**
+This is the reference for later checkpoints; every number is within the
+architecture.md budgets, and every provider data file, curated table, and
+public file came back byte-identical to the working clone's (the
+refresh-drift check: the five providers still serve the pinned bytes).
+
+| Measure | Baseline | Budget (architecture.md) |
+|---|---|---|
+| `git clone -c core.longpaths=true` | 1.4 s; `.git` 4.6 MB | — |
+| `uv sync --locked` | 9 s (cold); `.venv` 477 MB | — |
+| `uv run pytest` (461 passed, 3 skipped) | 47 s cold (30 s warm in the working clone) | — |
+| fixture verbs | `run --fixture` 1.6 s (11 ran), 1.0 s (0 ran, 11 skipped); `status` 0.9 s; `verify` 0.9 s (8 of 8 snapshots, 11 of 11 stages); `gate` 0.8 s (5 files Bucket B); `site build` 1.2 s | — |
+| `phillysim run`, real, from empty | 15.1 s wall: `acquire` 7.0 s, `validate` 3.0 s, `spine` 0.2 s, `demographics` 0.8 s, `snap_retailers` 2.3 s, `basemap` 0.3 s, `metrics` 0.0 s, `publish` 0.5 s (8 ran) | unattended runs are M3's; routine peak RAM ≤ 24 GB (not measured: peak RSS is deferred to the M3 spike harness by owner decision) |
+| fresh acquisition, per source (data files; each terms page 311,057 B in 0.5 s, the SNAP data page 44,082 B in 0.3 s; every fetch one attempt) | ACS 18,313,708 B in 0.6 s + 65,043,091 B in 1.3 s; CenPop 144,662 B in 0.2 s; SNAP 24,036,753 B in 1.2 s; roads 1,352,071 B in 0.3 s; tracts 13,109,450 B in 0.5 s; 123.3 MB in all | network: the same five files as EP-8b (about 122 MB); guard `Limits` per source held |
+| second `run` (0 ran, 8 skipped) | 1.1 s | — |
+| `status`, `verify` (5 of 5 snapshots, 8 of 8 stages), `gate` (5 files Bucket A, 4 sources), `site build` (`county_boundary (1), roads (426)`) | 1.1 s, 1.0 s, 1.0 s, 1.4 s | — |
+| `pytest --real-data-root` (spine, basemap, slice, destinations invariants) | 57 passed in 1.9 s | — |
+| real data root | 125.9 MB: raw 123.3 MB, public 1.56 MB, curated 891 KB, intermediate 22 KB, state file 8 KB, cache and quarantine empty | workspace ≤ 50 GB |
+| public zone | 1,555,668 B raw, 331,050 B gzipped (`tracts.geojson` 875,603 B / 174,979 B gz; `basemap.geojson` 588,768 B / 139,141 B gz; `sites.geojson` 44,931 B; the two CSVs 38 KB; `manifest.json` 8 KB) | sub-MB gzipped site payload |
+| built site (`site/dist/`) | 2.77 MB (the zone plus the page and the vendored MapLibre) | — |
+| fresh clone in all (checkout, `.venv`, data root, built site) | 620 MB, deleted afterwards | EP-10 budget: about 0.6 GB |
+| CI (run 33795124091 on `deb21fc`) | ubuntu job 49 s (`uv sync` 3 s, pytest 32 s); windows job 96 s (`uv sync` 12 s, pytest 54 s); `run --fixture` about 1 s on both | — |
+| preflight report (real thresholds) | 422.9 GB free disk (need ≥ 150 GB), 68.1 GB physical RAM (need ≥ 25.8 GB), Python 3.13.15, geopandas 1.1.4 / pyogrio 0.13.0 / shapely 2.1.2 / pyproj 3.7.2 / duckdb 1.5.5 / pyarrow 25.0.1, root writable | ≥ 150 GB free, 24 GB RAM |
+
 ## Decisions this package honors
 
 - [ADR-0001](../roadmap/adr/0001-language-and-stack.md): Python 3.12+/uv on

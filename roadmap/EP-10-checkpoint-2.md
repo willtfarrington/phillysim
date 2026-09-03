@@ -1,6 +1,6 @@
 # EP-10 — Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read
 
-**Status:** [~] in progress (work done 2026-09-03; owner review pending) · **Milestone:** — (checkpoint after M2, before the M3 refinement gate) · **Effort:** S (1 session, high confidence) · **Parallel with:** —
+**Status:** [x] a1d22fd (done 2026-09-03) · **Milestone:** — (checkpoint after M2, before the M3 refinement gate) · **Effort:** S (1 session, high confidence) · **Parallel with:** —
 
 ## Outcome & value
 The second recurring checkpoint packet ([milestones.md](milestones.md)
@@ -246,9 +246,12 @@ pointer to the next checkpoint (due after about five more packets); a
 CHANGELOG line.
 
 ## Handoff payload (filled 2026-09-03)
-- **Packet:** EP-10 — work done 2026-09-03 in one session; Planning
-  Baseline v1.0. Status and commit recorded in the owner-review section
-  at the end of this payload.
+- **Packet:** EP-10 — done at commit `a1d22fd` (+ this status commit),
+  2026-09-03, one session; Planning Baseline v1.0. CI run
+  [33796768835](https://github.com/willtfarrington/phillysim/actions/runs/33796768835)
+  on `a1d22fd` green on `windows-latest` (91 s) and `ubuntu-latest`
+  (59 s). Owner decisions in the review section at the end of this
+  payload.
 - **Files changed (documentation only; no module, test, data, or
   dependency change):** new `roadmap/EP-11-m3-refinement-gate.md`;
   changed `roadmap/README.md` (EP-10 row; "M3 — Routing spike" heading

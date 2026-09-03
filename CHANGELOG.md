@@ -51,6 +51,104 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-12 — routing sources: the OSM extract (Geofabrik, Bucket B) and
+  SEPTA GTFS through the guarded path; per-source snapshot IDs; the
+  clipped network** (2026-09-03; Planning Baseline v1.0; the first M3
+  packet after the gate; no JVM):
+  - **Per-source snapshot IDs** (ADR-0008, owner decision at EP-11):
+    `phillysim.pipeline.SNAPSHOT_ID` becomes the mapping `SNAPSHOT_IDS`;
+    the five sources acquired on 2026-09-02 keep that ID, the two routing
+    sources carry `2026-09-03`; the `acquire` stage's `snapshot_id`
+    parameter becomes `snapshot_ids` (the change re-ran `acquire`, which
+    re-used the five verified snapshots and fetched only the new ones);
+    every document that named the constant updated.
+  - `phillysim.adapters.osm` (`osm_network`): Geofabrik's **dated**
+    Pennsylvania extract `pennsylvania-260831.osm.pbf` (345,912,530 B; OSM
+    data of 2026-08-31; never the `-latest` file) stored as delivered with
+    the provider's MD5 sidecar fetched through the same path; the MD5 is
+    pinned in the adapter and compared against the file and the sidecar
+    before admission; the region page archived as `terms.html` and checked
+    for "created by OpenStreetMap Contributors" and "License: ODbL"; a
+    1 GiB file cap and no archive guard (a PBF is not a zip, and the
+    download path now never opens a non-archive as one); **the first
+    Bucket B manifest of the real pipeline** (ODbL, "© OpenStreetMap
+    contributors"). `read` (for `validate`) opens the header only: the MD5
+    checks, the generator, the replication timestamp, the sorting, and a
+    bounding box that must enclose the county bounds. **The clip**
+    (`osm.clip`, pyosmium): every way with a node inside the county bounds
+    buffered by 5 km in the analysis CRS (ADR-0007, ADR-0008) with all of
+    its nodes, the restriction relations among them, the source order, the
+    box in the header; `osm.check_clip` is the clip's contract. Data card
+    `docs/data-cards/osm-network.md`; DATA-LICENSES record.
+  - `phillysim.adapters.septa_gtfs` (`gtfs`): SEPTA's GTFS release
+    **`v202609060`** (`gtfs_public.zip`, 21,555,258 B, SHA-256 pinned as
+    GitHub records it; `google_bus.zip` and `google_rail.zip` inside)
+    stored as delivered; the developer license agreement archived as
+    `terms.html` and checked for its two "SEPTA reserves the right …"
+    sentences; allowlist `github.com`, the release-asset hosts
+    (`objects.githubusercontent.com` as the packet recorded it and
+    `release-assets.githubusercontent.com` as observed), and
+    `www3.septa.org`; caps 128 MiB / 1 GiB / ratio 50 / 50 members on the
+    outer zip at acquisition and on each inner zip in place (a new nested
+    guard, `guards.inspect_nested_zip`) and again as a file; Bucket A with
+    a `license_note` stating SEPTA's terms and the facts-not-contents
+    position. `read` returns one row per feed (required files and columns,
+    `feed_info.txt` dates covering the pinned Wednesday 2026-09-23 and
+    Saturday 2026-09-26, services on both, the time zone, stops and stops
+    outside the routing box as information, routes, trips); `unwrap`
+    copies the two feed zips out as files, never expanded. Data card
+    `docs/data-cards/septa-gtfs.md`; DATA-LICENSES record (the
+    click-through agreement text as archived, accepted).
+  - **The download path** (`phillysim.download`): `Fetch` gains `digest`
+    (a pinned `sha256:` or `md5:` value) and `md5_of` (a provider sidecar);
+    a mismatch quarantines with the new kind **`digest`**; the terms check
+    reads the page's visible text (tags removed, entities decoded), so a
+    phrase spanning an inline element matches; `Acquisition` records the
+    digests checked. `contracts.ColumnSpec` gains `maximum`.
+    `preflight` lists `osmium` among the locked packages.
+  - **The `network` stage** (`phillysim.network`, between `basemap` and
+    `metrics`; parameters `buffer_m` 5000, `crs`, `node_band`, `way_band`):
+    writes `intermediate/network/` (the clip
+    `pennsylvania-260831-philadelphia-5km.osm.pbf` and the two feed zips)
+    and `intermediate/network.json` (the box, the counts, the bucket **B**
+    by derivation, the two source snapshots). Measured on the pinned
+    extract: 5,803,119 nodes, 921,869 ways (224,252 highways), 3,693
+    relations, 49,968,756 B, about three minutes; 14,054 bus/Metro stops
+    (2,800 outside the box) and 156 rail stops (39 outside). Nothing
+    downstream of it reaches `publish`: the public zone is unchanged and
+    still Bucket A (`PUBLISH_SOURCES` unchanged).
+  - **Dependency:** `osmium` (pyosmium 4.3.1; wheels on Windows and Linux
+    for Python 3.13) joins the core dependencies and the lock; the
+    dependency policy test stays green.
+  - **CI samples:** `raw/osm_network/2026-09-03/`, the real extract clipped
+    to the six sample tracts' bounds with the same clip (49,473 nodes,
+    11,532 ways, 749 KB; ODbL, © OpenStreetMap contributors, notice in the
+    samples README and its Bucket B manifest, `synthetic: false`, the
+    provider's header carried over, the MD5 sidecar regenerated);
+    `raw/gtfs/2026-09-03/`, a **synthetic** feed in SEPTA's layout
+    (`synthetic: true`; no SEPTA feed contents committed). The five other
+    samples rebuilt byte-identical. Contract tests
+    `tests/contracts/test_osm_network.py` and `test_septa_gtfs.py`;
+    `tests/test_network.py` (the routing box, the clip on a hand-built
+    extract, its determinism, every `check_clip` violation, the nested
+    guards); the download-path branches on crafted bytes (a PBF never
+    zip-inspected, an MD5 sidecar mismatch, a pinned SHA-256 mismatch, the
+    visible-text terms check); the integration test runs the nine stages
+    on the samples with the samples' digests pinned in place of the
+    providers' (`conftest.sample_pins`) and asserts the Bucket B derivation
+    and the unchanged Bucket A zone; `verify` 7 of 7 snapshots, 9 of 9
+    stages.
+  - Docs: `docs/data-dictionary.md` (the two raw-source sections, the
+    `intermediate/network/` and `network.json` entries, the `digest`
+    quarantine kind, the acquisition report's `snapshot_ids` and
+    `digests_checked`), `docs/DATA-LICENSES.md` (status, table, the two
+    dated records, the routing-buckets paragraph, the samples paragraph),
+    `docs/data-cards/README.md`, the five earlier cards (per-source IDs),
+    `phillysim/README.md` (nine stages, the `network` bullet, the 490 MB
+    acquisition, the EP-12 resource paragraph), the samples README,
+    `roadmap/architecture.md` (stage rows 1 and 8), `roadmap/sources.md`
+    (SEPTA and OSM rows acquired), `roadmap/quality.md` (seven sources
+    under contract, nine stages in the integration row).
 - **EP-11 — M3 refinement gate executed** (2026-09-03, documentation
   only, interactively with the owner; work commit `c6b5372`, CI run
   33799859669 green on both platforms; every recommended option accepted

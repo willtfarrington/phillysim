@@ -21,17 +21,22 @@ public zone through :mod:`phillysim.publish`: license-labeled, binned, escaped
 GeoJSON + CSV, gated before install); EP-8b adds the ``tiger_roads`` source
 and the ``basemap`` stage (body in :mod:`phillysim.basemap`: the major roads
 in the analysis CRS) and publishes the basemap file beside the rest (public
-schema version 2); later packets append the rest (``destinations`` ..
+schema version 2); EP-12 adds the two routing sources (``osm_network``, the
+first Bucket B source of the real pipeline, and ``gtfs``) and the ``network``
+stage (body in :mod:`phillysim.network`: the clipped street network and the
+unwrapped feeds, no JVM); later packets append the rest (``destinations`` ..
 ``travel_times`` between ``snap_retailers`` and ``metrics`` at M3 / M4).
 
-Snapshot IDs are pinned in :data:`SNAPSHOT_ID` rather than taken from the
-clock, because a stage's outputs are static paths in the DAG. ``acquire``
-downloads the pinned snapshot when it is absent and re-uses it, after
+Snapshot IDs are pinned **per source** in :data:`SNAPSHOT_IDS` (ADR-0006,
+ADR-0008) rather than taken from the clock, because a stage's outputs are
+static paths in the DAG; a source acquired later takes its own acquisition
+date, and the sources already in the raw zone keep theirs. ``acquire``
+downloads a pinned snapshot when it is absent and re-uses it, after
 verifying it against its manifest, when it is already in the raw zone (so a
 lost state file never re-downloads and never touches the immutable raw
-zone). A controlled refresh (roadmap/sources.md) is a change to
-:data:`SNAPSHOT_ID` recorded in the changelog: the new date acquires fresh
-snapshots beside the old ones, which are never overwritten.
+zone). A controlled refresh (roadmap/sources.md) is a change to one source's
+entry in :data:`SNAPSHOT_IDS` recorded in the changelog: the new date
+acquires a fresh snapshot beside the old one, which is never overwritten.
 """
 
 from __future__ import annotations
@@ -39,14 +44,15 @@ from __future__ import annotations
 import json
 import shutil
 import time
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
 
 import geopandas as gpd
 import pandas as pd
 
-from phillysim.adapters import ADAPTERS, cenpop, snap, tiger, tiger_roads
-from phillysim.adapters.base import COUNTY_BOUNDS, COUNTY_NAME
+from phillysim.adapters import ADAPTERS, acs, cenpop, osm, septa_gtfs, snap, tiger, tiger_roads
+from phillysim.adapters.base import COUNTY_BOUNDS, COUNTY_NAME, ROUTING_BUFFER_M
 from phillysim.basemap import BASEMAP_REPORT, ROADS, basemap
 from phillysim.classify.store_format import MAPPING_VERSION
 from phillysim.contracts import check_frame
@@ -54,16 +60,30 @@ from phillysim.destinations import SNAP_REPORT, SNAP_RETAILERS, snap_retailers
 from phillysim.download import Acquisition, Opener, acquire_snapshot, urllib_open
 from phillysim.manifest import SCHEMA_VERSION, read_manifest, verify_snapshot
 from phillysim.metrics import slice as qa_slice
+from phillysim.network import NETWORK_DIR, NETWORK_REPORT, network
 from phillysim.publish import bins, export
 from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, TRACT_COUNT, demographics, spine
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
 PIPELINE_NAME = "real"
-#: The pinned acquisition date of the current spine snapshots (see the module docstring).
-SNAPSHOT_ID = "2026-09-02"
+#: The pinned snapshot ID (acquisition date) of every registered source (see the module
+#: docstring): the five sources of EP-5a to EP-8b, acquired 2026-09-02, and the two
+#: routing sources of EP-12, acquired 2026-09-03.
+SNAPSHOT_IDS: dict[str, str] = {
+    acs.SOURCE: "2026-09-02",
+    cenpop.SOURCE: "2026-09-02",
+    snap.SOURCE: "2026-09-02",
+    tiger.SOURCE: "2026-09-02",
+    tiger_roads.SOURCE: "2026-09-02",
+    osm.SOURCE: "2026-09-03",
+    septa_gtfs.SOURCE: "2026-09-03",
+}
 
 SOURCES: tuple[str, ...] = tuple(sorted(ADAPTERS))
-RAW_SNAPSHOTS: tuple[str, ...] = tuple(f"raw/{source}/{SNAPSHOT_ID}" for source in SOURCES)
+if set(SNAPSHOT_IDS) != set(SOURCES):
+    raise RuntimeError(
+        f"SNAPSHOT_IDS names {sorted(SNAPSHOT_IDS)} but the registry has {list(SOURCES)}"
+    )
 ACQUISITION = "intermediate/acquisition.json"
 VALIDATION = "intermediate/validation.json"
 #: The sources the public zone is derived from (its provenance and its license bucket): the
@@ -75,21 +95,40 @@ PUBLISH_SOURCES: tuple[str, ...] = tuple(
 
 
 def _raw(source: str) -> str:
-    return f"raw/{source}/{SNAPSHOT_ID}"
+    return f"raw/{source}/{SNAPSHOT_IDS[source]}"
+
+
+RAW_SNAPSHOTS: tuple[str, ...] = tuple(_raw(source) for source in SOURCES)
+
+#: ``{source: {file name: "<algorithm>:<hex>"}}``: pinned digests that override the
+#: adapters' own (the test suite pins the committed samples' digests this way).
+Pins = Mapping[str, Mapping[str, str]]
+
+
+def _pinned(spec, pins: Pins | None):
+    if not pins or spec.source not in pins:
+        return spec
+    overrides = pins[spec.source]
+    files = tuple(
+        replace(fetch, digest=overrides[fetch.file_name]) if fetch.file_name in overrides else fetch
+        for fetch in spec.files
+    )
+    return replace(spec, files=files)
 
 
 # --- 1. acquire ------------------------------------------------------------------------------
 
 
-def make_acquire(opener: Opener):
-    """The ``acquire`` stage body bound to a transport (the default is the real one)."""
+def make_acquire(opener: Opener, pins: Pins | None = None):
+    """The ``acquire`` stage body bound to a transport (the default is the real one) and,
+    optionally, to pinned digests overriding the adapters' (see :data:`Pins`)."""
 
     def acquire(ctx: StageContext) -> None:
         """Acquire the pinned snapshot of every registered source through the guarded path,
         or re-use the verified snapshot already in the raw zone; write the acquisition
         report."""
         quarantine_zone = ctx.root / "quarantine"
-        report: dict[str, Any] = {"snapshot_id": SNAPSHOT_ID, "sources": {}}
+        report: dict[str, Any] = {"snapshot_ids": dict(sorted(SNAPSHOT_IDS.items())), "sources": {}}
         for source in SOURCES:
             ctx.checkpoint()
             adapter = ADAPTERS[source]
@@ -101,9 +140,9 @@ def make_acquire(opener: Opener):
                 if not verdict.ok:
                     problems = "; ".join(str(p) for p in verdict.problems)
                     raise StageError(
-                        f"{source}/{SNAPSHOT_ID} is in the raw zone but fails verification "
-                        f"({problems}); the raw zone is immutable, so it will not be replaced: "
-                        "move it aside and run again"
+                        f"{source}/{SNAPSHOT_IDS[source]} is in the raw zone but fails "
+                        f"verification ({problems}); the raw zone is immutable, so it will not "
+                        "be replaced: move it aside and run again"
                     )
                 shutil.copytree(existing, target)
                 acquisition = Acquisition(
@@ -112,7 +151,7 @@ def make_acquire(opener: Opener):
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 spec = replace(
-                    adapter.spec,
+                    _pinned(adapter.spec, pins),
                     timeout=float(ctx.params["timeout_s"]),
                     attempts=int(ctx.params["attempts"]),
                 )
@@ -212,26 +251,28 @@ def publish(ctx: StageContext) -> None:
 # --- the pipeline -------------------------------------------------------------------------------
 
 
-def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
+def real_pipeline(opener: Opener = urllib_open, pins: Pins | None = None) -> Pipeline:
     """The real stages registered so far, wired over the pinned snapshot paths.
 
     ``opener`` is the transport ``acquire`` uses; the CLI passes nothing (the real
-    https path), the test suite passes a fake that serves the committed samples.
+    https path), the test suite passes a fake that serves the committed samples and
+    ``pins`` the samples' digests over the adapters' pinned ones.
     """
     return Pipeline(
         PIPELINE_NAME,
         [
             Stage(
                 "acquire",
-                make_acquire(opener),
+                make_acquire(opener, pins),
                 outputs=(*RAW_SNAPSHOTS, ACQUISITION),
-                # The source set and snapshot ID are parameters so that registering a new
-                # source (EP-6 added snap_retailers) or a controlled refresh changes the
-                # fingerprint and re-runs the stage, which re-uses every existing snapshot.
+                # The source set and the per-source snapshot IDs are parameters so that
+                # registering a new source (EP-6 added snap_retailers; EP-12 the routing
+                # sources) or a controlled refresh changes the fingerprint and re-runs the
+                # stage, which re-uses every existing snapshot and fetches only the new ones.
                 params={
                     "timeout_s": 60,
                     "attempts": 3,
-                    "snapshot_id": SNAPSHOT_ID,
+                    "snapshot_ids": dict(sorted(SNAPSHOT_IDS.items())),
                     "sources": list(SOURCES),
                 },
                 description="acquire the pinned snapshots through the guarded path",
@@ -285,6 +326,23 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 },
                 description="basemap roads layer: TIGER primary and secondary roads in the "
                 "analysis CRS, invariants enforced against the spine",
+            ),
+            Stage(
+                "network",
+                network,
+                inputs=(SPINE, _raw(osm.SOURCE), _raw(septa_gtfs.SOURCE), VALIDATION),
+                outputs=(NETWORK_DIR, NETWORK_REPORT),
+                # The extent is a parameter so a change of buffer or CRS re-runs the clip;
+                # the bands are the clip's contract (the CI sample overrides them).
+                params={
+                    "buffer_m": ROUTING_BUFFER_M,
+                    "crs": ANALYSIS_CRS,
+                    "node_band": list(osm.CLIP_NODE_BAND),
+                    "way_band": list(osm.CLIP_WAY_BAND),
+                },
+                description="routing inputs: the OSM extract clipped to the county bounds "
+                "+ 5 km (way-complete, Bucket B by derivation) and SEPTA's two GTFS zips "
+                "unwrapped as files; no JVM",
             ),
             Stage(
                 "metrics",

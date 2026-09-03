@@ -48,14 +48,16 @@ def test_no_destination_means_null_and_geographic_crs_is_refused() -> None:
 @pytest.fixture(scope="module")
 def spine(spine_samples_dir: Path) -> gpd.GeoDataFrame:
     raw = spine_samples_dir / "raw"
-    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_ID)
-    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_ID)
+    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_IDS[tiger.SOURCE])
+    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_IDS[cenpop.SOURCE])
     return build_spine(tracts, centers, ANALYSIS_CRS)
 
 
 @pytest.fixture(scope="module")
 def layer(spine_samples_dir: Path, spine: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    retailers = snap.read(spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_ID)
+    retailers = snap.read(
+        spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_IDS[snap.SOURCE]
+    )
     return destinations.build_snap_layer(retailers, spine, ANALYSIS_CRS)
 
 

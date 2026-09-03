@@ -18,14 +18,14 @@ from phillysim.spine import ANALYSIS_CRS, build_spine
 @pytest.fixture(scope="module")
 def spine(spine_samples_dir: Path) -> gpd.GeoDataFrame:
     raw = spine_samples_dir / "raw"
-    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_ID)
-    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_ID)
+    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_IDS[tiger.SOURCE])
+    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_IDS[cenpop.SOURCE])
     return build_spine(tracts, centers, ANALYSIS_CRS)
 
 
 @pytest.fixture(scope="module")
 def retailers(spine_samples_dir: Path) -> gpd.GeoDataFrame:
-    return snap.read(spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_ID)
+    return snap.read(spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_IDS[snap.SOURCE])
 
 
 @pytest.fixture(scope="module")

@@ -154,35 +154,59 @@ def safe_member_path(root: Path, member_name: str) -> Path:
 # --- bomb --------------------------------------------------------------------------------
 
 
+def _inspect_members(
+    members: list[zipfile.ZipInfo], *, name: str, compressed: int, limits: Limits
+) -> list[zipfile.ZipInfo]:
+    """The zip-slip and bomb rules over a central directory already read."""
+    if len(members) > limits.max_members:
+        raise GuardError("bomb", f"{name}: {len(members)} members exceeds {limits.max_members}")
+    declared = sum(m.file_size for m in members)
+    if declared > limits.max_extracted_bytes:
+        raise GuardError(
+            "bomb",
+            f"{name}: declared {declared} uncompressed bytes exceeds {limits.max_extracted_bytes}",
+        )
+    ratio = declared / max(compressed, 1)
+    if ratio > limits.max_compression_ratio:
+        raise GuardError(
+            "bomb",
+            f"{name}: compression ratio {ratio:.0f}:1 exceeds {limits.max_compression_ratio:.0f}:1",
+        )
+    for member in members:
+        if _is_symlink(member):
+            raise GuardError("zip_slip", f"member {member.filename!r}: symlink members refused")
+    return members
+
+
 def inspect_zip(archive: Path, limits: Limits = DEFAULT_LIMITS) -> list[zipfile.ZipInfo]:
     """Read the central directory and apply the zip-slip and bomb rules; extract nothing."""
     if not zipfile.is_zipfile(archive):
         raise GuardError("bomb", f"{archive.name}: not a zip archive")
     with zipfile.ZipFile(archive) as zf:
         members = [m for m in zf.infolist() if not m.is_dir()]
-    if len(members) > limits.max_members:
-        raise GuardError(
-            "bomb", f"{archive.name}: {len(members)} members exceeds {limits.max_members}"
-        )
-    declared = sum(m.file_size for m in members)
-    compressed = archive.stat().st_size
-    if declared > limits.max_extracted_bytes:
-        raise GuardError(
-            "bomb",
-            f"{archive.name}: declared {declared} uncompressed bytes exceeds "
-            f"{limits.max_extracted_bytes}",
-        )
-    ratio = declared / max(compressed, 1)
-    if ratio > limits.max_compression_ratio:
-        raise GuardError(
-            "bomb",
-            f"{archive.name}: compression ratio {ratio:.0f}:1 exceeds "
-            f"{limits.max_compression_ratio:.0f}:1",
-        )
-    for member in members:
-        if _is_symlink(member):
-            raise GuardError("zip_slip", f"member {member.filename!r}: symlink members refused")
-    return members
+    return _inspect_members(
+        members, name=archive.name, compressed=archive.stat().st_size, limits=limits
+    )
+
+
+def inspect_nested_zip(
+    outer: zipfile.ZipFile, member: str, limits: Limits = DEFAULT_LIMITS
+) -> list[zipfile.ZipInfo]:
+    """Apply the same rules to a zip archive that is itself a member of ``outer``, read in
+    place through the outer archive (nothing is written to disk); the member's stored size
+    is the compressed size the ratio is measured against (EP-12: SEPTA's outer feed zip
+    holds one zip per feed)."""
+    info = outer.getinfo(member)
+    with outer.open(info) as handle:
+        if not handle.seekable():
+            raise GuardError("bomb", f"{member}: nested archive is not seekable")
+        try:
+            inner = zipfile.ZipFile(handle)
+        except zipfile.BadZipFile as exc:
+            raise GuardError("bomb", f"{member}: not a zip archive ({exc})") from exc
+        with inner:
+            members = [m for m in inner.infolist() if not m.is_dir()]
+    return _inspect_members(members, name=member, compressed=info.file_size, limits=limits)
 
 
 def extract_zip(archive: Path, root: Path, limits: Limits = DEFAULT_LIMITS) -> list[Path]:

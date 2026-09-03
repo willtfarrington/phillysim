@@ -1,14 +1,16 @@
 # Data dictionary
 
-> **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b).**
-> Schema version **1**; public schema version **2** (EP-7 wrote version 1;
-> EP-8b added the basemap file). This document describes the tables the
-> pipeline produces. Instances today: the synthetic tinycity fixture's golden
-> files (`phillysim/tests/fixtures/tinycity/`) for every curated table, and,
-> since EP-5b, EP-6, EP-7, and EP-8b, the real curated tract spine, its ACS
-> join, the SNAP retailer layer, the basemap roads layer, the analytic table
-> (holding the QA-only slice metric), and the gated public zone in the
-> gitignored data root.
+> **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b,
+> EP-12).** Schema version **1**; public schema version **2** (EP-7 wrote
+> version 1; EP-8b added the basemap file). This document describes the
+> tables the pipeline produces. Instances today: the synthetic tinycity
+> fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
+> curated table, and, since EP-5b, EP-6, EP-7, EP-8b, and EP-12, the real
+> curated tract spine, its ACS join, the SNAP retailer layer, the basemap
+> roads layer, the analytic table (holding the QA-only slice metric), the
+> gated public zone, and the routing inputs (`intermediate/network/`: the
+> clipped OSM extract and the two SEPTA feed zips) in the gitignored data
+> root.
 > The integer schema version is one of the manifest-recorded version axes
 > ([ADR-0006](../roadmap/adr/0006-versioning-axes.md)): any breaking change to
 > a table shape below bumps it, with a migration note here. Column names are
@@ -28,6 +30,7 @@ parameter. Which tables carry which CRS:
 |---|---|---|
 | Raw-source tables (`raw/tiger_tracts`, `raw/cenpop` below) | NAD 83, EPSG:4269 | as delivered by the Census Bureau; never rewritten |
 | Raw SNAP retailer table (`raw/snap_retailers` below) | WGS 84, EPSG:4326 | the provider's geocodes carry no stated datum; treated as WGS 84 (the difference from NAD 83 is far below the geocoding error) |
+| Routing inputs: the OSM extract and its clip (`raw/osm_network`, `intermediate/network/`), the GTFS stops (`raw/gtfs`; EP-12) | WGS 84, EPSG:4326 | OpenStreetMap and GTFS coordinates are WGS 84 by definition and R5 reads both directly; the routing box (county bounds + 5 km) is computed in the analysis CRS and expressed in WGS 84 for the clip and the stop check |
 | Curated tract spine `geometry`; every analysis-zone geometry derived from it or joined to it (the SNAP retailer layer since EP-6, sites, travel-time inputs, metrics) | EPSG:26918 | the analysis CRS; recorded in each GeoParquet file's metadata |
 | `centroid_lon` / `centroid_lat` in the spine; `longitude` / `latitude` in the SNAP retailer layer and the sites table | degrees (NAD 83 as published for the spine, the provider's geocodes for destinations; treated as WGS 84 at publication, ADR-0007 datum note) | the form routing origins and destinations take; `phillysim.spine.centroids_in` projects the spine's centers on demand |
 | Public zone (`public/`, GeoJSON / CSV; EP-7) | WGS 84, EPSG:4326 | the publication boundary, and nowhere else: the `publish` stage reprojects from the analysis CRS, rounds coordinates to six decimals, and writes RFC 7946 GeoJSON (no `crs` member, which the publish gate rejects) |
@@ -71,7 +74,7 @@ Written by `phillysim.quarantine` beside the snapshot directory it moved
 | Field | Type | Meaning |
 |---|---|---|
 | `source`, `snapshot_id` | string | The snapshot as it was staged |
-| `kind` | string | What refused it: a guard (`allowlist`, `size`, `zip_slip`, `bomb`), `manifest` (unparseable or malformed manifest), `verify` (checksum / layout mismatch), or `terms` (the archived terms page no longer carries the wording the adapter expects: the acquisition stop condition, EP-5a) |
+| `kind` | string | What refused it: a guard (`allowlist`, `size`, `zip_slip`, `bomb`), `manifest` (unparseable or malformed manifest), `verify` (checksum / layout mismatch), `terms` (the archived terms page no longer carries the wording the adapter expects: the acquisition stop condition, EP-5a), or `digest` (a delivered file's digest differs from the one the adapter pins or from the provider's checksum sidecar: the provider's bytes are not the pinned ones, EP-12) |
 | `reason` | string | Human-readable detail naming the offending file, member, or URL; never an absolute path |
 | `quarantined_at` | string | ISO-8601 UTC timestamp |
 | `quarantined_as` | string | The directory name used under `quarantine/<source>/` |
@@ -250,7 +253,7 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 
 | File | Written by | Read by | Contents |
 |---|---|---|---|
-| `intermediate/acquisition.json` | `acquire` (real pipeline, EP-5a) | nobody (report) | Per-source acquisition report: snapshot ID, acquisition URL, whether an existing verified snapshot was re-used, each fetch's URL / bytes / attempts / seconds, the filter placement note, and the guard limits applied |
+| `intermediate/acquisition.json` | `acquire` (real pipeline, EP-5a) | nobody (report) | Per-source acquisition report: the per-source snapshot IDs (`snapshot_ids`, EP-12), and per source its snapshot ID, acquisition URL, whether an existing verified snapshot was re-used, each fetch's URL / bytes / attempts / seconds, the pinned digests and provider sidecars checked (`digests_checked`, EP-12), the filter placement note, and the guard limits applied |
 | `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
 | `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract; real pipeline (EP-5b): `geoid` + the pinned `B01003_001E/M`, `B08201_002E/M` as float64, exactly one row per spine tract in spine order, suppressed cells null (ADR-0004), join cardinality enforced |
 | `intermediate/snap_retailers.json` | `snap_retailers` (real pipeline, EP-6) | nobody (report) | Counts for the SNAP retailer layer: rows, supermarket-format rows, by store type, by format class, tracts with any / with a supermarket-format retailer, points unassigned to a tract, mapping version, as-of date, CRS |
@@ -258,7 +261,8 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/slice_metric.json` | `metrics` (real pipeline, EP-7) | nobody (report) | The QA slice metric's report: metric ID, category, methods version, tract and destination counts, null estimates, min / median / max distance in metres |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
-| `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
+| `intermediate/network.json` | `network` | `travel_times` (fixture); nobody yet in the real pipeline (EP-13's harness reads `intermediate/network/`) | Routing-input summary. Fixture: stop count, edge count, total edge length, CRS. Real pipeline (EP-12): the routing box (county bounds + `buffer_m`, WGS 84), CRS, the two source snapshots, the license bucket by derivation (B), the clip's file name, bytes, node / way / highway-way / relation counts and the state file's counts, and per feed zip its bytes, stops, stops outside the box, and stops inside the county's tracts |
+| `intermediate/network/` | `network` (real pipeline, EP-12) | the routing harness (EP-13; nothing in the pipeline yet) | A directory output (like `public/`): `pennsylvania-260831-philadelphia-5km.osm.pbf`, the OSM extract clipped to the routing box (way-complete, the source order, the box in its header; **Bucket B** by derivation from the `osm_network` snapshot), and `google_bus.zip` / `google_rail.zip`, SEPTA's two feed zips copied out of the release asset as files and never expanded (never copied under `public/` or `site/`) |
 
 ## Public zone (`public/`) — public schema version 2 (EP-7, EP-8b)
 
@@ -411,7 +415,7 @@ union of the spine's tracts (the county scope the provider's file promises;
 the stage report records the length outside it, 0.0 m for the pinned
 snapshot). `pytest --real-data-root DIR` runs them on a real data root.
 
-## Raw sources: the tract spine (EP-5a), SNAP retailers (EP-6), and the basemap roads (EP-8b)
+## Raw sources: the tract spine (EP-5a), SNAP retailers (EP-6), the basemap roads (EP-8b), and the routing sources (EP-12)
 
 Real snapshots are stored **as delivered** by the provider (byte-for-byte,
 so `phillysim verify` and anyone else can check them against the source) and
@@ -423,7 +427,77 @@ NAD 83 (EPSG:4269) as delivered; the `spine` stage reprojects into the
 analysis CRS (EPSG:26918, [ADR-0007](../roadmap/adr/0007-analysis-crs.md)).
 Every Census snapshot directory also holds `terms.html`, the archived Census
 Bureau Open Government page (the terms in force), and a manifest with
-`license_bucket = "A"`.
+`license_bucket = "A"`. Snapshot IDs are **per source**
+(`phillysim.pipeline.SNAPSHOT_IDS`, EP-12): the five sources below acquired
+on 2026-09-02 keep that ID and the two routing sources carry 2026-09-03.
+The routing sources are not tables: their `read` returns the summary the
+`validate` stage checks, and the `network` stage reads them a second way
+(the clip, the unwrap) into `intermediate/network/`.
+
+### `raw/osm_network/<snapshot-id>/` — OpenStreetMap extract for Pennsylvania via Geofabrik (EP-12)
+
+File `pennsylvania-260831.osm.pbf`, Geofabrik's dated state extract (OSM
+data of 2026-08-31; 345,912,530 bytes; never the `-latest` file), stored as
+delivered beside the provider's MD5 sidecar `pennsylvania-260831.osm.pbf.md5`
+(fetched through the same guarded path; the adapter pins the same MD5) and
+`terms.html`, the Geofabrik region page in force, checked in its visible
+text for "created by OpenStreetMap Contributors" and "License: ODbL". The
+manifest carries **`license_bucket = "B"`**, the first of the real
+pipeline (ADR-0003). A PBF is not an archive: the download path caps it at
+1 GiB and never opens it as a zip. `read` opens the file's **header only**
+and returns one row ([data card](data-cards/osm-network.md)):
+
+| Column | Type | Meaning |
+|---|---|---|
+| `file` | string | `pennsylvania-260831.osm.pbf` (key) |
+| `bytes` | integer | The delivered file's size, within the 1 GiB cap |
+| `md5`, `md5_pinned`, `md5_sidecar` | string | The file's MD5, the one the adapter pins (ADR-0008), and the one the provider's sidecar states |
+| `sidecar_match` | integer | 1 when `md5` equals `md5_sidecar` (required) |
+| `generator`, `replication_timestamp`, `sorting` | string | The header's writing program, OSM data timestamp (`YYYY-MM-DDThh:mm:ssZ`), and sort order (`Type_then_ID` required) |
+| `bbox_min_lon`, `bbox_min_lat`, `bbox_max_lon`, `bbox_max_lat` | float | The header's bounding box, which must enclose the county bounds (the right region, whole) |
+
+The county filter is the **clip** (`phillysim.adapters.osm.clip`, run by
+the `network` stage): the county bounds buffered by 5 km in the analysis
+CRS, expressed in WGS 84; every way with a node inside the box with all of
+its nodes, restriction relations whose members are all kept, the source
+order, the box in the header. Its own contract (`osm.check_clip`) is
+enforced by the stage on its output: a readable PBF whose header carries
+the box, node and way counts within the recorded bands (the stage's
+`node_band` / `way_band` parameters), every node inside the box or
+referenced by a kept way, `highway` ways present.
+
+### `raw/gtfs/<snapshot-id>/` — SEPTA GTFS, release v202609060 (EP-12)
+
+File `gtfs_public.zip`, SEPTA's release asset as SEPTA publishes it on
+GitHub (21,555,258 bytes; SHA-256 pinned in the adapter and checked at
+acquisition), holding `google_bus.zip` and `google_rail.zip`, stored as
+delivered, plus `terms.html`, SEPTA's developer page (the license
+agreement in force), checked for its two "SEPTA reserves the right …"
+sentences; the manifest carries `license_bucket = "A"` and a `license_note`
+stating the terms and the project's facts-not-contents position. No county
+filter (stops outside the routing box are counted, not dropped). `read`
+inspects each inner zip in place through the nested guards and returns one
+row per feed ([data card](data-cards/septa-gtfs.md)):
+
+| Column | Type | Meaning |
+|---|---|---|
+| `feed` | string | `google_bus.zip` or `google_rail.zip` (key; exactly the two) |
+| `label` | string | `bus_metro` or `rail` |
+| `bytes`, `members` | integer | The inner zip's stored size (within the 128 MiB cap) and member count |
+| `missing_required`, `missing_names` | integer; string, nullable | Required GTFS files and columns absent (must be 0) and their names |
+| `feed_publisher`, `feed_version` | string | From `feed_info.txt`: `SEPTA`; the release tag `v202609060` |
+| `feed_start_date`, `feed_end_date` | string | The feed's authoritative window, `YYYYMMDD` |
+| `covers_wednesday`, `covers_saturday` | integer | 1 when the pinned Wednesday (2026-09-23) / Saturday (2026-09-26) lies inside the window (required) |
+| `services_wednesday`, `services_saturday` | integer ≥ 1 | Service IDs running on each pinned day per `calendar.txt` and `calendar_dates.txt` |
+| `agency_timezone` | string | `America/New_York` (required) |
+| `stops`, `stops_outside_box` | integer | Stops in the feed and how many lie outside the routing box (information, not a failure) |
+| `routes`, `trips` | integer ≥ 1 | Row counts of `routes.txt` and `trips.txt` |
+
+The `network` stage **unwraps without expanding**
+(`phillysim.adapters.septa_gtfs.unwrap`): the outer archive inspected, each
+inner zip inspected in place and again as a file, the two feed zips copied
+out into `intermediate/network/`; nothing inside a feed is ever extracted,
+and nothing from the feed ever reaches `public/` or `site/`.
 
 ### `raw/snap_retailers/<snapshot-id>/` — USDA SNAP Retailer Locator historical data (EP-6)
 
@@ -516,7 +590,8 @@ Column-level contracts for the eight tinycity sources live in
 shape of the real sources loosely (SNAP-like retailers with a format-based
 `store_type`; markets with free-text `hours` / `months`; meal sites with
 `<day>_open` / `<day>_close` in `HH:MM`; ACS columns as `<table>_<line>E` /
-`…M`). The three spine sources, the SNAP retailer source (EP-6), and the
-roads source (EP-8b) have real contracts (above); the remaining destination,
-transit, and network sources keep their fixture contracts until their
-adapters land (M3, M4).
+`…M`). The three spine sources, the SNAP retailer source (EP-6), the roads
+source (EP-8b), and the two routing sources (EP-12: `osm_network` and
+`gtfs`, whose fixture counterparts stay stubs by decision, ADR-0008) have
+real contracts (above); the remaining destination sources keep their
+fixture contracts until their adapters land (M4).

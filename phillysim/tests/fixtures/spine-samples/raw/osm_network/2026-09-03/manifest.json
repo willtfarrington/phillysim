@@ -1,0 +1,17 @@
+{
+  "acquired_at": "2026-09-03T20:26:54Z",
+  "acquisition_url": "https://download.geofabrik.de/north-america/us/pennsylvania-260831.osm.pbf",
+  "acquisition_url_alt": null,
+  "files": {
+    "pennsylvania-260831.osm.pbf": "d9adc57663bab4c8a0fa86570d27ce0cd2bce6d6441c70b889a9333503486938",
+    "pennsylvania-260831.osm.pbf.md5": "bade4ed7777fd09ede8a630b656b0fe21732b734f5720f32a6ddf242760527bd",
+    "terms.html": "717fed3999d4a396645253cd8d7f2c2784b36803752200b7ccacc9ba9f26d27d"
+  },
+  "license_bucket": "B",
+  "license_note": "Open Database License (ODbL) 1.0 (https://opendatacommons.org/licenses/odbl/1-0/); data © OpenStreetMap contributors; extract processed and published by Geofabrik GmbH. Geofabrik dated Pennsylvania extract pennsylvania-260831.osm.pbf (OSM data of 2026-08-31, provider MD5 a779d2ef14c8addce6eac207ab9cd851), stored as delivered; every output computed over it is Bucket B by derivation (ADR-0003) and carries the ODbL notice and \"© OpenStreetMap contributors\". CI SAMPLE: the extract clipped to the bounds of 6 Philadelphia County tracts (49473 nodes, 11532 ways, 46 relations; way-complete) from the 2026-09-03 snapshot, the provider's header carried over, the MD5 sidecar regenerated for the sample; real OpenStreetMap data, ODbL 1.0, © OpenStreetMap contributors; terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-03",
+  "source": "osm_network",
+  "synthetic": false,
+  "terms_archive": "terms.html"
+}

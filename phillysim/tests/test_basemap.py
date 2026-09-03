@@ -24,14 +24,16 @@ SAMPLE_ROADS = 48
 @pytest.fixture(scope="module")
 def spine(spine_samples_dir: Path) -> gpd.GeoDataFrame:
     raw = spine_samples_dir / "raw"
-    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_ID)
-    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_ID)
+    tracts = tiger.read(raw / tiger.SOURCE / pipeline.SNAPSHOT_IDS[tiger.SOURCE])
+    centers = cenpop.read(raw / cenpop.SOURCE / pipeline.SNAPSHOT_IDS[cenpop.SOURCE])
     return build_spine(tracts, centers, ANALYSIS_CRS)
 
 
 @pytest.fixture(scope="module")
 def roads(spine_samples_dir: Path) -> gpd.GeoDataFrame:
-    return tiger_roads.read(spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_ID)
+    return tiger_roads.read(
+        spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]
+    )
 
 
 @pytest.fixture(scope="module")
@@ -157,8 +159,8 @@ def test_stage_writes_the_layer_and_refuses_one_the_invariants_reject(
     """The stage body on the sample snapshot writes the layer and the report; with the
     adapter's read doctored so every road lies outside the county it raises and writes
     nothing."""
-    raw = spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_ID
-    rel = f"raw/{tiger_roads.SOURCE}/{pipeline.SNAPSHOT_ID}"
+    raw = spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]
+    rel = f"raw/{tiger_roads.SOURCE}/{pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]}"
     root = tmp_path / "root"
     (root / rel).parent.mkdir(parents=True)
     shutil.copytree(raw, root / rel)

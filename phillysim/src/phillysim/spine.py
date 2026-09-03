@@ -30,14 +30,9 @@ from pyproj import CRS, Transformer
 
 from phillysim import adapters
 from phillysim.adapters.acs import column_names as acs_column_names
-from phillysim.adapters.base import COUNTY_BOUNDS, NAD83, TRACT_GEOID_PATTERN
+from phillysim.adapters.base import ANALYSIS_CRS, COUNTY_BOUNDS, NAD83, TRACT_GEOID_PATTERN
 from phillysim.stages import StageContext, StageError
 
-#: The single projected CRS every analysis-zone geometry carries (ADR-0007): NAD 83 / UTM
-#: zone 18N, metres. Philadelphia straddles the zone's central meridian (75 degrees W),
-#: and TIGER and CenPop are delivered on NAD 83, so the reprojection is a pure
-#: projection with no datum shift. WGS 84 appears only at the publication boundary.
-ANALYSIS_CRS = "EPSG:26918"
 #: Philadelphia County's 2020 census tracts (Census Bureau count; the stop condition).
 TRACT_COUNT = 408
 

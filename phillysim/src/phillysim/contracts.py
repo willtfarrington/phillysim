@@ -40,15 +40,16 @@ class ColumnSpec:
     ``kind`` is a coarse type family, not a dtype: ``int`` accepts any integer
     dtype (nullable ``Int64`` included), ``float`` accepts float *or* integer,
     ``str`` accepts string / object dtypes (and an all-null column, which pandas
-    cannot type), ``bool`` accepts boolean dtypes. ``minimum``, ``allowed``, and
-    ``pattern`` (a regex the whole string value must match) are value constraints
-    checked on non-null cells.
+    cannot type), ``bool`` accepts boolean dtypes. ``minimum``, ``maximum``,
+    ``allowed``, and ``pattern`` (a regex the whole string value must match) are
+    value constraints checked on non-null cells.
     """
 
     name: str
     kind: str
     nullable: bool = True
     minimum: float | None = None
+    maximum: float | None = None
     allowed: frozenset[str] | None = None
     pattern: str | None = None
 
@@ -154,6 +155,16 @@ def _check_schema(contract: SourceContract, frame: pd.DataFrame) -> list[Violati
                         contract.name,
                         "schema",
                         f"column {spec.name!r} has {below} value(s) below {spec.minimum}",
+                    )
+                )
+        if spec.maximum is not None and spec.kind in ("int", "float"):
+            above = int((present > spec.maximum).sum())
+            if above:
+                out.append(
+                    Violation(
+                        contract.name,
+                        "schema",
+                        f"column {spec.name!r} has {above} value(s) above {spec.maximum}",
                     )
                 )
         if spec.allowed is not None:

@@ -12,6 +12,7 @@ fail loudly.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import urllib.error
@@ -32,6 +33,7 @@ from phillysim.download import (
     check_terms,
     fetch_file,
     new_snapshot_dir,
+    parse_digest,
     urllib_open,
 )
 from phillysim.guards import GuardError, Limits
@@ -381,6 +383,120 @@ def test_terms_drift_is_the_stop_condition(tmp_path: Path) -> None:
     assert (moved / "terms.html").is_file() and (moved / "tracts.zip").is_file()
     assert not (moved / "manifest.json").exists(), "no manifest was written"
     assert list_quarantined(tmp_path / "q") == [record]
+
+
+def test_check_terms_reads_the_visible_text(tmp_path: Path) -> None:
+    """EP-12: a phrase may span an inline element (Geofabrik's footer) or an entity."""
+    page = tmp_path / "terms.html"
+    page.write_bytes(
+        b'<p>and created by <a href="https://www.openstreetmap.org/">OpenStreetMap '
+        b'Contributors</a> | <a href="x">License:\n  ODbL 1.0</a> &amp; more</p>'
+    )
+    check_terms(page, ["created by OpenStreetMap Contributors", "License: ODbL", "& more"])
+    with pytest.raises(TermsError, match="href"):
+        check_terms(page, ["href"])  # markup is not text
+
+
+# --- pinned digests and provider sidecars (EP-12) ---------------------------------------------
+
+
+def test_pinned_digest_is_validated_at_declaration() -> None:
+    assert parse_digest("sha256:" + "a" * 64) == ("sha256", "a" * 64)
+    assert parse_digest("md5:" + "B" * 32) == ("md5", "b" * 32), "hex is lowercased"
+    for bad in ("sha1:" + "a" * 40, "sha256:" + "a" * 63, "md5:" + "g" * 32, "a" * 64):
+        with pytest.raises(ValueError):
+            parse_digest(bad)
+    with pytest.raises(ValueError):
+        Fetch(DATA_URL, "t.zip", digest="sha256:short")
+
+
+def test_pinned_sha256_is_checked_before_admission(tmp_path: Path) -> None:
+    good = hashlib.sha256(GOOD_ZIP).hexdigest()
+    spec = _spec(files=(Fetch(DATA_URL, "tracts.zip", digest=f"sha256:{good}"),))
+    opener = FakeOpener({DATA_URL: GOOD_ZIP, TERMS_URL: TERMS_HTML})
+    acquisition = acquire_snapshot(
+        spec, _target(tmp_path), quarantine_zone=tmp_path / "q", opener=opener
+    )
+    assert acquisition.extra == {"digests_checked": {"tracts.zip": f"sha256:{good}"}}
+    assert acquisition.to_dict()["digests_checked"]["tracts.zip"].endswith(good)
+    # A replaced file under the same name is a stop: quarantined with kind ``digest``.
+    spec = _spec(
+        source="cenpop", files=(Fetch(DATA_URL, "tracts.zip", digest="sha256:" + "0" * 64),)
+    )
+    opener = FakeOpener({DATA_URL: GOOD_ZIP, TERMS_URL: TERMS_HTML})
+    with pytest.raises(QuarantinedError) as info:
+        acquire_snapshot(
+            spec, _target(tmp_path, "cenpop"), quarantine_zone=tmp_path / "q", opener=opener
+        )
+    assert info.value.record.kind == "digest" and "pinned" in info.value.record.reason
+    assert opener.calls == [DATA_URL], "the digest fails before the terms page is fetched"
+    assert not _target(tmp_path, "cenpop").exists()
+    assert [r.kind for r in list_quarantined(tmp_path / "q")] == ["digest"]
+
+
+def test_provider_md5_sidecar_is_fetched_and_compared(tmp_path: Path) -> None:
+    md5 = hashlib.md5(GOOD_ZIP).hexdigest()  # noqa: S324
+    sidecar_url = DATA_URL + ".md5"
+    files = (
+        Fetch(DATA_URL, "tracts.zip", digest=f"md5:{md5}"),
+        Fetch(sidecar_url, "tracts.zip.md5", md5_of="tracts.zip"),
+    )
+    routes = {
+        DATA_URL: GOOD_ZIP,
+        sidecar_url: f"{md5}  tracts.zip\n".encode(),
+        TERMS_URL: TERMS_HTML,
+    }
+    acquisition = acquire_snapshot(
+        _spec(files=files),
+        _target(tmp_path),
+        quarantine_zone=tmp_path / "q",
+        opener=FakeOpener(routes),
+    )
+    assert acquisition.extra["digests_checked"] == {
+        "tracts.zip": f"md5:{md5}",
+        "tracts.zip (sidecar)": f"md5:{md5}",
+    }
+    assert set(acquisition.manifest.files) == {"tracts.zip", "tracts.zip.md5", "terms.html"}
+    # The sidecar vouches for different bytes: quarantined, nothing admitted.
+    routes[sidecar_url] = ("f" * 32 + "  tracts.zip\n").encode()
+    with pytest.raises(QuarantinedError) as info:
+        acquire_snapshot(
+            _spec(source="cenpop", files=files),
+            _target(tmp_path, "cenpop"),
+            quarantine_zone=tmp_path / "q",
+            opener=FakeOpener(routes),
+        )
+    assert info.value.record.kind == "digest" and "sidecar" in info.value.record.reason
+    # A sidecar without a line for the file is a stop too.
+    routes[sidecar_url] = b"garbage\n"
+    with pytest.raises(QuarantinedError, match="digest"):
+        acquire_snapshot(
+            _spec(source="acs", files=files),
+            _target(tmp_path, "acs"),
+            quarantine_zone=tmp_path / "q",
+            opener=FakeOpener(routes),
+        )
+
+
+def test_a_pbf_is_never_opened_as_an_archive(tmp_path: Path) -> None:
+    """EP-12: the OSM extract is not a zip; bytes that would fail ``inspect_zip`` admit."""
+    pbf = b"\x00\x00\x00\x0d" + b"not an archive at all" * 10
+    spec = _spec(files=(Fetch(DATA_URL.replace(".zip", ".osm.pbf"), "state.osm.pbf"),))
+    opener = FakeOpener({DATA_URL.replace(".zip", ".osm.pbf"): pbf, TERMS_URL: TERMS_HTML})
+    acquisition = acquire_snapshot(
+        spec, _target(tmp_path), quarantine_zone=tmp_path / "q", opener=opener
+    )
+    assert "state.osm.pbf" in acquisition.manifest.files and acquisition.extra == {}
+    # The same bytes under a ``.zip`` name are refused by the archive guard.
+    spec = _spec(source="cenpop", files=(Fetch(DATA_URL, "state.zip"),))
+    with pytest.raises(QuarantinedError) as info:
+        acquire_snapshot(
+            spec,
+            _target(tmp_path, "cenpop"),
+            quarantine_zone=tmp_path / "q",
+            opener=FakeOpener({DATA_URL: pbf}),
+        )
+    assert info.value.record.kind == "bomb"
 
 
 def test_check_terms_folds_whitespace_and_names_missing_phrases(tmp_path: Path) -> None:

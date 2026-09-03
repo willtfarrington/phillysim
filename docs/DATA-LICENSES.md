@@ -1,12 +1,16 @@
 # Data licenses
 
-> **Status: five snapshots acquired (EP-5a, EP-6, and EP-8b, 2026-09-02);
-> the publish gate exists (EP-7); nothing published.** The three tract-spine
-> sources, the USDA SNAP retailer file, and the TIGER/Line county roads file
-> for the basemap have been acquired into the gitignored raw zone with their
-> terms pages (or, for USDA, the provider's data page in force) archived
-> (dated entries below), and the public zone they feed is built and gated
-> locally but not tracked or deployed. This
+> **Status: seven snapshots acquired (EP-5a, EP-6, and EP-8b, 2026-09-02;
+> EP-12, 2026-09-03); the publish gate exists (EP-7); nothing published.**
+> The three tract-spine sources, the USDA SNAP retailer file, the TIGER/Line
+> county roads file for the basemap, and, since EP-12, the two routing
+> sources (the OpenStreetMap extract via Geofabrik, the first **Bucket B**
+> source of the real pipeline, and SEPTA's GTFS feed pinned to a release
+> tag) have been acquired into the gitignored raw zone with their terms pages
+> (or, for USDA, the provider's data page in force) archived (dated entries
+> below), and the public zone the first five feed is built and gated locally
+> but not tracked or deployed; nothing derived from the routing sources is
+> published in the M3 spike. This
 > document states the licensing rules the project has adopted and gains a
 > per-source record as each source is actually ingested. It mirrors the
 > source matrix in [roadmap/sources.md](../roadmap/sources.md); that matrix
@@ -94,7 +98,18 @@ every `phillysim run --fixture`.
 
 **SEPTA-derived aggregates:** computed travel times are facts; published
 matrices contain no GTFS feed contents. The raw feed is never republished,
-and SEPTA's terms are re-read and archived at every refresh.
+and SEPTA's terms are re-read and archived at every refresh (EP-12 archived
+and sentence-checked them at the first acquisition; record below).
+
+**Routing sources and the buckets (EP-12, 2026-09-03).** The `network`
+stage writes the first Bucket B output of the real pipeline,
+`intermediate/network/` (the OSM extract clipped to the county bounds +
+5 km beside SEPTA's two feed zips), labeled B by derivation from the
+`osm_network` manifest (`intermediate/network.json` records the bucket and
+the two source snapshots). Nothing downstream of it reaches `publish`
+during the spike, so the public zone stays Bucket A; the first published
+Bucket B files are M5's routing outputs, and the SEPTA feed's own bucket
+is A (nothing OSM-derived comes from it).
 
 ## Source terms summary (to be expanded per snapshot)
 
@@ -109,8 +124,8 @@ and SEPTA's terms are re-read and archived at every refresh.
 | TIGER/Line 2025 roads (basemap) | US public domain | committed; acquired 2026-09-02 (record below; EP-8b) |
 | ACS 5-year 2020–2024 | US public domain (summary file; API terms not engaged) | committed; acquired 2026-09-02 (record below) |
 | City Planning Districts | City terms | committed |
-| SEPTA GTFS | Custom: revocable, redistribution permitted, fees reservable | committed (raw feed never republished) |
-| OSM via Geofabrik | ODbL | committed (drives Bucket B) |
+| SEPTA GTFS | Custom: revocable, redistribution permitted, fees reservable | committed; acquired 2026-09-03 (record below; EP-12); raw feed never republished |
+| OSM via Geofabrik | ODbL | committed; acquired 2026-09-03 (record below; EP-12); drives Bucket B |
 
 Excluded/blocked sources and fallback rules are recorded in
 [roadmap/sources.md](../roadmap/sources.md). Notably, GoodRx is **blocked**
@@ -209,10 +224,98 @@ changes, the acquisition stops and the snapshot is quarantined
   published `basemap.geojson` (public schema version 2) carries the
   Bucket A label like every other file of the zone.
 
+### 2026-09-03 — OpenStreetMap extract for Pennsylvania via Geofabrik (`osm_network`), Bucket B
+
+The first Bucket B record.
+
+- **Acquired:** `https://download.geofabrik.de/north-america/us/pennsylvania-260831.osm.pbf`
+  (Geofabrik's **dated** Pennsylvania extract; OSM data as of
+  2026-08-31T20:20:51Z by the region page, 2026-08-31T20:21:20Z by the
+  file's own replication timestamp; never the `-latest` file), 345,912,530
+  bytes, stored as delivered, with Geofabrik's MD5 sidecar
+  `pennsylvania-260831.osm.pbf.md5` (62 bytes) fetched through the same
+  guarded path and stored beside it. The delivered file's MD5,
+  `a779d2ef14c8addce6eac207ab9cd851`, equals both the value pinned in the
+  adapter ([ADR-0008](../roadmap/adr/0008-routing-toolchain-pins.md)) and
+  the sidecar's; a mismatch of either quarantines the snapshot (kind
+  `digest`). A PBF is not an archive and is never opened as one. The
+  county filter is the clip the `network` stage writes (county bounds +
+  5 km, way-complete); the state file never leaves the raw zone.
+- **Terms in force:** the **Open Database License (ODbL) 1.0**
+  (`https://opendatacommons.org/licenses/odbl/1-0/`); the data are
+  © OpenStreetMap contributors, extracted and published by Geofabrik GmbH.
+  Archived beside the data: the Geofabrik region page
+  (`https://download.geofabrik.de/north-america/us/pennsylvania.html`,
+  archived 2026-09-03 as `terms.html`), whose footer states that the
+  extracts are "created by OpenStreetMap Contributors" under
+  "License: ODbL 1.0"; the download path checks both phrases in the page's
+  visible text.
+- **Bucket:** **B**. Every file carrying a value computed over this
+  network (the clipped extract in `intermediate/network/` today; the
+  travel-time matrices and every metric column computed over them at M5)
+  carries the ODbL label and the notice "© OpenStreetMap contributors";
+  combined exports containing such a value are ODbL by rule (ADR-0003);
+  rendered maps are Produced Works. Nothing derived from it is published in
+  the M3 spike.
+- **Attribution:** OpenStreetMap contributors, Pennsylvania extract
+  pennsylvania-260831.osm.pbf via Geofabrik (ODbL 1.0).
+- **Use:** the routing network ([data card](data-cards/osm-network.md));
+  the routing spike (EP-13 onward) builds R5's street layer from the clip.
+
+### 2026-09-03 — SEPTA GTFS, release v202609060 (`gtfs`), Bucket A
+
+- **Acquired:** `https://github.com/septadev/GTFS/releases/download/v202609060/gtfs_public.zip`
+  (SEPTA's GTFS as SEPTA publishes it on GitHub, release tag `v202609060`,
+  published 2026-09-02; "Summer RR, Fall Bus-Metro, Sept Adjustments"),
+  21,555,258 bytes, stored as delivered: one zip holding `google_bus.zip`
+  (bus and Metro, authoritative 2026-09-06 to 2027-02-20) and
+  `google_rail.zip` (Regional Rail, authoritative 2026-09-06 to
+  2026-10-17). The delivered file's SHA-256,
+  `4d3fa20ea094937a9bb6389ad52017e1ac90a564aee497f318797e1b1e4f07ab`,
+  equals the digest GitHub records for the asset, pinned in the adapter;
+  a mismatch quarantines the snapshot (kind `digest`). The outer zip was
+  inspected (slip, bomb) at acquisition before anything was read out of
+  it; each inner zip is inspected in place by the reader and again as a
+  file when the `network` stage unwraps it. No county filter: the whole
+  network is routing input (stops outside the routing box are counted,
+  never dropped).
+- **Terms in force:** SEPTA's developer license agreement, the text on
+  `https://www3.septa.org/developer/` (archived 2026-09-03 as
+  `terms.html`; "Agreement updated: Tue, 18 Mar 2014" by its own text).
+  The download path checks two sentences, verbatim: "SEPTA reserves the
+  right to alter and/or no longer provide the Trip Planning Data at any
+  time without prior notice." and "SEPTA reserves the right to institute a
+  license fee at any time in the future without prior notice." A change is
+  the stop condition. The agreement is revocable, charges no fee today but
+  reserves one, and forbids altering the data and commercial use of
+  SEPTA's marks. **The project accepts those terms as archived:** the
+  release download bypasses the page's click-through form by using SEPTA's
+  own GitHub release, so the archived agreement text is what is accepted,
+  and the terms are re-read and re-archived at every refresh.
+- **Position (facts, not contents):** computed travel times are facts and
+  carry no feed contents; no GTFS row, stop, or schedule is ever
+  published, nothing unwrapped from the feed is ever copied under
+  `public/` or `site/`, and the raw feed is never redistributed. The CI
+  sample of this source is **synthetic** (a feed in SEPTA's layout over
+  the six sample tracts), because committing any subset of the real feed
+  to the repository would republish feed contents.
+- **Bucket:** **A** for the feed itself: nothing OSM-derived comes from
+  it. A travel time computed over the OSM network and this feed is
+  Bucket B because of the network.
+- **Attribution:** Southeastern Pennsylvania Transportation Authority
+  (SEPTA), GTFS release v202609060.
+- **Use:** the routing schedules ([data card](data-cards/septa-gtfs.md));
+  the routing spike (EP-13 onward) builds R5's transit layer from the two
+  feeds.
+
 The committed CI samples under `phillysim/tests/fixtures/spine-samples/`
-are subsets of these five snapshots (six Philadelphia County tracts, the
-retailers and major roads inside them, plus control rows) and inherit their
-public-domain status; their README says so.
+are subsets of the five Census and USDA snapshots (six Philadelphia County
+tracts, the retailers and major roads inside them, plus control rows) and
+inherit their public-domain status; the OSM sample is real OpenStreetMap
+data (the extract clipped to the six tracts' bounds) committed under the
+ODbL with the notice "© OpenStreetMap contributors" in the samples README
+and in its Bucket B manifest; the GTFS sample is synthetic and carries no
+SEPTA content. Their README says so.
 
 ## What ships with each snapshot
 

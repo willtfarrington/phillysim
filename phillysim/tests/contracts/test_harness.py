@@ -104,6 +104,15 @@ def test_minimum_violation() -> None:
     assert "schema" in checks(frame)
 
 
+def test_maximum_violation() -> None:
+    contract = SourceContract(name="t", columns=(ColumnSpec("n", "int", minimum=0, maximum=10),))
+    frame = pd.DataFrame({"n": [0, 10, 11]})
+    violations = check_frame(contract, frame)
+    assert len(violations) == 1 and violations[0].check == "schema"
+    assert "1 value(s) above 10" in violations[0].detail
+    assert check_frame(contract, pd.DataFrame({"n": [0, 10]})) == []
+
+
 def test_allowed_set_violation() -> None:
     frame = conforming()
     frame.loc[0, "kind"] = "zzz"

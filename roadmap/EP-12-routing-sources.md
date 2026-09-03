@@ -1,6 +1,6 @@
 # EP-12 — Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path
 
-**Status:** [ ] planned · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [~] in progress (work done 2026-09-03; owner review and commit pending) · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The two sources the routing spike needs exist as real snapshots in the raw
@@ -260,15 +260,170 @@ The documents listed under components; `roadmap/README.md` packet row;
 `roadmap/architecture.md` stage row 8; `roadmap/sources.md`; CHANGELOG.
 No new ADR (ADR-0008, written by EP-11, holds the pins).
 
-## Handoff payload (fill at session end)
-- packet ID + status; baseline/roadmap version
-- files changed; commands/tests run + results
-- the two acquisitions (URLs, bytes, seconds, attempts, digests, the MD5
-  check), the guard limits per source, the clipped PBF's node and way
-  counts and size, the stops-outside-box count
-- resource observations
-- decisions/ADRs made; unresolved risks/questions
-- no-go areas touched? (must be none; the GTFS feed never left the data
-  root; no GTFS row committed)
-- `roadmap/README.md` packet row updated to `[x] <commit>`
-- exact next packet: EP-13 (routing toolchain and harness)
+## Handoff payload (filled 2026-09-03)
+- **Packet:** EP-12 — work complete 2026-09-03, one session, at the S
+  estimate; Planning Baseline v1.0. Work commit and CI run: see "Owner
+  review" below (recorded once the owner has decided on the commit).
+- **Files changed.** New: `phillysim/src/phillysim/adapters/osm.py`,
+  `adapters/septa_gtfs.py`, `phillysim/src/phillysim/network.py`,
+  `tests/contracts/test_osm_network.py`, `tests/contracts/test_septa_gtfs.py`,
+  `tests/test_network.py`,
+  `tests/fixtures/spine-samples/raw/osm_network/2026-09-03/` (the clipped
+  PBF, 748,656 B, its MD5 sidecar, the terms excerpt, a Bucket B manifest)
+  and `raw/gtfs/2026-09-03/` (a synthetic 2,552 B feed, the terms excerpt,
+  a `synthetic: true` manifest), `docs/data-cards/osm-network.md`,
+  `docs/data-cards/septa-gtfs.md`. Changed: `pipeline.py` (`SNAPSHOT_IDS`,
+  `RAW_SNAPSHOTS` and `_raw` from the mapping, the `acquire` parameter
+  `snapshot_ids`, digest pins as an injectable override, the `network`
+  stage), `download.py` (`Fetch.digest` / `md5_of`, `check_digests`, the
+  `digest` quarantine kind, the visible-text terms check, `digests_checked`
+  in the acquisition record), `guards.py` (`inspect_nested_zip`),
+  `contracts.py` (`ColumnSpec.maximum`), `adapters/__init__.py` (registry),
+  `adapters/base.py` (`ANALYSIS_CRS` moved here, `WGS84`,
+  `ROUTING_BUFFER_M`, `buffered_bounds`), `spine.py` (imports the CRS
+  constant), `preflight.py` (`osmium` in the locked packages),
+  `pyproject.toml` + `uv.lock` (`osmium>=4.3.1`), `tests/conftest.py`
+  (per-source IDs in the sample transport, `sample_pins`, the sample
+  bands), `tests/fixtures/spine-samples/{build_samples.py,README.md}`,
+  `tests/integration/test_real_pipeline.py` (nine stages),
+  `tests/{test_download,test_guards,test_basemap,test_destinations,
+  test_slice_metric,test_spine_invariants}.py`,
+  `tests/contracts/{test_harness,test_snap,test_spine_sources,
+  test_tiger_roads}.py`, `docs/{DATA-LICENSES,data-dictionary}.md`,
+  `docs/data-cards/{README,acs,cenpop,snap-retailers,tiger-roads,
+  tiger-tracts}.md` (per-source IDs), `phillysim/README.md`,
+  `roadmap/{architecture,sources,quality,README}.md`, `CHANGELOG.md`, this
+  file.
+- **Commands/tests run + results.** `uv run pytest` → **516 passed, 3
+  skipped** in 38 s (461 before the packet; the three skips are the
+  real-data-root tests); `pytest --real-data-root ../data` (spine,
+  basemap, slice, destinations invariants on the real root) → 57 passed;
+  `ruff check` / `ruff format --check` clean; `pre-commit run --all-files`
+  all hooks passed (after the excerpt builder learned to strip trailing
+  whitespace, so the committed sample survives the hook byte for byte);
+  `uv lock --check` clean; the dependency policy test green on the new
+  lock (`osmium` pulls `requests`, `urllib3`, `idna`, `certifi`,
+  `charset-normalizer`; none is `GDAL` or `fiona`); the diff scanned for
+  user names, machine identifiers, and absolute paths → none;
+  `git ls-files` shows nothing under any `public/` zone or `site/dist/`
+  and no GTFS row beyond the synthetic sample and the tinycity fixture.
+  **Real run, working clone (`data/`):** `phillysim run --stage acquire`
+  re-ran `acquire` (stale on the new `snapshot_ids` / `sources`
+  parameters; 20.2 s): the five `2026-09-02` snapshots verified and
+  re-used, the two new ones fetched (below). `run --stage network` re-ran
+  `validate` (4.4 s, seven sources, no violation; the OSM read is
+  header-only), `spine`, `snap_retailers`, and `basemap` (stale on
+  `validation.json`; byte-identical outputs), and `network` (**181.7 s**;
+  the report below). With the measured bands pinned, `phillysim run`
+  re-ran `network` alone (**195.3 s**; `metrics` and `publish` fresh),
+  then a second `run` → **0 ran, 9 skipped**; `status` → 9 fresh;
+  `verify` → **7 of 7 snapshots, 9 of 9 stages**; `gate` green (5 files
+  Bucket A / CC-BY-4.0, 4 sources, pipeline `real`). **The public zone is
+  unchanged:** `basemap.geojson` `04141abb…0eafd`, `manifest.json`
+  `7f2a19d4…c702`, `tracts.geojson` `18e6f19c…6191`, `sites.geojson`
+  `65962e53…0403`, `tracts.csv` `ce380762…d5ce5`, `sites.csv`
+  `ea3bdea9…f1a3`, every one equal to the EP-8b / EP-10 references; the
+  four curated digests unchanged (`tracts_spine` `0c1d2349…fd3a2`,
+  `snap_retailers` `a2887ec3…b63b`, `basemap_roads` `70469c4e…66ee`,
+  `tract_metrics` `fa8b8bdd…4b9ce`).
+- **The two acquisitions (one attempt each, through the guarded path).**
+  `osm_network`: `https://download.geofabrik.de/north-america/us/pennsylvania-260831.osm.pbf`
+  345,912,530 B in 15.5 s; the sidecar `…osm.pbf.md5` 62 B in 0.4 s; the
+  region page `pennsylvania.html` 23,332 B in 0.5 s; 17.8 s in all. The
+  delivered file's MD5 `a779d2ef14c8addce6eac207ab9cd851` equals the pin
+  (ADR-0008) and the sidecar (`digests_checked` in `acquisition.json`
+  records both); the terms phrases "created by OpenStreetMap
+  Contributors" and "License: ODbL" found in the page's visible text;
+  manifest `license_bucket = "B"` (the first real Bucket B manifest), the
+  file never opened as an archive. `gtfs`:
+  `https://github.com/septadev/GTFS/releases/download/v202609060/gtfs_public.zip`
+  21,555,258 B in 0.8 s (redirected to
+  `release-assets.githubusercontent.com`); SEPTA's developer page 17,557 B
+  in 0.2 s; 1.0 s in all. SHA-256
+  `4d3fa20ea094937a9bb6389ad52017e1ac90a564aee497f318797e1b1e4f07ab`
+  equals GitHub's record; the outer zip inspected (2 members, ratio
+  1.00); both "SEPTA reserves the right …" sentences found verbatim;
+  manifest `license_bucket = "A"` with the terms and the
+  facts-not-contents position in its note.
+- **Guard `Limits` per source** (recorded in `acquisition.json`):
+  `osm_network` 1 GiB file / 1 GiB extracted / ratio 50 / 50 members (the
+  archive limits are declared, never exercised on a PBF); `gtfs` 128 MiB
+  file / 1 GiB extracted / ratio 50 / 50 members, applied to the outer
+  zip at acquisition and to each inner zip in place by the reader and
+  again as a file by the unwrap (actual: outer 21.6 MB, inner 20.8 MB
+  with 19 members and 0.76 MB with 20 members; the bus feed's
+  `stop_times.txt` is 101.6 MB uncompressed).
+- **The clipped network** (`intermediate/network/pennsylvania-260831-philadelphia-5km.osm.pbf`,
+  box −75.360257 / 39.804412 / −74.880953 / 40.195375 WGS 84, the county
+  bounds + 5 km in EPSG:26918): **5,803,119 nodes** (5,782,922 inside the
+  box; the rest belong to ways crossing it), **921,869 ways** (224,252
+  with a `highway` tag), **3,693 restriction relations**, **49,968,756 B**
+  (sha256 `1f87cacb…3d3` on the pinned run, recorded for EP-13 to compare;
+  both runs produced 49,968,756 B), from a state file of 45,125,372 nodes,
+  4,903,283 ways, 55,814 relations; the clip's contract passed (header
+  box equal to the clip box, counts inside the bands 4–8 M nodes /
+  0.6–1.3 M ways now pinned in `adapters.osm`, every node inside the box
+  or referenced by a kept way, highway ways present). **Stops outside the
+  box:** bus/Metro 2,800 of 14,054 (8,080 inside the county's tracts);
+  Regional Rail 39 of 156 (53 inside the tracts). Feed zips unwrapped:
+  20,797,660 B and 757,262 B.
+- **Resource observations:** one session, at the S estimate. Network:
+  367.5 MB once (the two files, the sidecar, two terms pages), under a
+  minute. Disk: the raw zone 469 MB (+367 MB), `intermediate/network/`
+  69 MB, the data root about 540 MB; `.venv` 480 MB (+6 MB for `osmium`).
+  Time: `network` about three minutes (three streaming passes over the
+  state file in Python, then the ID-filtered write); every other stage
+  seconds. RAM: not measured (EP-13's sampler); the clip holds about 5.8
+  million node IDs and 0.9 million way IDs in Python sets. Suite: 516
+  tests in 38 s (the sample clip adds about a second).
+- **Decisions made (routine, agent's call, logged):** the routing sources
+  are not tables, so their `read` (what `validate` checks) returns a
+  **summary frame** (one row for the OSM header and MD5 checks, one row
+  per GTFS feed) under a normal `SourceContract`, and the `network` stage
+  calls the second read (`osm.clip`, `septa_gtfs.unwrap`); the OSM
+  `validate` read opens the **header only** (the full scan is the clip's);
+  the MD5 is **pinned in the adapter and the sidecar is fetched and
+  compared too** (two provider-side checks; either mismatch is the
+  `digest` stop); the GTFS SHA-256 is pinned the same way; **digest pins
+  are injectable** (`real_pipeline(pins=…)`) so the suite pins the
+  committed samples' digests without touching the adapters; the clip's
+  **node and way bands are stage parameters** with the measured county
+  values as defaults (the CI sample overrides them, so the CLI's `status`
+  on a sample-built root reports `network` stale on parameters beside
+  `spine`, asserted); the clip is implemented with **three pyosmium passes
+  and an ID-filtered write** rather than `BackReferenceWriter`, to control
+  the header (the box, the source's replication timestamp) and the order;
+  the sample PBF is written **with the provider's header** (the state's
+  bounding box, generator, timestamp) so it passes the same header
+  contract as the real file; `ColumnSpec` gained `maximum`; `ANALYSIS_CRS`
+  moved to `adapters.base` (the GTFS adapter needs it without importing
+  `spine`); the sample excerpt builder strips trailing whitespace; the
+  OSM CI sample is 749 KB (the six tracts are in Center City; under the
+  5 MB hook and "a few hundred kilobytes" in spirit). **Owner-level
+  decisions and deviations from the brief** are listed under "Owner
+  review" below.
+- **Unresolved risks / questions:** Geofabrik's retention of dated daily
+  extracts is undocumented; the file is in the raw zone now, so a later
+  fresh clone that cannot fetch `pennsylvania-260831.osm.pbf` is the
+  refresh case (ADR-0008 amendment with the owner), not a break. The
+  SEPTA agreement is revocable; the terms check runs at every
+  acquisition. The rail feed's window ends 2026-10-17 (unchanged). Peak
+  RSS of the clip is unmeasured until EP-13's sampler. Whether R5 builds
+  the 50 MB clip within budget is what EP-13 measures; ADR-0008's
+  whole-state fallback stands. For the third checkpoint: the CI samples
+  README and DATA-LICENSES now name seven sources; the estimate-accuracy
+  row for EP-12 (one session, S).
+- **No-go areas touched:** none (no PHI, no secret, nothing deployed,
+  nothing under a `public/` zone or `site/dist/` committed; the GTFS feed
+  never left the data root: the raw zip and the two unwrapped zips live
+  under `data/`, nothing from it under `public/` or `site/`; no GTFS row
+  committed, the CI sample is synthetic; the OSM sample committed with the
+  ODbL notice and "© OpenStreetMap contributors" in the samples README and
+  its manifest; CI stays offline; no machine identifier or absolute path
+  in a tracked file).
+- `roadmap/README.md` packet row: updated with the work commit at the
+  handoff commit (see below).
+- **Exact next packet: EP-13** (`roadmap/EP-13-routing-toolchain-harness.md`:
+  the pinned JDK 21 and R5 jar, r5py behind the wheel-only rule in the
+  `routing` group, the RSS sampler, run records, the smoke route on this
+  packet's `intermediate/network/`, the CI performance smoke).

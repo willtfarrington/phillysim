@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
+from pyproj import Transformer
 
 from phillysim.contracts import SourceContract
 from phillysim.download import SnapshotSpec
@@ -30,6 +31,46 @@ TRACT_GEOID_PATTERN = rf"{COUNTY_GEOID}\d{{6}}"  # eleven digits, 2020 tracts of
 NAD83 = "EPSG:4269"
 #: Philadelphia County with a margin, in NAD 83 degrees (minx, miny, maxx, maxy).
 COUNTY_BOUNDS: tuple[float, float, float, float] = (-75.30, 39.85, -74.94, 40.15)
+#: WGS 84, the CRS routing inputs (OSM, GTFS) are expressed in.
+WGS84 = "EPSG:4326"
+#: The analysis CRS, NAD 83 / UTM zone 18N in metres (ADR-0007); :mod:`phillysim.spine`
+#: re-exports it and every buffer is measured in it.
+ANALYSIS_CRS = "EPSG:26918"
+#: The routing extent (ADR-0008): the county bounds buffered by this many metres in the
+#: analysis CRS, expressed in WGS 84 for the network clip and the GTFS stop check.
+ROUTING_BUFFER_M = 5000
+
+
+def buffered_bounds(
+    bounds: tuple[float, float, float, float],
+    buffer_m: float,
+    crs: str,
+    *,
+    bounds_crs: str = NAD83,
+    out_crs: str = WGS84,
+) -> tuple[float, float, float, float]:
+    """``bounds`` (degrees in ``bounds_crs``) projected into the metric ``crs``, grown by
+    ``buffer_m`` on every side, and expressed back in ``out_crs`` as the box enclosing the
+    buffered rectangle's four corners (ADR-0007: buffers are measured in the analysis
+    CRS, never in degrees)."""
+    forward = Transformer.from_crs(bounds_crs, crs, always_xy=True)
+    back = Transformer.from_crs(crs, out_crs, always_xy=True)
+    minx, miny, maxx, maxy = bounds
+    corners = [(minx, miny), (maxx, miny), (maxx, maxy), (minx, maxy)]
+    projected = [forward.transform(x, y) for x, y in corners]
+    pminx = min(x for x, _ in projected) - buffer_m
+    pmaxx = max(x for x, _ in projected) + buffer_m
+    pminy = min(y for _, y in projected) - buffer_m
+    pmaxy = max(y for _, y in projected) + buffer_m
+    box = [(pminx, pminy), (pmaxx, pminy), (pmaxx, pmaxy), (pminx, pmaxy)]
+    out = [back.transform(x, y) for x, y in box]
+    return (
+        round(min(x for x, _ in out), 6),
+        round(min(y for _, y in out), 6),
+        round(max(x for x, _ in out), 6),
+        round(max(y for _, y in out), 6),
+    )
+
 
 #: The terms page in force for Census Bureau data downloads, archived beside every
 #: snapshot, and the sentence it must still carry (the packet's stop condition).

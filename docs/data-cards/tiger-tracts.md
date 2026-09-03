@@ -14,8 +14,9 @@ straight from the zip (pyogrio); nothing is extracted.
 tracts (the 2020 tract definitions, with the Bureau's annual boundary
 maintenance up to that date). The `GEOID` values are the 2020 tract
 identifiers every other source in the spine joins on. Pinned snapshot
-`2026-09-02` (`phillysim.pipeline.SNAPSHOT_ID`); a controlled refresh bumps
-that constant and is recorded in the changelog (roadmap/sources.md).
+`2026-09-02` (this source's entry in `phillysim.pipeline.SNAPSHOT_IDS`;
+snapshot IDs are per source since EP-12); a controlled refresh bumps that
+entry and is recorded in the changelog (roadmap/sources.md).
 
 **Terms and license.** A work of the United States Government, US public
 domain (17 U.S.C. § 105); the Census Bureau publishes its data as open data

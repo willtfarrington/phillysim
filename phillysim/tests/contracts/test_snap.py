@@ -47,7 +47,7 @@ SAMPLE_CONTROLS = 5
 
 @pytest.fixture(scope="module")
 def sample(spine_samples_dir: Path) -> Path:
-    return spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_ID
+    return spine_samples_dir / "raw" / snap.SOURCE / pipeline.SNAPSHOT_IDS[snap.SOURCE]
 
 
 def test_adapter_is_registered_with_the_real_pipeline() -> None:
@@ -83,7 +83,7 @@ def test_contract_allows_exactly_the_mapped_store_types() -> None:
 
 def test_sample_snapshot_verifies_and_admits(sample: Path, tmp_path: Path) -> None:
     assert verify_snapshot(sample).ok
-    staged = tmp_path / "raw" / snap.SOURCE / pipeline.SNAPSHOT_ID
+    staged = tmp_path / "raw" / snap.SOURCE / pipeline.SNAPSHOT_IDS[snap.SOURCE]
     shutil.copytree(sample, staged)
     manifest = admit(
         staged, tmp_path / "quarantine", allowlist=snap.SPEC.allowlist, limits=snap.SPEC.limits
@@ -93,7 +93,7 @@ def test_sample_snapshot_verifies_and_admits(sample: Path, tmp_path: Path) -> No
 
 def test_sample_manifest_carries_the_required_fields(sample: Path) -> None:
     manifest = read_manifest(sample)
-    assert manifest.snapshot_id == pipeline.SNAPSHOT_ID
+    assert manifest.snapshot_id == pipeline.SNAPSHOT_IDS[snap.SOURCE]
     assert manifest.acquisition_url == snap.URL and manifest.acquisition_url_alt == snap.URL_ALT
     assert manifest.terms_archive == snap.PAGE_FILE and manifest.terms_archive in manifest.files
     assert set(manifest.files) == {snap.FILE_NAME, snap.PAGE_FILE}

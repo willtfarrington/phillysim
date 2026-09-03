@@ -30,7 +30,8 @@ redirects to a content-delivery host, which the adapter's allowlist names.
 2026-02-19); the file covers authorizations open at any point in 2005–2025.
 Pinned snapshot `2026-09-02`, zip 24,036,753 bytes, stored as delivered.
 USDA refreshes the historical file about once a year with a new year range
-in the file name; a controlled refresh bumps `phillysim.pipeline.SNAPSHOT_ID`
+in the file name; a controlled refresh bumps this source's entry in
+`phillysim.pipeline.SNAPSHOT_IDS` (snapshot IDs are per source since EP-12)
 and the adapter's URL and as-of date together. The as-of sentence is one of
 the phrases the download path checks on the archived page, so a changed
 vintage stops acquisition rather than delivering a different file silently.

@@ -23,6 +23,7 @@ from phillysim.guards import (
     copy_capped,
     extract_gzip,
     extract_zip,
+    inspect_nested_zip,
     inspect_zip,
     safe_member_path,
     screen_snapshot,
@@ -211,6 +212,53 @@ def test_benign_archive_extracts(tmp_path: Path) -> None:
         "sub/b.txt",
     ]
     assert (tmp_path / "out" / "sub" / "b.txt").read_bytes() == b"B\n"
+
+
+def _nested(inner_members: dict[str, bytes], name: str = "inner.zip") -> Path | bytes:
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w", zipfile.ZIP_DEFLATED) as zf:
+        for member, data in inner_members.items():
+            zf.writestr(member, data)
+    outer = io.BytesIO()
+    with zipfile.ZipFile(outer, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr(name, inner.getvalue())
+    return outer.getvalue()
+
+
+def test_nested_zip_is_inspected_in_place(tmp_path: Path) -> None:
+    """EP-12: an inner zip is inspected through the outer archive; nothing is written."""
+    archive = tmp_path / "outer.zip"
+    archive.write_bytes(_nested({"stops.txt": b"stop_id\n1\n", "routes.txt": b"route_id\n"}))
+    with zipfile.ZipFile(archive) as outer:
+        members = inspect_nested_zip(outer, "inner.zip", Limits(max_members=5))
+        assert sorted(m.filename for m in members) == ["routes.txt", "stops.txt"]
+        with pytest.raises(GuardError) as info:
+            inspect_nested_zip(outer, "inner.zip", Limits(max_members=1))
+        assert info.value.guard == "bomb" and "2 members" in info.value.detail
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["outer.zip"]
+
+
+def test_nested_zip_bomb_is_refused_by_ratio_and_declared_size(tmp_path: Path) -> None:
+    archive = tmp_path / "outer.zip"
+    archive.write_bytes(_nested({"big.txt": b"0" * 200_000}))
+    with zipfile.ZipFile(archive) as outer:
+        with pytest.raises(GuardError) as info:
+            inspect_nested_zip(outer, "inner.zip", Limits(max_compression_ratio=20))
+        assert info.value.guard == "bomb" and "ratio" in info.value.detail
+        with pytest.raises(GuardError) as info:
+            inspect_nested_zip(outer, "inner.zip", Limits(max_extracted_bytes=100_000))
+        assert info.value.guard == "bomb" and "declared" in info.value.detail
+
+
+def test_nested_member_that_is_not_a_zip_is_refused(tmp_path: Path) -> None:
+    archive = tmp_path / "outer.zip"
+    outer = io.BytesIO()
+    with zipfile.ZipFile(outer, "w") as zf:
+        zf.writestr("inner.zip", b"plain text, not an archive")
+    archive.write_bytes(outer.getvalue())
+    with zipfile.ZipFile(archive) as opened, pytest.raises(GuardError) as info:
+        inspect_nested_zip(opened, "inner.zip")
+    assert info.value.guard == "bomb" and "not a zip archive" in info.value.detail
 
 
 def test_not_a_zip_is_refused(tmp_path: Path) -> None:

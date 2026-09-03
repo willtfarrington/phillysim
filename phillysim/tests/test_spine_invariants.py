@@ -23,7 +23,7 @@ from shapely.geometry import box as shapely_box
 from phillysim import runner
 from phillysim.adapters import acs, cenpop, tiger
 from phillysim.adapters.base import COUNTY_BOUNDS, NAD83
-from phillysim.pipeline import SNAPSHOT_ID
+from phillysim.pipeline import SNAPSHOT_IDS
 from phillysim.spine import (
     ACS_TRACTS,
     ANALYSIS_CRS,
@@ -46,9 +46,9 @@ SAMPLE_TRACTS = 6
 def samples(spine_samples_dir: Path) -> dict[str, pd.DataFrame]:
     raw = spine_samples_dir / "raw"
     return {
-        "tracts": tiger.read(raw / tiger.SOURCE / SNAPSHOT_ID),
-        "centers": cenpop.read(raw / cenpop.SOURCE / SNAPSHOT_ID),
-        "acs": acs.read(raw / acs.SOURCE / SNAPSHOT_ID),
+        "tracts": tiger.read(raw / tiger.SOURCE / SNAPSHOT_IDS[tiger.SOURCE]),
+        "centers": cenpop.read(raw / cenpop.SOURCE / SNAPSHOT_IDS[cenpop.SOURCE]),
+        "acs": acs.read(raw / acs.SOURCE / SNAPSHOT_IDS[acs.SOURCE]),
     }
 
 
@@ -271,7 +271,7 @@ def test_real_spine_passes_every_invariant(real_data_root: Path) -> None:
         pytest.fail(f"{SPINE} is missing under the data root: run `phillysim run` first")
     spine = gpd.read_parquet(spine_path)
     acs_table = pd.read_parquet(real_data_root / ACS_TRACTS)
-    centers = cenpop.read(real_data_root / f"raw/{cenpop.SOURCE}/{SNAPSHOT_ID}")
+    centers = cenpop.read(real_data_root / f"raw/{cenpop.SOURCE}/{SNAPSHOT_IDS[cenpop.SOURCE]}")
     problems = check_spine(spine, centers=centers, acs=acs_table)
     assert problems == [], problems
     assert len(spine) == TRACT_COUNT and tuple(spine.columns) == SPINE_COLUMNS

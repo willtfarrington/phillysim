@@ -23,18 +23,19 @@ class SampleTransport:
     """Serves each real adapter's URLs from the committed samples; counts every call.
 
     The fake transport the real pipeline's ``acquire`` runs on in the suite (EP-5a): the
-    same allowlist, caps, archive guards, terms check, manifest, and admission as against
-    the Census and USDA hosts, without a network. ``terms`` replaces every terms page.
+    same allowlist, caps, archive guards, digest checks, terms check, manifest, and
+    admission as against the providers' hosts, without a network. ``terms`` replaces
+    every terms page.
     """
 
     def __init__(self, samples: Path, *, terms: bytes | None = None) -> None:
         from phillysim.adapters import ADAPTERS
-        from phillysim.pipeline import SNAPSHOT_ID
+        from phillysim.pipeline import SNAPSHOT_IDS
 
         self.routes: dict[str, bytes] = {}
         self.calls: list[str] = []
         for source, adapter in ADAPTERS.items():
-            sample = samples / "raw" / source / SNAPSHOT_ID
+            sample = samples / "raw" / source / SNAPSHOT_IDS[source]
             for fetch in adapter.spec.files:
                 self.routes[fetch.url] = (sample / fetch.file_name).read_bytes()
             page = (sample / adapter.spec.terms.file_name).read_bytes()
@@ -56,6 +57,32 @@ class _Response:
 
     def close(self) -> None:
         pass
+
+
+def sample_pins(samples: Path) -> dict[str, dict[str, str]]:
+    """The committed samples' digests in place of the adapters' pinned provider digests
+    (EP-12: the OSM extract's MD5, the GTFS asset's SHA-256), so the samples admit
+    through the same digest check the real files pass."""
+    from phillysim.adapters import ADAPTERS
+    from phillysim.download import digest_file, parse_digest
+    from phillysim.pipeline import SNAPSHOT_IDS
+
+    pins: dict[str, dict[str, str]] = {}
+    for source, adapter in ADAPTERS.items():
+        sample = samples / "raw" / source / SNAPSHOT_IDS[source]
+        for fetch in adapter.spec.files:
+            if fetch.digest is not None:
+                algorithm, _ = parse_digest(fetch.digest)
+                pins.setdefault(source, {})[fetch.file_name] = (
+                    f"{algorithm}:{digest_file(sample / fetch.file_name, algorithm)}"
+                )
+    return pins
+
+
+#: The OSM CI sample's node and way bands (the clip of the six sample tracts' bounds; the
+#: real bands in ``phillysim.adapters.osm`` are the county's).
+SAMPLE_NODE_BAND = [1_000, 200_000]
+SAMPLE_WAY_BAND = [100, 50_000]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -145,11 +172,18 @@ def sample_transport(spine_samples_dir: Path):
     return make
 
 
-def sample_real_pipeline(transport):
-    """The real pipeline on a fake transport, expecting the samples' six tracts."""
+def sample_real_pipeline(transport, samples: Path | None = None):
+    """The real pipeline on a fake transport, expecting the samples' six tracts, pinned
+    to the samples' digests, with the network stage's bands set for the sample clip."""
     from phillysim.pipeline import real_pipeline
 
-    return real_pipeline(opener=transport).with_params({"spine": {"expected_tracts": 6}})
+    samples = FIXTURES_DIR / "spine-samples" if samples is None else samples
+    return real_pipeline(opener=transport, pins=sample_pins(samples)).with_params(
+        {
+            "spine": {"expected_tracts": 6},
+            "network": {"node_band": SAMPLE_NODE_BAND, "way_band": SAMPLE_WAY_BAND},
+        }
+    )
 
 
 @pytest.fixture(scope="session")
@@ -159,7 +193,7 @@ def sample_public_zone(spine_samples_dir: Path, tmp_path_factory: pytest.TempPat
     from phillysim import runner
 
     root = tmp_path_factory.mktemp("sample-root") / "data"
-    runner.run(root, sample_real_pipeline(SampleTransport(spine_samples_dir)))
+    runner.run(root, sample_real_pipeline(SampleTransport(spine_samples_dir), spine_samples_dir))
     return root / "public"
 
 

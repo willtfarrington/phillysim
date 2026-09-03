@@ -16,7 +16,8 @@ codes, population, latitude, longitude).
 
 **Vintage.** 2020 Census (April 1, 2020) population on 2020 tract
 definitions. Pinned snapshot `2026-09-02`; a controlled refresh (there will
-be none until the 2030 Census) bumps `phillysim.pipeline.SNAPSHOT_ID`.
+be none until the 2030 Census) bumps this source's entry in
+`phillysim.pipeline.SNAPSHOT_IDS` (snapshot IDs are per source since EP-12).
 
 **Terms and license.** US public domain (17 U.S.C. § 105); the Open
 Government page in force archived as `terms.html`. **Bucket A** (ADR-0003).

@@ -41,7 +41,7 @@ SAMPLE_TRACTS = [
 
 
 def _sample(samples: Path, source: str) -> Path:
-    return samples / "raw" / source / pipeline.SNAPSHOT_ID
+    return samples / "raw" / source / pipeline.SNAPSHOT_IDS[source]
 
 
 # --- the registry ------------------------------------------------------------------------
@@ -49,7 +49,15 @@ def _sample(samples: Path, source: str) -> Path:
 
 def test_registry_matches_the_real_pipeline() -> None:
     assert tuple(sorted(ADAPTERS)) == pipeline.SOURCES
-    assert pipeline.SOURCES == ("acs", "cenpop", "snap_retailers", "tiger_roads", "tiger_tracts")
+    assert pipeline.SOURCES == (
+        "acs",
+        "cenpop",
+        "gtfs",
+        "osm_network",
+        "snap_retailers",
+        "tiger_roads",
+        "tiger_tracts",
+    )
     assert set(SOURCES) < set(pipeline.SOURCES)
     for name, adapter in ADAPTERS.items():
         assert adapter.name == adapter.spec.source == adapter.contract.name == name
@@ -76,7 +84,7 @@ def test_every_adapter_declares_its_own_allowlist_terms_and_bucket(source: str) 
 def test_sample_snapshot_verifies_and_admits(spine_samples_dir: Path, source: str, tmp_path):
     sample = _sample(spine_samples_dir, source)
     assert verify_snapshot(sample).ok
-    staged = tmp_path / "raw" / source / pipeline.SNAPSHOT_ID
+    staged = tmp_path / "raw" / source / pipeline.SNAPSHOT_IDS[source]
     shutil.copytree(sample, staged)
     spec = ADAPTERS[source].spec
     manifest = admit(staged, tmp_path / "quarantine", allowlist=spec.allowlist, limits=spec.limits)
@@ -88,7 +96,7 @@ def test_sample_manifest_carries_the_required_fields(spine_samples_dir: Path, so
     sample = _sample(spine_samples_dir, source)
     manifest = read_manifest(sample)
     spec = ADAPTERS[source].spec
-    assert manifest.snapshot_id == pipeline.SNAPSHOT_ID
+    assert manifest.snapshot_id == pipeline.SNAPSHOT_IDS[manifest.source]
     assert (
         manifest.terms_archive == spec.terms.file_name and manifest.terms_archive in manifest.files
     )

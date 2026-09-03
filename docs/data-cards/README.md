@@ -18,9 +18,11 @@ source" success evidence.
 | `acs` | [acs.md](acs.md) | ACS 5-year estimates with margins of error (denominators and context) | EP-5a / EP-5b |
 | `snap_retailers` | [snap-retailers.md](snap-retailers.md) | SNAP-authorized retailers with USDA store types (the supermarket-format layer and the all-retailer variant) | EP-6 |
 | `tiger_roads` | [tiger-roads.md](tiger-roads.md) | Primary and secondary roads for the minimal basemap (orientation only; no metric reads it) | EP-8b |
+| `osm_network` | [osm-network.md](osm-network.md) | The OpenStreetMap street network (Geofabrik's dated Pennsylvania extract, clipped to the county + 5 km) the routing engine walks; the first Bucket B source (ODbL) | EP-12 |
+| `gtfs` | [septa-gtfs.md](septa-gtfs.md) | SEPTA's bus/Metro and Regional Rail schedules (release v202609060) the routing engine rides; never republished | EP-12 |
 
-The remaining destination sources (farmers' markets, meal sites), transit,
-and the street network get cards with their adapters (M3, M4). Method cards
+The remaining destination sources (farmers' markets, meal sites) get cards
+with their adapters (M4). Method cards
 are a separate set under [docs/method-cards/](../method-cards/): the
 store-format classification (EP-6) and the QA-only straight-line slice
 metric (EP-7; explicitly not an access measure). Every published file names

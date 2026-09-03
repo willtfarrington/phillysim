@@ -1,0 +1,16 @@
+{
+  "acquired_at": "2026-09-03T20:26:36Z",
+  "acquisition_url": "https://github.com/septadev/GTFS/releases/download/v202609060/gtfs_public.zip",
+  "acquisition_url_alt": null,
+  "files": {
+    "gtfs_public.zip": "8b3def41c7a16d0cefdf90f87c0f9ebe4e3db81e7fa74cb933ac551224be7af7",
+    "terms.html": "14b6bbfc98c28c5d5ca5631ff67ae98780936582851e50b9ea858e6370c56b61"
+  },
+  "license_bucket": "A",
+  "license_note": "SEPTA developer license agreement (custom terms, agreement text of 2014-03-18 archived beside the data): revocable, no license fee today but one reservable without notice, no alteration of the data and no commercial use of SEPTA's marks. Project position (roadmap/sources.md, docs/DATA-LICENSES.md): the raw feed is never redistributed, no feed contents are ever published, computed travel times are facts; Bucket A (nothing OSM-derived comes from the feed). SEPTA GTFS release v202609060 (gtfs_public.zip holding google_bus.zip and google_rail.zip; bus/Metro authoritative 2026-09-06 to 2027-02-20, Regional Rail to 2026-10-17), stored as delivered; SHA-256 pinned. CI SAMPLE (synthetic): a feed in SEPTA's layout (google_bus.zip, google_rail.zip inside gtfs_public.zip) with 7 bus and 2 rail stops placed on the 6 sample tracts' centers plus one control stop outside the routing box, one route and two services each, and the pinned release's feed_info dates; no SEPTA feed contents (the real 2026-09-03 snapshot is never copied); terms page excerpted.",
+  "schema_version": 1,
+  "snapshot_id": "2026-09-03",
+  "source": "gtfs",
+  "synthetic": true,
+  "terms_archive": "terms.html"
+}

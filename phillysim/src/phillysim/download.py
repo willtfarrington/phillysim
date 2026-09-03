@@ -15,15 +15,23 @@ The order of checks is fixed and every step reuses an EP-4a primitive:
    lies about its length cannot bypass the cap;
 4. **guards before extraction** - a downloaded ``.zip`` is inspected for slip
    and bomb conditions (:func:`phillysim.guards.inspect_zip`); nothing is
-   ever extracted here;
-5. **terms page archived beside the data** - the terms page in force is
+   ever extracted here; a file that is not an archive (the OSM PBF extract,
+   EP-12) is never opened as one;
+5. **pinned digests** - a file whose :class:`Fetch` pins a digest (the
+   SHA-256 GitHub records for a release asset, the MD5 Geofabrik publishes
+   beside an extract) is compared against it, and a provider checksum
+   sidecar fetched through the same path (``md5_of``) is compared against
+   the file it vouches for; a mismatch quarantines the snapshot (reason kind
+   ``digest``: the provider's bytes are not the pinned ones, a stop);
+6. **terms page archived beside the data** - the terms page in force is
    fetched through the same path, stored in the snapshot under the name the
    manifest's ``terms_archive`` records, and checked for the wording the
-   adapter expects; different wording is the packet's stop condition and
-   quarantines the snapshot (reason kind ``terms``);
-6. **manifest** - built by :func:`phillysim.manifest.build_manifest` from the
+   adapter expects in its visible text (tags removed, whitespace folded);
+   different wording is the packet's stop condition and quarantines the
+   snapshot (reason kind ``terms``);
+7. **manifest** - built by :func:`phillysim.manifest.build_manifest` from the
    files on disk;
-7. **admission only through** :func:`phillysim.quarantine.admit`.
+8. **admission only through** :func:`phillysim.quarantine.admit`.
 
 No default allowlist exists: every adapter declares its own domains. A
 secret (a Census API key, if one is ever needed) never reaches a manifest;
@@ -34,9 +42,12 @@ branch on crafted local bytes and no test reaches the network.
 
 from __future__ import annotations
 
+import hashlib
+import html
 import http.client
 import logging
 import os
+import re
 import shutil
 import socket
 import time
@@ -71,6 +82,8 @@ MAX_BACKOFF_SECONDS = 8.0
 TERMS_CAP_BYTES = 8 * 1024**2  # a terms page is a web page, not a dataset
 USER_AGENT = f"phillysim/{__version__} (+https://github.com/willtfarrington/phillysim)"
 TERMS_KIND = "terms"  # quarantine reason kind for the stop condition
+DIGEST_KIND = "digest"  # quarantine reason kind for a pinned-digest or sidecar mismatch
+DIGEST_ALGORITHMS: tuple[str, ...] = ("sha256", "md5")
 
 
 class DownloadError(Exception):
@@ -79,6 +92,10 @@ class DownloadError(Exception):
 
 class TermsError(Exception):
     """The archived terms page does not carry the wording the adapter expects."""
+
+
+class DigestError(Exception):
+    """A delivered file's digest is not the pinned one, or not the provider's sidecar's."""
 
 
 # --- transport -----------------------------------------------------------------------------
@@ -161,15 +178,88 @@ def backoff_seconds(attempt: int) -> float:
 
 @dataclass(frozen=True)
 class Fetch:
-    """One file to download: where from (with the dual-URL alternate) and what to call it."""
+    """One file to download: where from (with the dual-URL alternate) and what to call it.
+
+    ``digest`` pins the delivered bytes as ``"<algorithm>:<hex>"`` (``sha256`` or
+    ``md5``); ``md5_of`` marks this file as the provider's MD5 sidecar for another
+    file of the same snapshot (Geofabrik's ``<hex>  <file name>`` line). Either
+    mismatch is a stop (:class:`DigestError`, quarantine kind ``digest``).
+    """
 
     url: str
     file_name: str
     url_alt: str | None = None
+    digest: str | None = None
+    md5_of: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.digest is not None:
+            parse_digest(self.digest)
 
     @property
     def urls(self) -> tuple[str, ...]:
         return (self.url,) if self.url_alt is None else (self.url, self.url_alt)
+
+
+def parse_digest(pinned: str) -> tuple[str, str]:
+    """``"sha256:<hex>"`` -> ``("sha256", "<hex>")``, validated."""
+    algorithm, _, value = pinned.partition(":")
+    value = value.strip().lower()
+    if algorithm not in DIGEST_ALGORITHMS:
+        raise ValueError(f"pinned digest {pinned!r}: algorithm must be one of {DIGEST_ALGORITHMS}")
+    length = {"sha256": 64, "md5": 32}[algorithm]
+    if len(value) != length or set(value) - set("0123456789abcdef"):
+        raise ValueError(f"pinned digest {pinned!r}: expected {length} hex characters")
+    return algorithm, value
+
+
+def digest_file(path: Path, algorithm: str) -> str:
+    digest = hashlib.new(algorithm)
+    with path.open("rb") as handle:
+        while chunk := handle.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def read_md5_sidecar(path: Path, file_name: str) -> str:
+    """The MD5 a provider's ``<hex>  <file name>`` sidecar states for ``file_name``."""
+    for line in path.read_text("utf-8", errors="replace").splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[-1].lstrip("*") == file_name:
+            value = parts[0].lower()
+            if len(value) == 32 and not set(value) - set("0123456789abcdef"):
+                return value
+    raise DigestError(f"{path.name}: no MD5 line for {file_name!r} in the provider's sidecar")
+
+
+def check_digests(snapshot_dir: Path, files: Iterable[Fetch]) -> dict[str, str]:
+    """Compare every pinned digest and every MD5 sidecar; return ``{file: "<algo>:<hex>"}``
+    for each check that passed, or raise :class:`DigestError` on the first mismatch."""
+    checked: dict[str, str] = {}
+    files = tuple(files)
+    names = {f.file_name for f in files}
+    for fetch in files:
+        if fetch.digest is not None:
+            algorithm, expected = parse_digest(fetch.digest)
+            actual = digest_file(snapshot_dir / fetch.file_name, algorithm)
+            if actual != expected:
+                raise DigestError(
+                    f"{fetch.file_name}: {algorithm} {actual} differs from the pinned {expected}; "
+                    "the provider's bytes are not the pinned ones (stop and surface to the owner)"
+                )
+            checked[fetch.file_name] = f"{algorithm}:{actual}"
+        if fetch.md5_of is not None:
+            if fetch.md5_of not in names:
+                raise DigestError(f"{fetch.file_name}: md5_of names {fetch.md5_of!r}, not a file")
+            stated = read_md5_sidecar(snapshot_dir / fetch.file_name, fetch.md5_of)
+            actual = digest_file(snapshot_dir / fetch.md5_of, "md5")
+            if actual != stated:
+                raise DigestError(
+                    f"{fetch.md5_of}: md5 {actual} differs from the provider's sidecar "
+                    f"{fetch.file_name} ({stated}); the delivered bytes are not the provider's"
+                )
+            checked[fetch.md5_of + " (sidecar)"] = f"md5:{actual}"
+    return checked
 
 
 @dataclass(frozen=True)
@@ -359,9 +449,20 @@ def _utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+_TAG_RE = re.compile(r"<[^>]*>")
+
+
+def visible_text(page: str) -> str:
+    """The page's text with tags removed, entities decoded, and whitespace folded, so a
+    phrase spanning an inline element (``created by <a>OpenStreetMap Contributors</a>``)
+    is checked the way a reader sees it."""
+    return " ".join(html.unescape(_TAG_RE.sub(" ", page)).split())
+
+
 def check_terms(path: Path, phrases: Iterable[str]) -> None:
-    """Raise :class:`TermsError` unless the archived page carries every phrase."""
-    text = " ".join(path.read_text("utf-8", errors="replace").split())
+    """Raise :class:`TermsError` unless the archived page's visible text carries every
+    phrase."""
+    text = visible_text(path.read_text("utf-8", errors="replace"))
     missing = [phrase for phrase in phrases if " ".join(phrase.split()) not in text]
     if missing:
         raise TermsError(
@@ -418,6 +519,7 @@ def acquire_snapshot(
             fetches.append(result)
             if Path(fetch.file_name).suffix.lower() in ARCHIVE_SUFFIXES:
                 inspect_zip(target / fetch.file_name, spec.limits)  # guards before extraction
+        digests_checked = check_digests(target, spec.files)
         fetches.append(
             fetch_file(
                 spec.terms,
@@ -436,6 +538,9 @@ def acquire_snapshot(
         raise QuarantinedError(record) from exc
     except TermsError as exc:
         record = quarantine(target, quarantine_zone, kind=TERMS_KIND, reason=str(exc))
+        raise QuarantinedError(record) from exc
+    except DigestError as exc:
+        record = quarantine(target, quarantine_zone, kind=DIGEST_KIND, reason=str(exc))
         raise QuarantinedError(record) from exc
     except DownloadError:
         shutil.rmtree(target, ignore_errors=True)
@@ -464,4 +569,9 @@ def acquire_snapshot(
     )
     write_manifest(target, manifest)
     admitted = admit(target, quarantine_zone, allowlist=spec.allowlist, limits=spec.limits)
-    return Acquisition(admitted, tuple(fetches), time.perf_counter() - started)
+    return Acquisition(
+        admitted,
+        tuple(fetches),
+        time.perf_counter() - started,
+        extra={"digests_checked": digests_checked} if digests_checked else {},
+    )

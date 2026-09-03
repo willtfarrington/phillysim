@@ -26,7 +26,8 @@ from pathlib import Path
 GB = 10**9
 GIB = 2**30
 
-#: The locked stack (ADR-0001 / ADR-0002); r5py joins at the M3 spike.
+#: The locked stack (ADR-0001 / ADR-0002); pyosmium joined at EP-12 (the network clip),
+#: r5py joins at EP-13 in the optional ``routing`` group.
 LOCKED_PACKAGES: tuple[str, ...] = (
     "geopandas",
     "pyogrio",
@@ -34,6 +35,7 @@ LOCKED_PACKAGES: tuple[str, ...] = (
     "pyproj",
     "duckdb",
     "pyarrow",
+    "osmium",
 )
 MIN_PYTHON: tuple[int, int] = (3, 12)
 

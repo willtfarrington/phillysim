@@ -111,14 +111,16 @@ phillysim/
                                 keyboard, reflow, fallbacks, the basemap's measured
                                 contrast table (EP-8a, EP-8b)
     contracts/            harness unit tests; tinycity sources; the three spine sources,
-                          the SNAP retailer source, and the TIGER roads source on the
-                          committed samples (EP-5a, EP-6, EP-8b)
+                          the SNAP retailer source, the TIGER roads source, and the two
+                          routing sources on the committed samples (EP-5a, EP-6, EP-8b,
+                          EP-12)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
-                          real pipeline's eight stages on a fake transport (EP-5a–EP-8b)
+                          real pipeline's nine stages on a fake transport (EP-5a–EP-12)
     fixtures/tinycity/    golden fixture (README explains the layout)
     fixtures/tinycity-invalid/  injected-fault variant for negative tests
-    fixtures/spine-samples/     real-shaped, public-domain subsets of the five real
-                                snapshots + the script that cuts them (README explains)
+    fixtures/spine-samples/     real-shaped subsets of the seven real snapshots (five
+                                public-domain, the OSM clip under ODbL, a synthetic GTFS
+                                feed) + the script that cuts them (README explains)
 ```
 
 ## The tinycity fixture
@@ -235,27 +237,36 @@ name `real`) on the resolved data root. It shares the fixture pipeline's
 stage names, zones, and output paths where the two overlap, so the
 architecture.md stage table describes both, but the two never meet: the
 state file records its pipeline's name and refuses the other one, and the
-roots differ (`<data root>/` versus `<data root>/fixture/`). Eight stages
+roots differ (`<data root>/` versus `<data root>/fixture/`). Nine stages
 exist: `acquire` and `validate` (EP-5a), `spine` and `demographics`
 (EP-5b), `snap_retailers` (EP-6; the first per-source destination layer,
 which the fixture pipeline has no counterpart for), `basemap` (EP-8b; the
-roads layer of the basemap, likewise real-only), and `metrics` and
-`publish` (EP-7, EP-8b).
+roads layer of the basemap, likewise real-only), `network` (EP-12; the
+routing inputs, the same stage name as the fixture's with a real body), and
+`metrics` and `publish` (EP-7, EP-8b).
 
-- `acquire` brings in the pinned snapshot (`phillysim.pipeline.SNAPSHOT_ID`,
-  currently `2026-09-02`) of each registered source: TIGER/Line 2025 tracts
-  (`tiger_tracts`), CenPop2020 tract centers (`cenpop`), the ACS 5-year
-  2020–2024 tables B01003 and B08201 (`acs`), the USDA SNAP Retailer
-  Locator historical file (`snap_retailers`, EP-6), and the TIGER/Line 2025
-  county roads file (`tiger_roads`, EP-8b), each into
-  `raw/<source>/<snapshot-id>/` with the archived terms page (for USDA, the
-  provider's data page in force) and a manifest. A snapshot already in the
-  raw zone is verified and re-used, never re-downloaded (and never replaced:
-  a tampered one fails the stage); the source list and snapshot ID are stage
-  parameters, so registering a source re-runs the stage for the new one
-  only. It also writes `intermediate/acquisition.json` (URLs, bytes,
-  attempts, timings, filter placement, guard limits per source). A
-  controlled refresh is a change to `SNAPSHOT_ID`, recorded in the
+- `acquire` brings in the pinned snapshot of each registered source
+  (`phillysim.pipeline.SNAPSHOT_IDS`, one acquisition date per source since
+  EP-12: `2026-09-02` for the five sources below, `2026-09-03` for the two
+  routing sources): TIGER/Line 2025 tracts (`tiger_tracts`), CenPop2020
+  tract centers (`cenpop`), the ACS 5-year 2020–2024 tables B01003 and
+  B08201 (`acs`), the USDA SNAP Retailer Locator historical file
+  (`snap_retailers`, EP-6), the TIGER/Line 2025 county roads file
+  (`tiger_roads`, EP-8b), Geofabrik's dated Pennsylvania OpenStreetMap
+  extract with its MD5 sidecar (`osm_network`, EP-12; ODbL, the first
+  Bucket B source), and SEPTA's GTFS release asset (`gtfs`, EP-12; SHA-256
+  pinned), each into `raw/<source>/<snapshot-id>/` with the archived terms
+  page (for USDA, the provider's data page in force) and a manifest. A file
+  whose adapter pins a digest is compared against it, and a provider
+  checksum sidecar against the file it vouches for, before admission (a
+  mismatch quarantines with kind `digest`); a PBF is never opened as an
+  archive. A snapshot already in the raw zone is verified and re-used,
+  never re-downloaded (and never replaced: a tampered one fails the stage);
+  the source list and the snapshot IDs are stage parameters, so registering
+  a source re-runs the stage for the new one only. It also writes
+  `intermediate/acquisition.json` (URLs, bytes, attempts, timings, digests
+  checked, filter placement, guard limits per source). A controlled refresh
+  is a change to one source's entry in `SNAPSHOT_IDS`, recorded in the
   changelog; older snapshots stay.
 - `validate` reads each snapshot through its adapter, which applies the
   Philadelphia County filter (state files are stored as delivered and
@@ -296,12 +307,30 @@ roads layer of the basemap, likewise real-only), and `metrics` and
   tract, none outside the county bounds) and writes
   `intermediate/basemap.json`. Its parameters are `crs` and `road_classes`.
   The county boundary needs no stage: `publish` dissolves the spine.
+- `network` (EP-12, `phillysim.network`) writes the routing inputs into
+  `intermediate/network/`: the OSM extract clipped with pyosmium to the
+  county bounds buffered by 5 km in the analysis CRS (way-complete: every
+  way touching the box with all of its nodes, the restriction relations
+  among them, the source order, the box in the header; for the pinned
+  extract 5.8 million nodes, 922 thousand ways, 50 MB, about three
+  minutes), its contract enforced in-stage (a readable PBF carrying the
+  box, counts within the recorded bands, every node inside the box or
+  referenced by a kept way, `highway` ways present), and SEPTA's two feed
+  zips copied out of the release asset as files through the nested zip
+  guards, never expanded; `intermediate/network.json` holds the counts
+  (stops outside the box are counted, not dropped) and the directory's
+  license bucket, **B** by derivation. Its parameters are `buffer_m`,
+  `crs`, `node_band`, and `way_band`. No JVM runs here; nothing downstream
+  of it reaches `publish`, so the public zone stays Bucket A.
 
-`phillysim run` (or `run --stage basemap`) needs the network once (about
-122 MB: 98 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
-`www.fna.usda.gov`, seconds on a fast connection) and the real-run preflight
-thresholds; afterwards `run`, `status`, and `verify` are offline and take a
-few seconds each. The invariants can be re-run on a real data root by hand:
+`phillysim run` (or `run --stage network`) needs the network once (about
+490 MB: 98 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
+`www.fna.usda.gov`, 346 MB from `download.geofabrik.de`, 22 MB from
+GitHub's release-asset host, plus the terms pages; under a minute on a
+fast connection) and the real-run preflight thresholds; afterwards `run`,
+`status`, and `verify` are offline, and every stage takes a few seconds
+except `network` (the clip: minutes). The invariants can be re-run on a
+real data root by hand:
 
 ```
 uv run pytest tests/test_spine_invariants.py tests/test_basemap.py --real-data-root ../data -s
@@ -486,6 +515,22 @@ refresh-drift check: the five providers still serve the pinned bytes).
 | fresh clone in all (checkout, `.venv`, data root, built site) | 620 MB, deleted afterwards | EP-10 budget: about 0.6 GB |
 | CI (run 33795124091 on `deb21fc`) | ubuntu job 49 s (`uv sync` 3 s, pytest 32 s); windows job 96 s (`uv sync` 12 s, pytest 54 s); `run --fixture` about 1 s on both | — |
 | preflight report (real thresholds) | 422.9 GB free disk (need ≥ 150 GB), 68.1 GB physical RAM (need ≥ 25.8 GB), Python 3.13.15, geopandas 1.1.4 / pyogrio 0.13.0 / shapely 2.1.2 / pyproj 3.7.2 / duckdb 1.5.5 / pyarrow 25.0.1, root writable | ≥ 150 GB free, 24 GB RAM |
+
+The routing sources (EP-12, 2026-09-03, same machine): on the existing data
+root `phillysim run --stage acquire` fetched the Geofabrik extract
+(345,912,530 B in 15.5 s, one attempt) with its 62-byte MD5 sidecar and
+the region page (23 KB), and SEPTA's release asset (21,555,258 B in 0.8 s,
+one attempt) with its developer page (18 KB), the five other snapshots
+verified and re-used; 20 s in all. `run --stage network` then re-ran
+`validate` (4.4 s for seven sources; the OSM read is header-only) and the
+`network` stage in 182 s: three streaming passes over 45.1 million nodes,
+4.9 million ways, and 55.8 thousand relations, the clip written with the
+ID filter (5.8 million nodes, 922 thousand ways, 3.7 thousand relations,
+49,968,756 B), its contract checked, and the two feed zips unwrapped
+(20.8 MB and 0.76 MB). The raw zone grows by 367 MB (data root about 560
+MB with the 71 MB `intermediate/network/`); `osmium` adds 6 MB to `.venv`.
+Peak RSS is still not measured (EP-13's sampler); the clip's Python sets
+hold about 6 million node IDs and 0.9 million way IDs.
 
 ## Decisions this package honors
 

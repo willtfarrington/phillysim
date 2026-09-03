@@ -37,7 +37,9 @@ SAMPLE_CONTROLS = 4
 
 @pytest.fixture(scope="module")
 def sample(spine_samples_dir: Path) -> Path:
-    return spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_ID
+    return (
+        spine_samples_dir / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]
+    )
 
 
 def test_adapter_is_registered_with_the_real_pipeline() -> None:
@@ -83,7 +85,7 @@ def test_contract_allows_exactly_the_major_road_classes() -> None:
 
 def test_sample_snapshot_verifies_and_admits(sample: Path, tmp_path: Path) -> None:
     assert verify_snapshot(sample).ok
-    staged = tmp_path / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_ID
+    staged = tmp_path / "raw" / tiger_roads.SOURCE / pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]
     shutil.copytree(sample, staged)
     spec = tiger_roads.SPEC
     manifest = admit(staged, tmp_path / "quarantine", allowlist=spec.allowlist, limits=spec.limits)
@@ -93,7 +95,7 @@ def test_sample_snapshot_verifies_and_admits(sample: Path, tmp_path: Path) -> No
 def test_sample_manifest_carries_the_required_fields(sample: Path) -> None:
     manifest = read_manifest(sample)
     spec = tiger_roads.SPEC
-    assert manifest.snapshot_id == pipeline.SNAPSHOT_ID
+    assert manifest.snapshot_id == pipeline.SNAPSHOT_IDS[tiger_roads.SOURCE]
     assert manifest.terms_archive == spec.terms.file_name
     assert manifest.terms_archive in manifest.files
     assert manifest.license_bucket == "A" and "CI SAMPLE" in manifest.license_note

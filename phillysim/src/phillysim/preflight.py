@@ -18,7 +18,7 @@ import ctypes
 import os
 import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from importlib import metadata
 from pathlib import Path
@@ -27,7 +27,8 @@ GB = 10**9
 GIB = 2**30
 
 #: The locked stack (ADR-0001 / ADR-0002); pyosmium joined at EP-12 (the network clip),
-#: r5py joins at EP-13 in the optional ``routing`` group.
+#: psutil at EP-13 (the RSS sampler); r5py lives in the optional ``routing`` group and is
+#: checked by ``phillysim toolchain check``, never imported here.
 LOCKED_PACKAGES: tuple[str, ...] = (
     "geopandas",
     "pyogrio",
@@ -36,6 +37,7 @@ LOCKED_PACKAGES: tuple[str, ...] = (
     "duckdb",
     "pyarrow",
     "osmium",
+    "psutil",
 )
 MIN_PYTHON: tuple[int, int] = (3, 12)
 
@@ -186,9 +188,16 @@ def _fmt_bytes(value: int) -> str:
 
 
 def run_preflight(
-    root: Path, thresholds: Thresholds, probes: Probes = DEFAULT_PROBES
+    root: Path,
+    thresholds: Thresholds,
+    probes: Probes = DEFAULT_PROBES,
+    extra: Iterable[Check] = (),
 ) -> PreflightReport:
-    """Evaluate every check against ``thresholds`` and report all of them in one pass."""
+    """Evaluate every check against ``thresholds`` and report all of them in one pass.
+
+    ``extra`` appends checks evaluated elsewhere (EP-13: the routing verbs add the
+    toolchain report, so a missing JDK or jar refuses the run the same way).
+    """
     checks: list[Check] = []
 
     free = probes.free_disk(root)
@@ -247,4 +256,5 @@ def run_preflight(
             else "data root (or its nearest existing ancestor) is not writable",
         )
     )
+    checks.extend(extra)
     return PreflightReport(thresholds, tuple(checks))

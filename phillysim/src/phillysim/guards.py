@@ -23,7 +23,10 @@ from __future__ import annotations
 
 import gzip
 import ipaddress
+import os
+import shutil
 import stat
+import tarfile
 import zipfile
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -228,6 +231,114 @@ def extract_zip(archive: Path, root: Path, limits: Limits = DEFAULT_LIMITS) -> l
             with zf.open(member) as src, target.open("wb") as dst:
                 budget -= copy_capped(src, dst, budget, label=f"{archive.name}:{member.filename}")
             written.append(target)
+    return written
+
+
+def safe_link_target(root: Path, member_name: str, link_name: str) -> Path:
+    """Resolve a symlink member's target strictly inside ``root``, or raise ``zip_slip``.
+
+    The link is relative to the member's own directory (a JDK tarball's
+    ``lib/server/libjsig.so -> ../libjsig.so``); an absolute target or one that
+    climbs out of the root is refused.
+    """
+    if (
+        not link_name
+        or link_name.startswith(("/", "\\"))
+        or (len(link_name) > 1 and link_name[1] == ":")
+    ):
+        raise GuardError(
+            "zip_slip", f"member {member_name!r}: absolute symlink target {link_name!r}"
+        )
+    member = safe_member_path(root, member_name)
+    target = (member.parent / Path(*PurePosixPath(link_name.replace("\\", "/")).parts)).resolve()
+    root_resolved = root.resolve()
+    if target == root_resolved or root_resolved not in target.parents:
+        raise GuardError(
+            "zip_slip", f"member {member_name!r}: symlink target {link_name!r} escapes the root"
+        )
+    return target
+
+
+def inspect_tar(archive: Path, limits: Limits = DEFAULT_LIMITS) -> list[tarfile.TarInfo]:
+    """Read a (gzip-compressed) tar's member list and apply the zip-slip and bomb rules;
+    extract nothing. Only regular files, directories, and in-root relative symlinks are
+    allowed (no hard links, devices, or FIFOs)."""
+    check_file_size(archive, limits)
+    if not tarfile.is_tarfile(archive):
+        raise GuardError("bomb", f"{archive.name}: not a tar archive")
+    with tarfile.open(archive, "r:*") as tf:
+        members = tf.getmembers()
+    if len(members) > limits.max_members:
+        raise GuardError(
+            "bomb", f"{archive.name}: {len(members)} members exceeds {limits.max_members}"
+        )
+    declared = sum(m.size for m in members if m.isfile())
+    if declared > limits.max_extracted_bytes:
+        raise GuardError(
+            "bomb",
+            f"{archive.name}: declared {declared} uncompressed bytes exceeds "
+            f"{limits.max_extracted_bytes}",
+        )
+    ratio = declared / max(archive.stat().st_size, 1)
+    if ratio > limits.max_compression_ratio:
+        raise GuardError(
+            "bomb",
+            f"{archive.name}: compression ratio {ratio:.0f}:1 exceeds "
+            f"{limits.max_compression_ratio:.0f}:1",
+        )
+    for member in members:
+        if not (member.isfile() or member.isdir() or member.issym()):
+            raise GuardError(
+                "zip_slip", f"member {member.name!r}: only files, directories, and symlinks"
+            )
+    return members
+
+
+def extract_tar(archive: Path, root: Path, limits: Limits = DEFAULT_LIMITS) -> list[Path]:
+    """Extract a tar (optionally gzip-compressed) under ``root`` with every guard applied.
+
+    Members are checked first (:func:`inspect_tar`); every path is normalized against
+    ``root``; a symlink must point inside the root and is created last (copied where
+    the platform refuses symlinks); bytes are counted as they are written. Returns the
+    written paths (files and links).
+    """
+    members = inspect_tar(archive, limits)
+    written: list[Path] = []
+    links: list[tuple[Path, str, Path]] = []
+    budget = limits.max_extracted_bytes
+    with tarfile.open(archive, "r:*") as tf:
+        for member in members:
+            name = member.name.rstrip("/")
+            if member.isdir():
+                target = safe_member_path(root, name + "/x").parent
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target = safe_member_path(root, name)
+            if member.issym():
+                links.append(
+                    (target, member.linkname, safe_link_target(root, name, member.linkname))
+                )
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            src = tf.extractfile(member)
+            if src is None:  # pragma: no cover - a regular member always yields a stream
+                raise GuardError("bomb", f"member {member.name!r}: unreadable")
+            with src, target.open("wb") as dst:
+                budget -= copy_capped(src, dst, budget, label=f"{archive.name}:{member.name}")
+            if member.mode & stat.S_IXUSR:
+                target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+            written.append(target)
+    for link, link_name, resolved in links:
+        link.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            # Windows resolves a reparse point's relative target with backslashes only.
+            os.symlink(link_name.replace("/", os.sep), link)
+        except OSError:
+            if resolved.is_file():
+                shutil.copyfile(resolved, link)
+            else:
+                raise
+        written.append(link)
     return written
 
 

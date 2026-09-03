@@ -14,6 +14,8 @@ data/cache/
 # The stage runner's state file and the fixture pipeline's own data root (EP-4b).
 data/pipeline_state.json
 data/fixture/
+# Routing run records (EP-13): plans, records, RSS series, logs, output tables.
+data/runs/
 
 # --- Secrets --------------------------------------------------------------
 .env
@@ -58,9 +60,14 @@ tmp/
 scratch/
 
 # --- Project-local runtimes (pinned by manifest, not committed) -----------
+# `phillysim toolchain install` (EP-13, ADR-0008) puts the pinned JDK under
+# phillysim/.jdk/ and the pinned R5 jar under phillysim/.r5/, and records both
+# in phillysim/toolchain.json. Nothing of it is ever tracked.
 .jdk/
 jdk/
+.r5/
 *.jar
+phillysim/toolchain.json
 
 # --- Node / site build ----------------------------------------------------
 node_modules/

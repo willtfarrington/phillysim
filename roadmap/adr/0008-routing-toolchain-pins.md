@@ -1,6 +1,6 @@
 # ADR-0008: Routing toolchain pins, extents, dates, and the spike's decision numbers
 
-Status: accepted (EP-11, 2026-09-03; owner-reviewed: every value below was put to the owner as a numbered question and the recommended option accepted; the review is recorded in the EP-11 handoff)
+Status: accepted (EP-11, 2026-09-03; owner-reviewed: every value below was put to the owner as a numbered question and the recommended option accepted; the review is recorded in the EP-11 handoff). **Amended 2026-09-03 (EP-13, owner decision): the R5 jar pin** moved from `r5-v7.6-r5py-all.jar` to `r5-v7.5.1-r5py-all.jar`; see the jar entry and the amendment note below.
 
 ## Context
 ADR-0001 and architecture.md say the routing engine is r5py on a
@@ -31,13 +31,26 @@ downloaded or installed by the gate.
   Installed under `<repo>/phillysim/.jdk/jdk-21.0.12.1+1/` (gitignored),
   never on `PATH` or in the system; `JAVA_HOME` is set in the routing
   child's environment per invocation and nowhere else.
-- **R5 jar:** `r5-v7.6-r5py-all.jar` from the r5py project's R5 build
-  (release `v7.6-r5py`, 2026-08-03, R5 7.6 with the r5py patches; the jar
-  r5py 1.1.7 pins in its own source), 65,104,016 bytes, SHA-256
-  `bb3935be2edd2fc5a20726600440bb4561f5ab2ce5d9d64c6b9cc6ca19260eb5`.
-  Installed at `<repo>/phillysim/.r5/r5-v7.6-r5py-all.jar` (gitignored)
+- **R5 jar (amended 2026-09-03, EP-13):** `r5-v7.5.1-r5py-all.jar` from the
+  r5py project's R5 build (release `v7.5.1-r5py`, 2026-05-08, R5 7.5.1 with
+  the r5py patches; **the jar r5py 1.1.7 pins in its own source**,
+  `r5py/util/classpath.py`), 64,437,972 bytes, SHA-256
+  `d50be106cadd7b636cfc0e209052767d7df570629f79fdf98ecd5cf5d2d89be7`.
+  Installed at `<repo>/phillysim/.r5/r5-v7.5.1-r5py-all.jar` (gitignored)
   and always passed to r5py as its classpath, so r5py's own download path
-  is never exercised.
+  is never exercised (the harness refuses to import r5py unless that file
+  exists and refuses to route unless r5py resolved exactly that path).
+  *Amendment note.* The gate recorded `r5-v7.6-r5py-all.jar` (release
+  `v7.6-r5py`, 2026-08-03; 65,104,016 bytes; SHA-256 `bb3935be…0eb5`) as
+  "the jar r5py 1.1.7 itself pins"; that was wrong: r5py 1.1.7 (PyPI's
+  latest on the amendment date) pins v7.5.1, and only r5py's unreleased
+  `main` branch pins v7.6. EP-13's first smoke run on the v7.6 jar failed
+  inside r5py's `TransportNetwork` build (`com.conveyal.osmlib.OSM` has
+  only a private constructor in R5 7.6; r5py 1.1.7 calls the public one),
+  the packet's stop condition. The owner chose the jar r5py 1.1.7 pins
+  over waiting for an r5py release that targets v7.6; every other pin is
+  unchanged. Moving to R5 7.6 later is a new amendment with a matching
+  r5py release and a methods-version bump (ADR-0006).
 - **Python side:** `r5py==1.1.7` (2026-06-29) with `jpype1==1.7.1` and
   `psutil==7.2.2`, in an optional `routing` dependency group of the
   locked stack; all wheels on Windows and Linux for Python 3.13
@@ -130,11 +143,11 @@ downloaded or installed by the gate.
   owner confirms; the fallback packet follows the verdict.
 
 ## Alternatives considered
-- **A newer or older JDK 21 build**: any 21.x would run R5 7.6; the
+- **A newer or older JDK 21 build**: any 21.x would run R5 7.5.1 (or 7.6); the
   current LTS build was chosen because it is what Adoptium serves today
   and its checksum is published beside it. A JDK 17 or 25 is not
   supported by R5 7.x.
-- **Conveyal's own R5 7.6 jar** instead of the r5py build: r5py pins its
+- **Conveyal's own R5 jar** instead of the r5py build: r5py pins its
   patched build and verifies it by checksum at start-up; using another jar
   would fight the library.
 - **The whole state extract without a clip**: kept as the recorded

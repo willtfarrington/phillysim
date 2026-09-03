@@ -1,7 +1,7 @@
 # Data dictionary
 
 > **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b,
-> EP-12).** Schema version **1**; public schema version **2** (EP-7 wrote
+> EP-12); routing run records since EP-13.** Schema version **1**; public schema version **2** (EP-7 wrote
 > version 1; EP-8b added the basemap file). This document describes the
 > tables the pipeline produces. Instances today: the synthetic tinycity
 > fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
@@ -110,6 +110,51 @@ Stage outputs are staged under `cache/staging/<stage>/` and moved into their
 zone by atomic rename; a leftover staging directory is a coherence problem
 `verify` reports. The raw zone is immutable: a stage that re-produces an
 existing snapshot must produce identical content or it fails.
+
+## Routing run records (`<data root>/runs/routing/<run-id>/`) — EP-13
+
+Written by the routing harness (`phillysim.routing.harness`, EP-13) for every
+JVM run: the smoke route now, the run matrix at EP-14. `runs/` is a data-root
+directory beside the zones (like `pipeline_state.json` and `fixture/`), not a
+zone: nothing under it is read by a stage or published, and `data/runs/` is
+gitignored. `<run-id>` is `<UTC timestamp>-<plan slug>`
+(`20260903T213000Z-smoke`). Every file is canonical JSON (two-space indent,
+sorted keys) or CSV; paths inside are data-root-relative; the data root, the
+repository root, and the toolchain's project directory are scrubbed to
+`<data-root>`, `<repo-root>`, and `<toolchain-home>` in every string, like the
+state file's error text. No machine identifier or user name enters a record.
+
+| File | Contents |
+|---|---|
+| `plan.json` | What was asked: `slug`; `modes` (`walk`, `walk_transit`); `speed_walking_kmh`; `departure` (naive local `YYYY-MM-DDTHH:MM`) and `time_zone`; `window_minutes`; `percentiles`; `max_time_minutes`; `origins` and `destinations` (`description`, `count`, `points` as `{id, lon, lat}` in WGS 84); `inputs` (label → data-root-relative path: `osm`, `gtfs_bus`, `gtfs_rail`); `note` |
+| `record.json` | What happened; fields below |
+| `rss.csv` | The sampler's series: `utc` (ISO 8601 second), `elapsed_s`, `rss_bytes` (the sum over the process tree) |
+| `log.txt` | The child's stdout and stderr (JVM notices, r5py warnings, tracebacks) |
+| `child.json` | The child's command, its environment overrides (`JAVA_HOME`, `JAVA_TOOL_OPTIONS`, the cache and config variables), and r5py's arguments, scrubbed |
+| `phases.json` | Written by the child: per phase (`import`, `build`, `route:<mode>`) the UTC `start` and `end`; for `build` whether the network came from r5py's cache (`network_cached_before`) and the cache files present; for a route its `rows` |
+| `travel_times.csv` | The output table in canonical row order: `mode`, `from_id`, `to_id`, `travel_time_p50`, `travel_time_p85` (integer minutes; empty where R5 found no route within `max_time`) |
+| `error.json` | Only on a failure: the child's exception `type`, `message`, and `traceback` |
+
+`record.json` fields (`schema_version` **1**):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `run_id`, `slug` | string | The run's ID and the plan's slug |
+| `outcome` | `completed`, `killed-rss`, `failed`, or `cancelled` | `completed` only when the child exited 0 and wrote the output table; `killed-rss` when the sampler killed the tree at the 22 GB line; `failed` on any other exit; `cancelled` on Ctrl-C |
+| `started_at`, `finished_at` | string | ISO 8601 UTC |
+| `wall_seconds` | float | From the child's start to its exit |
+| `exit_code` | integer, nullable | The child's exit status |
+| `phases` | object | `phases.json` with a `peak_rss_bytes` added per phase (the peak of the samples between its `start` and `end`), so the network build and each route are measured separately |
+| `rss` | object | `samples`, `peak_rss_bytes`, `peak_rss_elapsed_s`, `peak_rss_utc`, `budget_bytes` (20 GB), `budget_crossed`, `budget_crossed_elapsed_s`, `kill_bytes` (22 GB), `killed`, `killed_elapsed_s`, `killed_bytes` |
+| `toolchain` | object | The JDK release, version, archive digest, and `java -version` line; the jar release, name, and digest (from `phillysim/toolchain.json`); the heap (`12G`) and `JAVA_TOOL_OPTIONS` |
+| `versions` | object | `r5py`, `jpype1`, `psutil` as installed |
+| `inputs` | object | Per input label its data-root-relative `path`, `bytes`, and `sha256` |
+| `output` | object, nullable | `path`, `rows`, `bytes`, `byte_sha256` (the file as written), `canonical_value_sha256` (the rows in key order with sorted columns and normalized values: integral floats as integers, missing as null); two runs that agree in value agree in this digest whatever the row order or float formatting (the determinism observation, OQ-C) |
+| `error` | string, nullable | The child's exception type and message, or the kill reason, scrubbed |
+| `files` | object | The names of the files above as written |
+
+The record is the spike's evidence (EP-14 aggregates records; EP-15 judges
+them against the milestones.md criteria) and never a published table.
 
 ## Curated tract spine (`curated/tracts_spine.parquet`, GeoParquet)
 
@@ -261,8 +306,8 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/slice_metric.json` | `metrics` (real pipeline, EP-7) | nobody (report) | The QA slice metric's report: metric ID, category, methods version, tract and destination counts, null estimates, min / median / max distance in metres |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
-| `intermediate/network.json` | `network` | `travel_times` (fixture); nobody yet in the real pipeline (EP-13's harness reads `intermediate/network/`) | Routing-input summary. Fixture: stop count, edge count, total edge length, CRS. Real pipeline (EP-12): the routing box (county bounds + `buffer_m`, WGS 84), CRS, the two source snapshots, the license bucket by derivation (B), the clip's file name, bytes, node / way / highway-way / relation counts and the state file's counts, and per feed zip its bytes, stops, stops outside the box, and stops inside the county's tracts |
-| `intermediate/network/` | `network` (real pipeline, EP-12) | the routing harness (EP-13; nothing in the pipeline yet) | A directory output (like `public/`): `pennsylvania-260831-philadelphia-5km.osm.pbf`, the OSM extract clipped to the routing box (way-complete, the source order, the box in its header; **Bucket B** by derivation from the `osm_network` snapshot), and `google_bus.zip` / `google_rail.zip`, SEPTA's two feed zips copied out of the release asset as files and never expanded (never copied under `public/` or `site/`) |
+| `intermediate/network.json` | `network` | `travel_times` (fixture); the routing harness's smoke plan (`phillysim.routing.smoke`, EP-13) for the clip's file name and the feed names | Routing-input summary. Fixture: stop count, edge count, total edge length, CRS. Real pipeline (EP-12): the routing box (county bounds + `buffer_m`, WGS 84), CRS, the two source snapshots, the license bucket by derivation (B), the clip's file name, bytes, node / way / highway-way / relation counts and the state file's counts, and per feed zip its bytes, stops, stops outside the box, and stops inside the county's tracts |
+| `intermediate/network/` | `network` (real pipeline, EP-12) | the routing harness's child (EP-13, `phillysim.routing.harness`; r5py copies the three files into `cache/r5py/` as working copies and builds the network there); no stage yet | A directory output (like `public/`): `pennsylvania-260831-philadelphia-5km.osm.pbf`, the OSM extract clipped to the routing box (way-complete, the source order, the box in its header; **Bucket B** by derivation from the `osm_network` snapshot), and `google_bus.zip` / `google_rail.zip`, SEPTA's two feed zips copied out of the release asset as files and never expanded (never copied under `public/` or `site/`) |
 
 ## Public zone (`public/`) — public schema version 2 (EP-7, EP-8b)
 

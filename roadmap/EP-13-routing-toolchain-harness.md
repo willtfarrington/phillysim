@@ -1,6 +1,6 @@
 # EP-13 — Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route
 
-**Status:** [ ] planned · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [~] work complete 2026-09-03 (the smoke green on the amended ADR-0008 jar pin); the status commit marks it done · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The routing engine exists on the machine under the project's control and
@@ -182,23 +182,23 @@ the peak-RSS line to `phillysim/README.md` "Resource baselines" (the
 EP-10 table said "deferred to the M3 spike harness").
 
 ## Acceptance criteria & evidence
-- [ ] `phillysim toolchain install` from a clean state installs the JDK
+- [x] `phillysim toolchain install` from a clean state installs the JDK
       and the jar with the recorded digests; `toolchain check` reports
       `21.0.12.1` and the jar digest; a wrong digest is refused (tested on
       crafted bytes); nothing lands on `PATH` or outside the two
       directories.
-- [ ] `uv sync --locked --group routing` installs r5py 1.1.7 and JPype1
+- [x] `uv sync --locked --group routing` installs r5py 1.1.7 and JPype1
       1.7.1 from wheels on Windows; `uv run pytest` green with and without
       the group installed; the dependency policy test green; the
       no-JVM-in-CI test green; CI green on both platforms without the
       group.
-- [ ] The sampler kills a scripted child tree at the threshold and records
+- [x] The sampler kills a scripted child tree at the threshold and records
       a peak within one sample of the true peak (tested).
-- [ ] `phillysim route smoke` completes three runs; each record has wall,
+- [x] `phillysim route smoke` completes three runs; each record has wall,
       peak RSS, digests, and outcome `completed`; the three
       canonicalized-value digests are recorded (equal or not); no sample
       reached 22 GB.
-- [ ] The CI performance-smoke test runs on both platforms and records
+- [x] The CI performance-smoke test runs on both platforms and records
       fixture wall and peak RSS.
 - Evidence: CI run; the three smoke records' numbers in the handoff; the
   "Resource baselines" line.
@@ -240,16 +240,208 @@ note: the real body arrives with EP-15 on go), CHANGELOG, the packet row.
 ADR-0008 is referenced, not changed; a pin that must change goes back to
 the owner as an amendment.
 
-## Handoff payload (fill at session end)
-- packet ID + status; baseline/roadmap version
-- files changed; commands/tests run + results
-- the toolchain install (bytes, seconds, digests), the group's wheel list,
-  the network build wall and RSS, the three smoke runs' wall, peak RSS,
-  and digests (equal or not), the CI performance-smoke numbers on both
-  platforms
-- resource observations (the first peak RSS; against the 20 / 22 GB lines)
-- decisions/ADRs made; unresolved risks/questions
-- no-go areas touched? (must be none; nothing on `PATH`; nothing under
-  `.jdk/` / `.r5/` tracked)
-- `roadmap/README.md` packet row updated to `[x] <commit>`
-- exact next packet: EP-14 (the run matrix and the first unattended night)
+## Handoff payload (filled 2026-09-03)
+- **Packet:** EP-13 — done at commit `<work-commit>` (+ the status commit),
+  2026-09-03, one session, at the S estimate (the stop condition below cost
+  about ten minutes: a diagnosis, an owner decision, a jar reinstall, and a
+  re-run of the smoke); Planning Baseline v1.0. CI run: recorded in the
+  status commit. Owner review at the end of this payload.
+- **Files changed.** New: `phillysim/src/phillysim/routing/{__init__,
+  toolchain,sampler,records,harness,smoke}.py`, `tests/test_toolchain.py`,
+  `tests/test_sampler.py`, `tests/test_records.py`,
+  `tests/test_routing_harness.py` (the brief's `test_harness.py` name is
+  taken by `tests/contracts/test_harness.py`; pytest refuses two modules
+  with one basename), `tests/test_no_jvm_in_ci.py`,
+  `tests/test_performance_smoke.py`. Changed: `guards.py`
+  (`safe_link_target`, `inspect_tar`, `extract_tar`), `preflight.py`
+  (`psutil` in the locked packages; `run_preflight(extra=…)`), `cli.py`
+  (`toolchain install|check`, `route smoke`, a `__main__` guard),
+  `pyproject.toml` + `uv.lock` (`psutil` core; the `routing` group),
+  `.gitignore` (`.r5/`, `data/runs/`, `phillysim/toolchain.json`),
+  `roadmap/adr/0008-routing-toolchain-pins.md` (the jar amendment),
+  `phillysim/README.md`, `docs/data-dictionary.md`, `roadmap/quality.md`,
+  `roadmap/architecture.md`, `CHANGELOG.md`, `roadmap/README.md`, this
+  file.
+- **Commands/tests run + results.** `uv lock` then `uv sync --locked
+  --group routing`: 18 packages added from wheels (affine, attrs, click,
+  cloudpickle, configargparse, geohexgrid, joblib, jpype1 1.7.1, narwhals,
+  psutil 7.2.2, pyparsing, r5py 1.1.7, rasterio 1.5.1, scikit-learn 1.9.0,
+  scipy 1.18.1, simplification 1.0.0, threadpoolctl 3.6.0; `.venv` 480 MB →
+  738 MB); `uv pip compile --only-binary :all:` for `windows` and `linux` on
+  Python 3.13 resolves the group to the same 31 packages (Windows adds
+  `tzdata`), so the lock carries no Linux marker and the Linux fallback
+  needs no documenting; `uv lock --check` clean; `uv run pytest` → **583
+  passed, 3 skipped** in 43 s (516 before; the three skips are the
+  real-data-root tests), with the routing group installed and no r5py
+  imported by the suite (asserted); the dependency policy test green on the
+  new lock (none of the 18 is `GDAL` or `fiona`); the no-JVM-in-CI test
+  green; `ruff check` / `ruff format --check` clean; `pre-commit run
+  --all-files` all hooks passed; the diff scanned for user names, machine
+  identifiers, and absolute paths → none; `git ls-files` shows nothing
+  under `.jdk/`, `.r5/`, no `*.jar`, no `toolchain.json`, nothing under
+  `data/`. Without the group the suite also passes: every routing test runs
+  on crafted archives, scripted children, and fake probes (CI proves it on
+  both platforms).
+- **The toolchain install (console kept).** First install, against the
+  gate's pins: the JDK zip **205,073,461 B in 14.8 s**, sha256
+  `f9d6e191…8b4e` = the pin; 490 archive members extracted under the
+  guards (256 MiB / 1 GiB / ratio 10 / 2,000); `java -version` → `openjdk
+  version "21.0.12.1" 2026-08-18 LTS` (ADR-0008 says published 2026-08-19;
+  the build's own date string is the 18th); the jar `r5-v7.6-r5py-all.jar`
+  **65,104,016 B in 4.8 s**, sha256 `bb3935be…0eb5` = the gate's pin;
+  `.jdk/` 329 MB, `.r5/` 63 MB; about 20 s in all; `toolchain check` all
+  four checks ok. After the amendment (below): `.r5/` deleted by hand,
+  `toolchain install` re-run → the JDK found installed and verified (no
+  download), the jar `r5-v7.5.1-r5py-all.jar` **64,437,972 B in 1.5 s**,
+  sha256 `d50be106…9be7` = the amended pin, `.r5/` 62 MB; `check` ok.
+  Both downloads redirected from `github.com` to
+  `release-assets.githubusercontent.com` (the host EP-12 observed).
+- **The group's wheel list:** above (18 wheels; the routing three plus
+  what r5py pulls: rasterio, scikit-learn, scipy, geohexgrid,
+  simplification, joblib, configargparse, cloudpickle, affine, attrs,
+  click, narwhals, pyparsing, threadpoolctl; `requests` and `filelock`
+  were already in the tree through `osmium`).
+- **The smoke route on the gate's jar (the stop condition).** `phillysim
+  route smoke` → preflight green (the real-run thresholds plus the four
+  toolchain checks), the plan: origin the spine center of tract
+  `42101000500` (contains City Hall, confirmed against the spine),
+  destination `snap_retailers:1298051` (MOM's Organic Market, 239.9 m
+  straight-line by the QA rule), walk and walk+transit at 4.8 km/h,
+  2026-09-23 08:00 America/New_York, 60-minute window, percentiles 50 and
+  85, `max_time` 120 min, on `intermediate/network/` (the clip
+  49,968,756 B sha256 `1f87cacb…`, the two feed zips). Run
+  `20260903T212734Z-smoke` → **`failed` at 8.5 s**, peak RSS 0.33 GB, 31
+  samples: `TypeError: Java class has no constructors` at
+  `com.conveyal.osmlib.OSM(...)` in r5py's `TransportNetwork.__init__`.
+  Diagnosis (`javap` on the installed jar): R5 7.6's `OSM` has one
+  **private** constructor and static factories; r5py **1.1.7 calls the
+  public constructor**, and its own `util/classpath.py` pins
+  `r5-v7.5.1-r5py-all.jar` (SHA-256 `d50be106cadd7b636cfc0e209052767d7df5
+  70629f79fdf98ecd5cf5d2d89be7`, release `v7.5.1-r5py`, 2026-05-08,
+  64,437,972 B); r5py's unreleased `main` pins v7.6; PyPI's latest r5py is
+  1.1.7. The gate's sentence "the jar r5py 1.1.7 itself pins" was wrong for
+  the file it named; every other pin held (the JDK's digest and version, the
+  jar's digest and size, JPype starting the JVM from the project-local JDK
+  with the pinned classpath honored: the constructor error proves the v7.6
+  classes were loaded). The record is kept under `data/runs/routing/`.
+- **The diagnostic before the decision (not the pinned toolchain).** The
+  v7.5.1 jar fetched through the guarded path (digest verified) into a
+  scratch toolchain home under the session scratchpad (the JDK reached
+  through a directory junction; the project's `.r5/` untouched), the smoke
+  plan run through the real harness; records under
+  `data/runs/routing-diagnostic/` (slug `smoke-diag-v751`; kept by owner
+  decision). Cold: 45.3 s, peak RSS 4.81 GB; cached network: 8.0 / 6.3 /
+  6.4 s, 2.36 / 2.45 / 2.54 GB; four completed runs with identical
+  canonicalized-value digests. **Honest note:** in the diagnostic the
+  child's `--r5-classpath` named a file that did not exist (the session's
+  rename of the jar constant lived only in the parent process) and r5py
+  **silently fell back to its own download** of the same v7.5.1 jar
+  (checksum-verified by r5py; identical bytes) into `data/cache/r5py/`, so
+  the safety precondition "r5py's own jar download path is never
+  exercised" was breached once, in the diagnostic only; the copy was
+  deleted and the harness child now **refuses to import r5py unless the
+  installed jar exists and refuses to route unless r5py resolved exactly
+  that path** (`ClasspathError`, tested; `phases.json` records the
+  resolved classpath's name), so it cannot recur. One diagnostic run failed
+  in 0.3 s with a `SyntaxError` because the harness module was being edited
+  at that moment; unrelated to routing.
+- **The smoke route on the pinned toolchain (after the amendment; r5py's
+  network cache cleared first so run 1 builds cold).** Three runs, every
+  record `completed`, the three canonicalized-value digests **equal**
+  (`cab6893edad3bb3aefda1671fc4f9280c1bb131bc796a3127675ece9e52d007a`) and
+  the three byte digests equal (`0298735475b2…`): the first determinism
+  observation (OQ-C), on one pair, two modes, 60-minute window.
+  | run | wall | peak RSS (when) | phases |
+  |---|---|---|---|
+  | `20260903T214412Z-smoke` (cold) | 45.1 s | **4.94 GB** at 36.9 s, 160 samples | import 1 s at 0.33 GB; **network build 43 s at 4.94 GB**; walk route under 1 s and walk+transit route under 1 s at 4.72 GB |
+  | `20260903T214458Z-smoke` (cached network) | 6.2 s | 2.52 GB at 5.9 s, 22 samples | import 2 s; build from cache 2 s at 2.19 GB; routes about 1 s |
+  | `20260903T214504Z-smoke` (cached network) | 6.2 s | 2.43 GB at 5.7 s, 22 samples | import 2 s; build from cache 2 s at 2.40 GB; routes about 1 s |
+  | `20260903T214511Z-smoke-single` (`--single-departure`, a one-minute window) | 5.8 s | 2.43 GB, 21 samples | the same values; r5py's below-five-minutes warning in `log.txt` |
+  Output: walk p50 = p85 = **4 min**, walk+transit p50 = p85 = **4 min**
+  (a 240 m pair; transit never wins it). No sample reached the 22 GB line
+  or the 20 GB budget. r5py's cache after the build:
+  `<digest>.transport_network` 397 MiB, `.mapdb.p` 101 MiB, `.mapdb` 4 MiB;
+  the three inputs are symlinks into `intermediate/network/` (Windows
+  Developer Mode allows them); nothing written beside the raw or
+  intermediate files; the harness now removes the temporary directories
+  R5 leaves behind after a killed or failed child.
+- **CI performance smoke:** `phillysim run --fixture` under the sampler:
+  **1.3 s wall, peak RSS 140 MiB** (146,747,392 B), 10 samples at 10 Hz on
+  Windows; the Linux numbers are printed in the CI log (recorded in the
+  status commit).
+- **Resource observations:** one session, at the S estimate. Network:
+  270 MB for the gate's toolchain, 64 MB more for the amended jar (and 64 MB
+  for the diagnostic's copy), about 260 MB of wheels; under a minute in all.
+  Disk: `.jdk/` 329 MB, `.r5/` 62 MB, `.venv` +258 MB, r5py's cache about
+  500 MB under the data root, run records about 12 KB each. RAM: **peak
+  process-tree RSS 4.94 GB** for a cold network build on the 50 MB clip
+  with a 12 GB heap; **2.4–2.5 GB** with the cached network; against the
+  20 GB budget and the 22 GB kill there is room for the state-extract
+  fallback several times over. Time: the network build is 43 s cold and 2 s
+  from cache; one pair routes in about a second per mode; the sampler ran
+  at 4 Hz for the first minute (160 samples over 45 s). Suite +67 tests,
+  +6 s.
+- **Decisions made (routine, agent's call, logged):** `toolchain.json` at
+  `phillysim/toolchain.json` (beside `.jdk/` and `.r5/`; one more ignore
+  line); `runs/` is a data-root directory like `fixture/`, not a zone
+  (`phillysim paths` unchanged); the run's output table is CSV in canonical
+  row order (byte-deterministic), not Parquet, and the byte digest is of
+  that file; the roots scrubbed are `<data-root>`, `<toolchain-home>` (the
+  project directory, which also holds `.venv`), and `<repo-root>`; r5py's
+  arguments go on the child's `sys.argv` rather than into an `r5py.yml`
+  (recorded in `child.json`); `APPDATA` / `XDG_CONFIG_HOME` point under the
+  cache so no user-level `r5py.yml` is read or written; the sampler's `GB`
+  is decimal (`10**9`, as `preflight.GB`), so the lines are 20,000,000,000
+  and 22,000,000,000 bytes; phase peaks come from the series and the
+  child's UTC phase stamps; `guards.extract_tar` allows only files,
+  directories, and in-root relative symlinks (Temurin's Linux tarball ships
+  `lib/server/libjsig.so -> ../libjsig.so`), copies where the platform
+  refuses symlinks, and writes Windows-style link targets on Windows; the
+  child writes `phases.json` even on failure; the classpath guards; the
+  temporary-directory cleanup; the test module's name. **Owner-level
+  decisions** below.
+- **Unresolved risks / questions:** r5py's cache expiry is two weeks from
+  a file's access or modification time: EP-14 should expect at most one
+  43 s rebuild per night (`phases.json` says whether a run built or loaded,
+  `network_cached_before`). `JAVA_TOOL_OPTIONS` makes the JVM print
+  `Picked up JAVA_TOOL_OPTIONS: …` to stderr (in `log.txt`; harmless).
+  r5py adds `-Xcheck:jni` to every JVM (slower JNI; r5py's choice). The
+  walk+transit result equals walk for the smoke pair by construction
+  (240 m); EP-15's hand check needs farther pairs. The Linux toolchain
+  path is tested on crafted archives only; no Linux JVM run exists (out of
+  scope). R5 7.6 stays available for a later amendment once an r5py release
+  targets it. For the third checkpoint: the estimate-accuracy row for EP-13
+  (one session, S).
+- **No-go areas touched:** none (nothing on `PATH` or in the system; the
+  JDK and jar only under `phillysim/.jdk/` and `phillysim/.r5/`, both
+  ignored and asserted untracked; nothing under `data/` committed; CI stays
+  offline and installs no routing group; no PHI, no secret, nothing
+  deployed; no machine identifier or absolute path in a tracked file or a
+  run record; the routing child wrote only under `data/cache/r5py/` and
+  `data/runs/`). The one precondition breached is the diagnostic's r5py
+  fallback download, disclosed above and closed by code.
+- `roadmap/README.md` packet row updated to `[x] <work-commit>` in the
+  status commit; the M3 heading stays open (EP-14, EP-15 remain).
+- **Exact next packet: EP-14** (`roadmap/EP-14-routing-run-matrix.md`: the
+  pre-scripted run matrix over the 408 CenPop centers and the 1,609 SNAP
+  retailers through this harness, launched as the first unattended night;
+  expect one cold network build of about 43 s and 4.9 GB, then routing
+  RSS on top of the 2.4 GB cached-network floor).
+
+### Owner review (2026-09-03)
+
+Four decisions put to the owner interactively at the stop condition; **the
+recommended option was accepted for every one**:
+- **The jar pin (ADR-0008 amendment):** amend to the jar r5py 1.1.7 pins
+  itself, `r5-v7.5.1-r5py-all.jar` (release `v7.5.1-r5py`, 2026-05-08;
+  64,437,972 B; SHA-256 `d50be106…9be7`), every other pin kept; finish the
+  packet in this session. Applied: ADR-0008 amended with a dated note, the
+  constants and tests changed, `.r5/` deleted by hand and the jar
+  reinstalled through the guarded path, the smoke green three times.
+- **The diagnostic records:** keep under `data/runs/routing-diagnostic/`,
+  labeled (gitignored; never committed).
+- **The allowlist:** `release-assets.githubusercontent.com` confirmed
+  beside the brief's two hosts, as at EP-12.
+- **Commit, push, CI, handoff:** yes, once green. Work commit
+  `<work-commit>`, CI run recorded in the status commit, then the status
+  commit.

@@ -67,6 +67,15 @@ phillysim/
                           the basemap file and public schema version 2, EP-8b);
                           sitebuild (the slice page built from a gated zone, the local
                           dev server) (EP-8a)
+    routing/              the routing toolchain and harness (EP-13; ADR-0008): toolchain
+                          (the pinned Temurin JDK 21 and R5 jar installed project-local
+                          through the guarded path, `toolchain install` / `check`), sampler
+                          (process-tree RSS at >= 1 Hz, the 20 GB budget line and the
+                          22 GB kill), records (run plans and the scrubbed run record under
+                          `<data root>/runs/routing/`), harness (every JVM run in a child
+                          process with a per-invocation environment; the only module that
+                          imports r5py, inside the child), smoke (the first route, three
+                          times)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
                           `demographics` (EP-5b), `snap_retailers` (EP-6), `basemap`
                           (EP-8b), `metrics` + `publish` (EP-7) on the pinned snapshots
@@ -110,6 +119,20 @@ phillysim/
                                 the machine's own Chrome or Edge: Playwright + axe,
                                 keyboard, reflow, fallbacks, the basemap's measured
                                 contrast table (EP-8a, EP-8b)
+    test_toolchain.py           the pinned toolchain installed from crafted archives on a
+                                fake transport: digests, zip-slip, bomb, the Java version,
+                                the Linux tarball path, idempotence, `check` (EP-13)
+    test_sampler.py             the RSS sampler on a scripted profile and on real scripted
+                                children (the kill at the line, the grandchild) (EP-13)
+    test_records.py             run plans, run IDs, the scrub, the canonicalized-value and
+                                byte digests (EP-13)
+    test_routing_harness.py     the child's environment and r5py arguments; the run loop on
+                                scripted children: completed, failed, killed-rss (EP-13)
+    test_no_jvm_in_ci.py        no module imports r5py or JPype at module level, only the
+                                harness child anywhere; the group is optional; CI installs
+                                none of it; the ignore rules; nothing tracked (EP-13)
+    test_performance_smoke.py   `phillysim run --fixture` under the sampler: wall and peak
+                                RSS bounds, the numbers in the test log (EP-13)
     contracts/            harness unit tests; tinycity sources; the three spine sources,
                           the SNAP retailer source, the TIGER roads source, and the two
                           routing sources on the committed samples (EP-5a, EP-6, EP-8b,
@@ -439,6 +462,86 @@ offline, zero axe-core violations, the keyboard order, 320 px reflow,
 reduced motion, and the no-WebGL fallback; CI runs it on both platforms and
 fails, rather than skips, if no browser can be launched.
 
+## The routing toolchain and harness (EP-13)
+
+The M3 routing spike runs r5py on a JVM the project controls
+([ADR-0008](../roadmap/adr/0008-routing-toolchain-pins.md)): Eclipse
+Temurin JDK **21.0.12.1+1** and the R5 jar, both downloaded once through the
+guarded download path (allowlist `github.com` plus GitHub's two release-asset
+hosts, https only, capped streaming), compared against the recorded byte
+counts and SHA-256 digests **before** anything is installed (a mismatch
+deletes the download and stops), and installed **project-local**:
+
+```
+uv sync --locked --group routing      # r5py 1.1.7, JPype1 1.7.1, psutil 7.2.2 (wheels)
+uv run phillysim toolchain install    # .jdk/jdk-21.0.12.1+1/ and .r5/<jar>, about 270 MB once
+uv run phillysim toolchain check      # java -version, the jar's digest, the record, the group
+```
+
+The JDK archive is the one archive the project extracts; it goes through the
+zip-slip and bomb guards (`guards.extract_zip`, or `guards.extract_tar` for
+the Linux tarball, whose in-root symlinks are allowed and whose escaping ones
+are refused) into a scratch directory, and the JDK moves into place only
+after its own `java -version` reports `21.0.12.1`. Nothing lands on `PATH`,
+in the registry, or in the system; `.jdk/`, `.r5/`, `*.jar`, and the
+`toolchain.json` record are gitignored and a test asserts none is tracked.
+`JAVA_HOME` is set in the routing child's environment per invocation and
+nowhere else.
+
+The `routing` dependency group is optional: `uv sync --locked` (what CI
+runs) does not install it, and no module under `phillysim` imports r5py or
+JPype at module level (importing r5py starts the JVM and, without a jar,
+downloads one); only the harness child imports r5py, inside the function
+that runs in the child (`tests/test_no_jvm_in_ci.py`). `psutil` is a core
+dependency because the sampler and the CI performance-smoke test use it.
+
+**Every JVM run is a child process** (`python -m phillysim.routing.harness
+<run dir>`), never the CLI process, with an environment built per
+invocation: `JAVA_HOME` = the project-local JDK; `JAVA_TOOL_OPTIONS=
+-XX:ActiveProcessorCount=8` (architecture.md's parallelism cap); r5py's
+arguments through its own `configargparse` parser on the child's `sys.argv`
+(`--max-memory 12G`, `--r5-classpath <the installed jar>`, so r5py's own
+download path is never exercised, and `--temporary-directory` under the
+data root); and r5py's cache under the data root (`cache/r5py/`: r5py reads
+`LOCALAPPDATA` on Windows and `XDG_CACHE_HOME` on Linux, so the child's
+environment sets both; it copies its inputs there as working copies, builds
+the network there as `<digest>.mapdb` and `<digest>.transport_network`, and
+expires cache files older than two weeks; `APPDATA` / `XDG_CONFIG_HOME` point
+under the same directory so no user-level `r5py.yml` is read or written).
+`PATH` is untouched. The child's stdout and stderr go to the run's
+`log.txt`.
+
+A thread in the parent samples the child **and all its descendants** with
+psutil at >= 1 Hz (1 Hz, 4 Hz during the first minute), records the peak sum
+of RSS and the whole series, notes the second the **20 GB** budget line is
+first crossed, and kills the tree (children first) the moment a sample
+reaches **22 GB** (architecture.md "Resource budgets"). Wall time runs from
+the child's start to its exit. Each run leaves
+`<data root>/runs/routing/<UTC timestamp>-<slug>/` with `plan.json`,
+`record.json` (outcome `completed` / `killed-rss` / `failed` / `cancelled`,
+wall, peak RSS and when, the budget crossing, the toolchain digests, the
+inputs' digests, the output's byte digest and canonicalized-value digest),
+`rss.csv`, `log.txt`, `child.json`, `phases.json`, and `travel_times.csv`;
+the shape is in [docs/data-dictionary.md](../docs/data-dictionary.md). Every
+path inside is data-root-relative and the data root, the repository root,
+and the project directory are scrubbed to placeholders.
+
+```
+uv run phillysim route smoke                       # three runs, walk and walk+transit
+uv run phillysim route smoke --single-departure    # a one-minute window (EP-15's hand check)
+```
+
+`route smoke` runs the real-run preflight plus the toolchain check, then
+routes from the spine center of the tract containing City Hall
+(`42101000500`) to the supermarket-format retailer nearest to it, walk at
+4.8 km/h and walk+transit at 4.8 km/h on the pinned Wednesday
+(2026-09-23) from 08:00 with a 60-minute window, percentiles 50 and 85,
+`max_time` 120 minutes, on the `network` stage's clipped extract and the two
+SEPTA feed zips; three times in a row, each run its own record; then reports
+whether the three canonicalized-value digests agree (the first determinism
+observation) and the peak RSS against the 22 GB line. r5py's default walking
+speed is 3.6 km/h and is overridden on every call.
+
 ## Resource baselines
 
 Recorded at the EP-9 checkpoint (2026-09-02) from a fresh clone of `main`
@@ -529,8 +632,31 @@ ID filter (5.8 million nodes, 922 thousand ways, 3.7 thousand relations,
 49,968,756 B), its contract checked, and the two feed zips unwrapped
 (20.8 MB and 0.76 MB). The raw zone grows by 367 MB (data root about 560
 MB with the 71 MB `intermediate/network/`); `osmium` adds 6 MB to `.venv`.
-Peak RSS is still not measured (EP-13's sampler); the clip's Python sets
+Peak RSS of the clip was not measured at EP-12; the clip's Python sets
 hold about 6 million node IDs and 0.9 million way IDs.
+
+**The routing toolchain and the first JVM runs (EP-13, 2026-09-03, same
+machine).** `uv sync --locked --group routing` added 18 packages
+(`.venv` 480 MB to 738 MB; scipy, rasterio, and scikit-learn are the
+bulk). `phillysim toolchain install`: the JDK zip 205,073,461 B in 14.8 s
+(digest equal to ADR-0008's, 490 archive members extracted under the
+guards, `.jdk/` 329 MB) and, after the ADR-0008 jar amendment, the jar
+`r5-v7.5.1-r5py-all.jar` 64,437,972 B in 1.5 s (digest equal to the
+amended pin, `.r5/` 62 MB); the pre-amendment jar (65,104,016 B in 4.8 s,
+digest equal to the gate's pin) had installed and verified the same way
+before r5py refused it. The process-tree RSS sampler exists since this
+packet and every number below is its peak sum of RSS over the child and
+its descendants.
+
+| Measure | Baseline | Budget (architecture.md) |
+|---|---|---|
+| CI performance smoke: `phillysim run --fixture` as a child under the sampler | 1.3 s wall, peak RSS 140 MiB, 10 samples at 10 Hz (Windows; the Linux numbers are in the CI log) | 60 s / 2 GiB test bounds |
+| `phillysim route smoke` on the jar ADR-0008 pinned **before its amendment** (`r5-v7.6-r5py-all.jar`) | 1 run, `failed` at 8.5 s: r5py 1.1.7 cannot construct `com.conveyal.osmlib.OSM` from this jar (its constructor is private in R5 7.6); peak RSS 0.33 GB; the JVM itself started from the project-local JDK with the pinned classpath | the packet's stop condition; ADR-0008 amendment with the owner |
+| **`phillysim route smoke` on the pinned toolchain** (after the amendment: `r5-v7.5.1-r5py-all.jar`), three runs, records under `data/runs/routing/` | cold: 45.1 s wall, **peak RSS 4.94 GB** at 37 s (r5py import 1 s; network build 43 s at 4.94 GB; each route under a second at 4.72 GB); with r5py's cached network: 6.2 s and 6.2 s wall, peak RSS 2.52 GB and 2.43 GB (build from cache 2 s); the three canonicalized-value digests equal (`cab6893e…`) and the three byte digests equal (`02987354…`); walk 4 min and walk+transit 4 min (p50 = p85) for the 240 m pair; `--single-departure` (a one-minute window): 5.8 s, 2.43 GB, the same values | 20 GB budget, 22 GB kill: well under; **the first peak-RSS number of the project** |
+| Diagnostic smoke on the same jar before the amendment (a scratch toolchain home, records under `data/runs/routing-diagnostic/`) | cold: 45.3 s wall, **peak RSS 4.81 GB** at 37 s (r5py import 3 s, network build 40 s at 4.81 GB, walk route 1 s, walk+transit route under 1 s); with r5py's cached network: 8.0 / 6.3 / 6.4 s wall, peak RSS 2.36 / 2.45 / 2.54 GB (build 2–3 s); all four completed runs' canonicalized-value digests equal (`cab6893e…`), byte digests equal (`02987354…`); walk 4 min and walk+transit 4 min (p50 = p85) for the 240 m pair | 20 GB budget, 22 GB kill: well under; the first peak-RSS number of the project |
+| r5py's network cache (`data/cache/r5py/`) | `<digest>.transport_network` 416 MB, `.mapdb.p` 106 MB, `.mapdb` 4 MB; the three inputs linked, not copied (symlinks on this machine); about 0.9 GB with the temporary directories the killed and failed children left under `tmp/`; r5py expires files older than two weeks | workspace ≤ 50 GB |
+| run records | about 12 KB per run (`rss.csv` dominates: 160 rows for the cold run) | — |
+| test suite | 583 passed, 3 skipped in about 44 s (516 before the packet) | — |
 
 ## Decisions this package honors
 
@@ -541,5 +667,9 @@ hold about 6 million node IDs and 0.9 million way IDs.
   zone files + DuckDB spatial; no PostGIS.
 - Locked-stack packages (geopandas, pyogrio, shapely, pyproj, duckdb, pyarrow)
   are declared now so the ban test and the Windows-wheel requirement are
-  exercised from the first commit; r5py and the pinned JDK arrive with the M3
-  routing spike.
+  exercised from the first commit; since EP-13 r5py, JPype1, and psutil form
+  the optional `routing` group (wheels on Windows and Linux) and the pinned
+  JDK and R5 jar are installed project-local by `phillysim toolchain install`.
+- [ADR-0008](../roadmap/adr/0008-routing-toolchain-pins.md): the exact JDK
+  build, the jar, the heap, the processor cap, the cache under the data root,
+  the calendar, and the spike's decision numbers; `JAVA_HOME` per invocation.

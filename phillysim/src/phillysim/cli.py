@@ -10,6 +10,9 @@ and the stage state against the zones, and ``gate`` (EP-7) re-runs the publish
 gate on the installed public zone (license labels, bounds, escaping, no path
 leakage; CI runs it on the fixture). ``site build`` / ``site serve`` (EP-8a)
 build the static slice page from a gated public zone and serve it locally.
+``toolchain install`` / ``toolchain check`` (EP-13) install and verify the pinned
+JDK and R5 jar project-local; ``route smoke`` runs the first JVM route in a
+sampled child process and leaves run records under ``<data root>/runs/routing/``.
 
 Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
 EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
@@ -41,6 +44,7 @@ from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
 from phillysim.publish import sitebuild
 from phillysim.publish.export import PUBLIC_MANIFEST, PUBLIC_ZONE
 from phillysim.publish.gate import check_public_zone
+from phillysim.routing import smoke, toolchain
 from phillysim.runner import StateError, verify_state
 from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
 
@@ -414,3 +418,139 @@ def site_serve(
         typer.echo("stopped")
     finally:
         server.server_close()
+
+
+# --- the routing toolchain and harness (EP-13) -------------------------------------------------
+
+toolchain_app = typer.Typer(
+    name="toolchain",
+    help="Install and check the pinned routing toolchain, project-local (EP-13, ADR-0008).",
+    no_args_is_help=True,
+    rich_markup_mode=None,
+)
+app.add_typer(toolchain_app, name="toolchain")
+
+HomeOption = Annotated[
+    Path | None,
+    typer.Option(
+        "--home",
+        help="Install under this project directory instead of <repo>/phillysim (tests).",
+    ),
+]
+
+
+def _toolchain(home: Path | None) -> toolchain.Toolchain:
+    if home is not None:
+        return toolchain.Toolchain(home.expanduser().resolve())
+    return toolchain.Toolchain.default()
+
+
+@toolchain_app.command("install")
+def toolchain_install(home: HomeOption = None) -> None:
+    """Download the pinned Temurin JDK 21 build and the pinned R5 jar through the guarded
+    path, verify both against ADR-0008's digests, and install them under <repo>/phillysim/
+    (.jdk/ and .r5/, gitignored; nothing on PATH). Idempotent.
+
+    Exit status 1 on a digest mismatch (the download is deleted), a guard refusal, or a
+    JDK that does not report the pinned version.
+    """
+    chain = _toolchain(home)
+    typer.echo(f"toolchain home: {chain.home} ({chain.platform})")
+    try:
+        with _download_log():
+            toolchain.install(chain, echo=typer.echo)
+    except toolchain.ToolchainError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for line in toolchain.check(chain).lines():
+        typer.echo(line)
+
+
+@toolchain_app.command("check")
+def toolchain_check(home: HomeOption = None) -> None:
+    """Report the installed toolchain: the JDK's `java -version`, the jar's digest against
+    the pin, the record, and the routing group's package versions. Exit status 1 unless
+    every check passes. Creates nothing.
+    """
+    chain = _toolchain(home)
+    typer.echo(f"toolchain home: {chain.home} ({chain.platform})")
+    report = toolchain.check(chain)
+    for line in report.lines():
+        typer.echo(line)
+    if not report.ok:
+        raise typer.Exit(code=1)
+
+
+route_app = typer.Typer(
+    name="route",
+    help="Routing runs in a sampled child process (EP-13); records under <data root>/runs/.",
+    no_args_is_help=True,
+    rich_markup_mode=None,
+)
+app.add_typer(route_app, name="route")
+
+
+@route_app.command("smoke")
+def route_smoke(
+    data_root: DataRootOption = None,
+    home: HomeOption = None,
+    repeats: Annotated[
+        int, typer.Option("--repeats", min=1, help="How many runs in a row (default 3).")
+    ] = smoke.REPEATS,
+    single_departure: Annotated[
+        bool,
+        typer.Option(
+            "--single-departure",
+            help="A one-minute departure window instead of 60 (EP-15's hand check).",
+        ),
+    ] = False,
+    departure: Annotated[
+        str,
+        typer.Option("--departure", help="Local departure time HH:MM on the pinned Wednesday."),
+    ] = smoke.DEPARTURE_TIME,
+) -> None:
+    """The smoke route: one tract center to one supermarket-format retailer on the clipped
+    network, walk and walk+transit, run three times; each run leaves a record. Exit status
+    1 if preflight (the real-run thresholds plus the toolchain check) refuses or any run
+    does not complete.
+    """
+    root, label = _resolve_root(False, data_root)
+    chain = _toolchain(home)
+    typer.echo(f"route smoke at {label}: {root}")
+    preflight = run_preflight(root, REAL_RUN, extra=toolchain.check(chain).checks)
+    for line in preflight.lines():
+        typer.echo(line)
+    if not preflight.ok:
+        typer.echo("refusing to run: preflight failed")
+        raise typer.Exit(code=1)
+    try:
+        report = smoke.run_smoke(
+            root,
+            chain,
+            repeats=repeats,
+            single_departure=single_departure,
+            departure_time=departure,
+            echo=typer.echo,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    summary = report.to_dict()
+    typer.echo(f"smoke: {len(report.records)} run(s): {', '.join(summary['outcomes'])}")
+    for record in report.records:
+        digest = (record.output or {}).get("canonical_value_sha256")
+        typer.echo(
+            f"  {record.run_id}: wall {record.wall_seconds} s, peak RSS "
+            f"{record.rss.get('peak_rss_bytes', 0) / 10**9:.2f} GB, values {digest}"
+        )
+    typer.echo(
+        f"smoke: outputs {'identical' if report.deterministic else 'DIFFER'} across runs; "
+        f"peak RSS {report.peak_rss_bytes / 10**9:.2f} GB "
+        f"({'under' if report.under_kill_line else 'AT OR OVER'} the 22 GB kill line)"
+    )
+    if not report.ok:
+        raise typer.Exit(code=1)
+
+
+if __name__ == "__main__":  # pragma: no cover - `python -m phillysim.cli`
+    app()

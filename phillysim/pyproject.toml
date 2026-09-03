@@ -10,7 +10,10 @@ authors = [{ name = "W. Taylor Farrington" }]
 # Stack is locked by ADR-0001 / ADR-0002 (roadmap/adr/). Geo I/O goes through
 # pyogrio only; the `GDAL` and `fiona` PyPI packages are banned from the tree
 # and tests/test_dependency_policy.py fails the build if either appears.
-# r5py + the pinned JDK arrive with the M3 routing spike, not before.
+# r5py and its Java bridge live in the optional `routing` dependency group (EP-13,
+# ADR-0008): installed locally with `uv sync --locked --group routing`, never in CI
+# (importing r5py starts a JVM). psutil is core: the process-tree RSS sampler and the
+# CI performance-smoke test use it.
 dependencies = [
   "typer>=0.27",
   "geopandas>=1.1",
@@ -20,6 +23,7 @@ dependencies = [
   "duckdb>=1.5",
   "pyarrow>=25",
   "osmium>=4.3.1",
+  "psutil>=7.2.2",
 ]
 
 [project.scripts]
@@ -35,6 +39,15 @@ dev = [
   "pre-commit>=4.3",
   "playwright>=1.50",
   "axe-playwright-python>=0.1.4",
+]
+
+# The routing toolchain's Python side (ADR-0008): exact pins, wheels only on Windows and
+# Linux for Python 3.13 (resolved 2026-09-03 with `uv pip compile --only-binary :all:`).
+# Not a default group: CI never installs it and nothing CI imports imports r5py.
+routing = [
+  "r5py==1.1.7",
+  "jpype1==1.7.1",
+  "psutil==7.2.2",
 ]
 
 [tool.uv]

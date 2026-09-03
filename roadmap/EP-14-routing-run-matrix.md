@@ -1,6 +1,6 @@
 # EP-14 — The pre-scripted run matrix and the first unattended night
 
-**Status:** [ ] planned · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [x] b35370d done 2026-09-03 · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The spike's runs are written down as data before they run, and then run
@@ -138,14 +138,14 @@ data root scrubbed). If r5py's cache expiry could rebuild the network
 mid-night, touch the cache before launch (EP-13 recorded the build cost).
 
 ## Acceptance criteria & evidence
-- [ ] The plan file exists, is tested against ADR-0008's parameters, and
+- [x] The plan file exists, is tested against ADR-0008's parameters, and
       lists the runs above with the two core runs first.
-- [ ] `route matrix` resumes, records, kills, and codes as specified on a
+- [x] `route matrix` resumes, records, kills, and codes as specified on a
       fake child (tests); `uv run pytest` green; CI green (no JVM).
-- [ ] The rehearsal completed for every run on six origins with records,
+- [x] The rehearsal completed for every run on six origins with records,
       sanity counts, and an extrapolated core wall in the handoff and in
       `night.json`.
-- [ ] The night was launched with the owner's decision recorded, is
+- [x] The night was launched with the owner's decision recorded, is
       running at session end, and its night directory exists with
       `night.json` in state `running`.
 - Evidence: the rehearsal's records; the launch log; CI.
@@ -184,15 +184,195 @@ delete the night directory; nothing else changed.
 `docs/data-dictionary.md` (night record), CHANGELOG, the packet row.
 ADR-0008 referenced.
 
-## Handoff payload (fill at session end)
-- packet ID + status; baseline/roadmap version
-- files changed; commands/tests run + results
-- the rehearsal's per-run wall and per-origin seconds, sanity counts,
-  peak RSS; the extrapolated core wall; the launch command (scrubbed) and
-  time; the owner's launch decision
-- resource observations
-- decisions/ADRs made; unresolved risks/questions
-- no-go areas touched? (must be none)
-- `roadmap/README.md` packet row updated to `[x] <commit>`
-- exact next packet: EP-15 (the verdict), to start only after the night's
-  `night.json` reads `finished` (or `KILLED-BY-EVIDENCE`)
+## Handoff payload (filled 2026-09-03)
+- **Packet:** EP-14 — done at commit `b35370d` (the work commit `5fc052a`
+  plus `b35370d`, which lets a night directory hold a detached launch's
+  redirected streams; + this status commit), 2026-09-03, one session, at
+  the S estimate; Planning Baseline v1.0. CI run [33813751959](https://github.com/willtfarrington/phillysim/actions/runs/33813751959) on `b35370d` green on `ubuntu-latest` and `windows-latest` (ubuntu 80 s, windows 127 s; 631 passed, 3 skipped on both, without the routing group); the work commit's run 33813523236 green too. Owner review at the
+  end of this payload.
+- **Files changed.** New: `phillysim/src/phillysim/routing/plan.py` (matrix
+  plans), `phillysim/src/phillysim/routing/matrix.py` (the night driver),
+  `phillysim/src/phillysim/routing/plans/m3-spike.json` (the plan, tracked),
+  `tests/test_routing_plan.py`, `tests/test_matrix_driver.py`. Changed:
+  `routing/records.py` (`RunPlan.snap_to_network`, default off so EP-13's
+  smoke plan and digests are unchanged), `routing/harness.py`
+  (`snap_to_network` passed to r5py; `run(..., run_dir=)`), `cli.py`
+  (`route matrix`, `route status`), `phillysim/README.md` (the verb, the
+  plan, launch and resume, the rehearsal in the baselines table),
+  `docs/data-dictionary.md` (the night record; the matrix's `mode` values
+  and where the speed and window live; `plan.json`'s new field),
+  `CHANGELOG.md`, `roadmap/README.md` (the packet row), this file.
+- **Commands/tests run + results.** `uv run pytest` → **631 passed,
+  3 skipped** in 62 s (583 before; 48 new tests, none touching a JVM: the
+  driver runs on scripted children through the real `harness.run`, the plan
+  tests on crafted tables and feed zips); `ruff check` / `ruff format
+  --check` clean; `pre-commit run --all-files` all hooks passed; the packaged
+  plan resolved against the real tables and feeds without a JVM (408 origins,
+  1,609 destinations; `feed_info.txt`: bus 2026-09-06..2027-02-20, rail
+  2026-09-06..2026-10-17, both `v202609060`; no date outside either window);
+  `phillysim toolchain check` all four ok; `phillysim status` 9 fresh after
+  the rehearsal; the diff scanned for absolute paths, user names, and machine
+  identifiers → none; `git ls-files` shows nothing under `data/`.
+- **The plan** (`m3-spike.json`, sha256 `febe2614…`): the seven runs of the
+  brief's table in order (`walk-48-wed`, `transit-48-wed` core;
+  `walk-48-wed-repeat`, `transit-48-wed-repeat`; `walk-30-wed`,
+  `transit-30-wed`; `transit-48-sat`), ADR-0008's parameters verbatim
+  (America/New_York; 2026-09-23 and 2026-09-26 from 08:00; 720 departures
+  for transit, one for walk; percentiles 50 and 85; `max_time` 120;
+  `snap_to_network` on; the 408 spine centers; all 1,609 retailers;
+  `core_wall_limit_hours` 8), `rehearsal_origins` = the six CI sample
+  tracts, and no path anywhere (tested). One departure for the walk runs is
+  a one-minute window, which r5py flags with its below-five-minutes warning
+  in `log.txt` (harmless; the same as EP-13's `--single-departure`).
+- **The rehearsal** (`route matrix --plan m3-spike.json --origins-subset
+  6`; night `20260903T222152Z-m3-spike-subset6`, 22:21:52Z–22:23:19Z; the
+  six sample tracts × 1,609 retailers; the network from r5py's cache in
+  every run). All seven runs `completed`; **86 s of wall together**; core
+  wall **24.4 s**; **peak RSS 3.53 GB** (`transit-48-wed`); no sample near
+  the 20 GB budget or the 22 GB kill; nothing missing from any grid
+  (9,654 rows each, no unsnapped point).
+  | run | wall | peak RSS | import / build / route | finite pairs | typical time (finite): p50, max | matrix values digest |
+  |---|---|---|---|---|---|---|
+  | `walk-48-wed` | 6.9 s | 2.99 GB | 2 / 2 / 2 s | 64.25 % (3,429 over the censor) | 71, 119 min | `3826ed39…` |
+  | `transit-48-wed` | 17.4 s | 3.53 GB | 1 / 3 / 12 s | 100 % | 36, 90 min | `ce751261…` |
+  | `walk-48-wed-repeat` | 6.9 s | 2.95 GB | 2 / 2 / 2 s | 64.25 % | as above | `3826ed39…` (= original; byte digest equal too) |
+  | `transit-48-wed-repeat` | 17.4 s | 3.41 GB | 2 / 2 / 13 s | 100 % | as above | `ce751261…` (= original; byte digest equal too) |
+  | `walk-30-wed` | 6.4 s | 2.72 GB | 1 / 3 / 1 s | 35.19 % (6,228 over) | 83, 119 min | `0e7a3b24…` |
+  | `transit-30-wed` | 16.2 s | 3.13 GB | 1 / 3 / 11 s | 100 % | 41, 97 min | `c5dde41f…` |
+  | `transit-48-sat` | 15.1 s | 3.36 GB | 2 / 2 / 10 s | 100 % | 39, 90 min | `f7318a68…` |
+  Per-origin routing seconds: walk 0.33 (4.8 km/h) and 0.17 (3.0 km/h);
+  transit 1.67–2.17. The p85 − median mean is 3.5–4.4 min on the transit
+  runs and 0 on walk (time-invariant). A plausibility spot check from tract
+  `42101000101`: the five nearest retailers (0.2–1 km) route in 2–13 min on
+  foot; the three farthest (22–23 km) are censored on foot and 74–79 min
+  typical by transit. **Extrapolation** (`expected_wall`, linear in
+  origins: fixed import + build cost plus per-origin routing seconds × 408):
+  core **960 s = 0.27 h** (walk 140 s, transit 820 s), all seven runs
+  3,496 s = 0.97 h; pessimistic, because six origins under-use R5's eight
+  threads (the night's first core run then took 54 s against the 140 s
+  extrapolated). Well within the 8 h criterion; the owner was told before
+  the launch.
+- **The launch** (owner decision, question 1 below). First attempt
+  22:33:03Z from `phillysim/`: refused by the driver's own empty-directory
+  check, because `Start-Process` creates the redirected `launch.log` /
+  `launch.err` inside the pre-created night directory before the driver
+  starts (the README's own procedure); fixed in `b35370d` (`launch.*` files
+  are allowed in a fresh night directory, tested), the refused directory
+  (two launch files, no record) deleted, the fix committed and pushed
+  before relaunching so the night runs on committed code. Second launch
+  **22:36:07Z**, night **`20260903T223607Z-m3-spike`**, the command (data
+  root scrubbed):
+  ```
+  Start-Process -WindowStyle Hidden -PassThru -FilePath .\.venv\Scripts\python.exe `
+    -ArgumentList "-m","phillysim.cli","route","matrix","--plan","m3-spike.json","--night","20260903T223607Z-m3-spike","--keep-awake" `
+    -RedirectStandardOutput <data-root>\runs\routing\20260903T223607Z-m3-spike\launch.log `
+    -RedirectStandardError  <data-root>\runs\routing\20260903T223607Z-m3-spike\launch.err
+  ```
+  `launch.log`: preflight green (420 GB free, 68.1 GB RAM, the toolchain
+  checks), `keep awake: requested`, `night … starting plan m3-spike
+  (m3-spike.json febe26143044), 408 origins x 1609 destinations, 7 runs`.
+  `route status --night 20260903T223607Z-m3-spike` at 22:38Z: **state
+  `running`, driver pid alive**, `walk-48-wed` **completed in 54 s at a
+  peak RSS of 5.31 GB**, `transit-48-wed` running; and again at the end of
+  the session (below). Sleep prevention: the machine's plan already never
+  sleeps on AC (checked with `powercfg`, nothing changed); `--keep-awake`
+  is a per-process request released at exit. The night's records are
+  EP-15's input; the driver resumes with the same `--night` if the machine
+  restarts.
+- **Resource observations:** one session, at the S estimate. Attended
+  routing: the rehearsal 86 s; the launch seconds. Unattended: about an
+  hour expected for all seven runs. RAM: the rehearsal peaked at 3.53 GB;
+  the night's first run (408 origins, walk) at **5.31 GB**, so RSS grows
+  with the origin count (R5's per-origin result buffers) but stays far
+  under the 20 GB budget. Disk: a rehearsal run directory about 0.8 MB
+  (`plan.json` 181 KB with the 1,615 points inline, `travel_times.csv`
+  519 KB, the Parquet 46 KB); the night's matrices will be about 660,000
+  rows each. Suite +48 tests, about +20 s (the scripted children are real
+  subprocesses). Network: none (a push and CI).
+- **Decisions made (routine, agent's call, logged):** a night lives under
+  `runs/routing/<UTC>-<plan>[-subsetN]/` and each run's record under
+  `<night>/<run>/` with `run_id` `<night-id>/<run>` (the harness gained a
+  `run_dir` override; `records.list_runs` still lists night directories,
+  and `matrix.list_nights` filters on `night.json`); the origins and
+  destinations are written once to `points.parquet` and every run's
+  `plan.json` also carries them inline (the EP-13 child contract; 181 KB
+  per run); the harness's raw CSV is kept beside the Parquet, and the
+  Parquet is the full origin × destination grid with missing or over-censor
+  pairs at 120 (the dictionary's "censored at 120"), sorted by key, with
+  byte and canonicalized-value digests over (`origin_geoid`, `site_id`,
+  `mode`); "finite" = typical time under 120 (EP-15's reading), computed on
+  the raw CSV before censoring; an earlier attempt of a run is kept as
+  `<run>.attempt<N>/`; a `failed` / `cancelled` run stops the night in
+  state `stopped` (the brief names no behaviour; resuming re-runs it); a
+  killed non-core run is recorded and the night continues; `outcome_code`
+  holds only `KILLED-BY-EVIDENCE` (`go` and `TIMEBOX-EXHAUSTED` are
+  EP-15's); `--origins-subset N` takes the first N of an origin order that
+  puts the plan's `rehearsal_origins` first, so N = 6 is exactly the CI
+  sample set; the extrapolation is linear in origins with the import and
+  build phases as a fixed cost (phase stamps are at second resolution);
+  `route matrix` exits 0 only when the night `finished`; `--keep-awake`
+  via `SetThreadExecutionState`; r5py's cache files are touched at night
+  start (regular files only, see below); the driver's `driver.log` is
+  UTC-stamped and appended across invocations; `night.json` is canonical
+  JSON (sorted keys), so readers sort `runs` by `order`. **Owner-level
+  decisions** below.
+- **Two preconditions wobbled and were closed by code.** (1) The
+  rehearsal's cache touch followed r5py's three input symlinks (Windows has
+  no `follow_symlinks` for `os.utime`) and refreshed the **modification
+  times** of the three files under `intermediate/network/`; contents and
+  digests unchanged, `phillysim status` 9 fresh, nothing under `raw/`,
+  `public/`, or `site/`; the driver now skips symlinks (tested). (2) The
+  first launch refused, above. Also noted: `log.txt` (the child's raw
+  stderr, EP-13's design) carries r5py's warning with the venv path; the
+  JSON records are scrubbed; everything stays under the gitignored data
+  root.
+- **Unresolved risks / questions (EP-15's inputs):** the **finite-pairs
+  gate**: methodology.md's ≥ 95 % finite pairs, read per core run, is met
+  by every transit run (100 %) and cannot be met by the walk run over all
+  1,609 retailers (64 % at 4.8 km/h, 35 % at 3.0 km/h: a 120-minute walk
+  reaches about 9.6 km and the county is over 20 km across); the owner
+  chose to record it (question 3) and EP-15 decides whether the gate reads
+  per mode or for the walk+transit run only, with the full night's numbers.
+  The extrapolation is pessimistic (54 s measured against 140 s); the
+  night's own walls are the measurement. RSS grows with origins (5.31 GB
+  at 408 walk origins); the transit runs' night peaks are the number EP-15
+  reads against the 20 GB budget. If the night's `night.json` ends in
+  `stopped` (a failed child), re-invoke with the same `--night`; the
+  interruption is recorded and the earlier attempt kept.
+- **No-go areas touched:** none (the unattended run writes only under
+  `runs/routing/` and `cache/r5py/`, plus the disclosed mtime touch of
+  three intermediate files, closed; no system setting changed; nothing
+  published; the plan file carries no path; nothing under `data/`
+  committed; CI installs no routing group and runs no JVM; no machine
+  identifier or absolute path in a tracked file, in `night.json`, or in a
+  run record).
+- `roadmap/README.md` packet row updated to `[x] b35370d`; the M3 heading
+  stays open (EP-15 remains).
+- **Exact next packet: EP-15** (`roadmap/EP-15-routing-verdict.md`), to
+  start only after `data/runs/routing/20260903T223607Z-m3-spike/night.json`
+  reads `finished` (or `KILLED-BY-EVIDENCE`); `uv run phillysim route
+  status --night 20260903T223607Z-m3-spike` says which.
+
+### Owner review (2026-09-03)
+
+Three decisions put to the owner interactively; **the recommended option
+was accepted for every one**:
+- **The launch:** launch the full plan tonight (all seven runs, detached,
+  the machine left on), after the rehearsal's extrapolated core wall of
+  0.27 h was reported. Applied: launched 22:36:07Z (the first attempt at
+  22:33:03Z refused and fixed, above), confirmed running with `route
+  status`.
+- **Commit, push, CI, status commit:** yes; the work commit before the
+  launch so the night runs on committed code, the push after the launch
+  was confirmed, the status commit once CI is green. Applied: `5fc052a`,
+  `b35370d`, CI run 33813751959 green, then this status commit.
+- **The walk finite-pairs finding:** record it as an EP-15 input, no
+  change to methodology.md now. Applied: here and in the CHANGELOG.
+
+**At session end (22:40Z):** `route status --night 20260903T223607Z-m3-spike`
+→ state `running`, driver alive; `walk-48-wed` completed (54 s, 5.31 GB);
+`transit-48-wed` running at 116 s; the other five pending; `night.json`
+present in state `running`. One limitation noticed here: the harness writes
+a run's `rss.csv` when the run ends, so `route status` shows a running run's
+wall so far but its last RSS sample only for completed attempts (writing the
+series incrementally is a small later change, not needed for the verdict).

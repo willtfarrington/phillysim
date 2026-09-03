@@ -48,8 +48,8 @@ pipeline from EP-5a on (recorded at the EP-9 checkpoint, 2026-09-02):
 |---|---|---|---|---|
 | 1 | `acquire` | authorized source adapters → immutable snapshots | `raw/<source>/<snapshot-id>/` | fixture: tinycity generated and admitted through the guards; real (EP-5a): TIGER / CenPop / ACS through the guarded download path (`phillysim.download`), pinned snapshot ID, existing snapshots re-used |
 | 2 | `validate` | schema + license validation | `intermediate/validation.json` | source contracts (EP-3); real (EP-5a): each adapter's contract on the county-filtered read |
-| 3 | `spine` | normalization to the 2020-tract spine | `curated/tracts_spine.parquet` | computed |
-| 4 | `demographics` | normalization (ACS estimates + MOE on the spine) | `intermediate/acs_tracts.parquet` | computed |
+| 3 | `spine` | normalization to the 2020-tract spine | `curated/tracts_spine.parquet` | computed; real (EP-5b, `phillysim.spine`): TIGER geometry in the analysis CRS EPSG:26918 (ADR-0007) + CenPop population and centers, invariants enforced in-stage |
+| 4 | `demographics` | normalization (ACS estimates + MOE on the spine) | `intermediate/acs_tracts.parquet` | computed; real (EP-5b): pinned ACS variables + MOE joined one-to-one, nulls kept |
 | 5 | `destinations` | normalization (destination points assigned to tracts) | `intermediate/destinations.parquet` | computed |
 | 6 | `conflate` | destination-layer conflation | `intermediate/sites_conflated.parquet` | identity stub until M4 |
 | 7 | `hours` | hours parsing | `curated/sites.parquet` | oracle stub until M4 |

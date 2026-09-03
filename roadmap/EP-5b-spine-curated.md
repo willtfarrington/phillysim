@@ -1,6 +1,6 @@
 # EP-5b — Curated tract spine + geospatial invariants + analysis-CRS ADR
 
-**Status:** [ ] planned · **Milestone:** M2 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-5 (2026-09-02, EP-9 pre-read; EP-5a is the other half)
+**Status:** [~] in progress (2026-09-02) · **Milestone:** M2 · **Effort:** S (1 session, medium confidence) · **Parallel with:** — · **Split from:** EP-5 (2026-09-02, EP-9 pre-read; EP-5a is the other half)
 
 ## Outcome & value
 The curated geography spine on real data: one GeoParquet table keyed by

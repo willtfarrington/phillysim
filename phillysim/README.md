@@ -50,7 +50,10 @@ phillysim/
                           manifest, admission (EP-5a)
     adapters/             real source adapters: base (Adapter, Philadelphia constants),
                           tiger, cenpop, acs; ADAPTERS registry (EP-5a)
-    pipeline.py           the real pipeline: `acquire` + `validate` on the pinned snapshots (EP-5a)
+    pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
+                          `demographics` (EP-5b) on the pinned snapshots
+    spine.py              the curated tract spine, the analysis CRS (ADR-0007), and the
+                          geospatial invariants every later packet inherits (EP-5b)
     contracts.py          source-contract harness (schema/license/geometry) + the
                           locked analytic-table contract
     fixtures/tinycity.py  deterministic synthetic fixture generator (EP-3)
@@ -68,6 +71,8 @@ phillysim/
     test_preflight.py     every check reported in one pass; simulated failures refuse the run
     test_dependency_policy.py   GDAL/fiona ban, with built-in negative checks
     test_tinycity_fixture.py    determinism + committed-golden checks
+    test_spine_invariants.py    geospatial invariants on the samples (CI) and, with
+                                `--real-data-root DIR`, on the real spine (manual) (EP-5b)
     contracts/            harness unit tests; tinycity sources; the three spine sources on
                           the committed samples (EP-5a)
     integration/          tinycity through all eleven stages via the CLI (M1 evidence); the
@@ -192,8 +197,8 @@ name `real`) on the resolved data root. It shares the fixture pipeline's
 stage names, zones, and output paths, so the architecture.md stage table
 describes both, but the two never meet: the state file records its
 pipeline's name and refuses the other one, and the roots differ
-(`<data root>/` versus `<data root>/fixture/`). Two stages exist so far;
-EP-5b adds `spine` and `demographics`.
+(`<data root>/` versus `<data root>/fixture/`). Four stages exist so far:
+`acquire` and `validate` (EP-5a), `spine` and `demographics` (EP-5b).
 
 - `acquire` brings in the pinned snapshot (`phillysim.pipeline.SNAPSHOT_ID`,
   currently `2026-09-02`) of each spine source: TIGER/Line 2025 tracts
@@ -211,11 +216,33 @@ EP-5b adds `spine` and `demographics`.
   [docs/data-dictionary.md](../docs/data-dictionary.md)), and checks the
   result against the source's contract; `intermediate/validation.json`
   records rows, nulls, and violations.
+- `spine` (EP-5b, `phillysim.spine`) builds the curated tract spine
+  `curated/tracts_spine.parquet` (GeoParquet): TIGER geometry reprojected
+  into the analysis CRS EPSG:26918 (NAD 83 / UTM zone 18N, metres;
+  [ADR-0007](../roadmap/adr/0007-analysis-crs.md)), the 2020 Census
+  population and the population-weighted center from CenPop (never
+  recomputed from geometry), one row per tract keyed by GEOID. The stage runs
+  the geospatial invariants on its own output (CRS as declared, geometry
+  valid and inside the county bounds, GEOID pattern / uniqueness / count of
+  408, one center per tract) and fails on any violation; `crs` and
+  `expected_tracts` are its parameters.
+- `demographics` (EP-5b) joins the pinned ACS estimates and margins of error
+  (`B01003_001`, `B08201_002`) one-to-one to the spine into
+  `intermediate/acs_tracts.parquet`, suppressed cells left null (ADR-0004),
+  and checks the join cardinality the same way.
 
-`phillysim run --stage validate` needs the network once (about 97 MB from
-`www2.census.gov` and `www.census.gov`, seconds on a fast connection) and the
-real-run preflight thresholds; afterwards `run`, `status`, and `verify` are
-offline and take about a second each.
+`phillysim run` (or `run --stage spine`) needs the network once (about 97 MB
+from `www2.census.gov` and `www.census.gov`, seconds on a fast connection)
+and the real-run preflight thresholds; afterwards `run`, `status`, and
+`verify` are offline and take about a second each. The invariants can be
+re-run on a real data root by hand:
+
+```
+uv run pytest tests/test_spine_invariants.py --real-data-root ../data -s
+```
+
+CI never passes `--real-data-root`; those tests skip without it and the rest
+of the module runs on the committed samples.
 
 The download path (`phillysim.download`) is the outbound side of
 architecture.md's security section, in a fixed order: every URL is checked

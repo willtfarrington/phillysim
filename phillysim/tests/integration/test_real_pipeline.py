@@ -1,9 +1,11 @@
-"""EP-5a integration: the real pipeline's ``acquire`` and ``validate`` stages, offline.
+"""EP-5a / EP-5b integration: the real pipeline's four stages, offline.
 
 A fake transport serves the committed spine samples under the adapters' real
-URLs, so the stages run exactly as they do against the Census hosts (allowlist,
-caps, archive guards, terms check, manifest, admission) without a network. The
-suite-wide socket guard in ``conftest.py`` would fail any test that tried.
+URLs, so ``acquire`` and ``validate`` run exactly as they do against the Census
+hosts (allowlist, caps, archive guards, terms check, manifest, admission)
+without a network, and ``spine`` / ``demographics`` (EP-5b) build the curated
+spine from the six sample tracts. The suite-wide socket guard in
+``conftest.py`` would fail any test that tried to connect.
 """
 
 from __future__ import annotations
@@ -13,17 +15,29 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import geopandas as gpd
+import pandas as pd
 import pytest
+from pyproj import CRS
 from typer.testing import CliRunner
 
 from phillysim import pipeline, runner
-from phillysim.adapters import ADAPTERS
+from phillysim.adapters import ADAPTERS, acs
 from phillysim.cli import app
 from phillysim.fixtures.pipeline import fixture_pipeline
 from phillysim.pipeline import ACQUISITION, RAW_SNAPSHOTS, SNAPSHOT_ID, VALIDATION, real_pipeline
 from phillysim.quarantine import list_quarantined
 from phillysim.runner import StateError
-from phillysim.stages import StageError
+from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, SPINE_COLUMNS, check_spine
+from phillysim.stages import Pipeline, StageError
+
+STAGES = ["acquire", "validate", "spine", "demographics"]
+SAMPLE_TRACTS = 6
+
+
+def _pipeline(transport) -> Pipeline:
+    """The real pipeline on the fake transport, expecting the samples' six tracts."""
+    return real_pipeline(opener=transport).with_params({"spine": {"expected_tracts": 6}})
 
 
 class SampleTransport:
@@ -66,8 +80,8 @@ def root(tmp_path: Path) -> Path:
 def test_acquire_and_validate_end_to_end(root: Path, spine_samples_dir: Path) -> None:
     transport = SampleTransport(spine_samples_dir)
     lines: list[str] = []
-    report = runner.run(root, real_pipeline(opener=transport), echo=lines.append)
-    assert report.ran == ["acquire", "validate"] and report.skipped == []
+    report = runner.run(root, _pipeline(transport), echo=lines.append)
+    assert report.ran == STAGES and report.skipped == []
     expected_calls = Counter(
         fetch.url for adapter in ADAPTERS.values() for fetch in adapter.spec.files
     )
@@ -92,26 +106,41 @@ def test_acquire_and_validate_end_to_end(root: Path, spine_samples_dir: Path) ->
     assert all(v["rows"] == 6 and v["violations"] == [] for v in validation.values())
     assert not any((root / "quarantine").iterdir())
 
+    # EP-5b: the curated spine and the ACS join on the six sample tracts.
+    spine = gpd.read_parquet(root / SPINE)
+    assert tuple(spine.columns) == SPINE_COLUMNS and len(spine) == SAMPLE_TRACTS
+    assert CRS.from_user_input(spine.crs) == CRS.from_user_input(ANALYSIS_CRS)
+    acs_tracts = pd.read_parquet(root / ACS_TRACTS)
+    assert list(acs_tracts.columns) == ["geoid", *acs.column_names()]
+    assert list(acs_tracts["geoid"]) == list(spine["geoid"])
+    assert check_spine(spine, expected_tracts=SAMPLE_TRACTS, acs=acs_tracts) == []
+    state = json.loads((root / runner.STATE_FILE).read_text("utf-8"))
+    assert state["stages"]["spine"]["params"] == {"crs": ANALYSIS_CRS, "expected_tracts": 6}
+
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 0, verify.output
     assert "3 of 3 snapshot(s) verified" in verify.output
-    assert "pipeline 'real'" in verify.output and "2 of 2 stage(s) done and intact" in verify.output
+    assert "pipeline 'real'" in verify.output and "4 of 4 stage(s) done and intact" in verify.output
+    # The CLI's pipeline expects the county's 408 tracts, so the six-tract spine built with
+    # the overridden parameter is stale on parameters there (and only there).
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
-    assert status.exit_code == 0 and "2 fresh, 0 stale, 0 missing, 0 incomplete" in status.output
+    assert status.exit_code == 0 and "3 fresh, 1 stale, 0 missing, 0 incomplete" in status.output
+    assert "stale      spine" in status.output and "changed: parameters" in status.output
+    assert runner.status(root, _pipeline(transport))[2].status == "fresh"
 
     calls_before = len(transport.calls)
-    second = runner.run(root, real_pipeline(opener=transport))
-    assert second.ran == [] and second.skipped == ["acquire", "validate"]
+    second = runner.run(root, _pipeline(transport))
+    assert second.ran == [] and second.skipped == STAGES
     assert len(transport.calls) == calls_before, "a fresh run opens no connection"
 
 
 def test_existing_snapshots_are_reused_never_refetched(root: Path, spine_samples_dir: Path):
     transport = SampleTransport(spine_samples_dir)
-    runner.run(root, real_pipeline(opener=transport))
+    runner.run(root, _pipeline(transport))
     calls = len(transport.calls)
     (root / runner.STATE_FILE).unlink()  # the state file is lost; the raw zone is not
-    report = runner.run(root, real_pipeline(opener=transport))
-    assert report.ran == ["acquire", "validate"]
+    report = runner.run(root, _pipeline(transport))
+    assert report.ran == STAGES
     assert len(transport.calls) == calls, "verified snapshots in the raw zone are re-used"
     acquisition = json.loads((root / ACQUISITION).read_text("utf-8"))
     assert all(entry["reused"] is True for entry in acquisition["sources"].values())
@@ -120,12 +149,12 @@ def test_existing_snapshots_are_reused_never_refetched(root: Path, spine_samples
 
 def test_tampered_existing_snapshot_is_refused_not_replaced(root: Path, spine_samples_dir: Path):
     transport = SampleTransport(spine_samples_dir)
-    runner.run(root, real_pipeline(opener=transport))
+    runner.run(root, _pipeline(transport))
     target = root / "raw" / "cenpop" / SNAPSHOT_ID / "CenPop2020_Mean_TR42.txt"
     target.write_bytes(target.read_bytes() + b"tampered\n")
     (root / runner.STATE_FILE).unlink()
     with pytest.raises(StageError, match="fails verification"):
-        runner.run(root, real_pipeline(opener=transport))
+        runner.run(root, _pipeline(transport))
     assert target.read_bytes().endswith(b"tampered\n"), "the raw zone is never rewritten"
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 1 and "FAIL cenpop/2026-09-02" in verify.output
@@ -134,7 +163,7 @@ def test_tampered_existing_snapshot_is_refused_not_replaced(root: Path, spine_sa
 def test_terms_drift_stops_acquisition_and_quarantines(root: Path, spine_samples_dir: Path):
     transport = SampleTransport(spine_samples_dir, terms=b"<html>The terms have changed.</html>")
     with pytest.raises(StageError, match="quarantined \\(terms\\)"):
-        runner.run(root, real_pipeline(opener=transport))
+        runner.run(root, _pipeline(transport))
     records = list_quarantined(root / "quarantine")
     assert len(records) == 1 and records[0].kind == "terms" and records[0].source == "acs"
     assert "freely available" in records[0].reason
@@ -142,14 +171,14 @@ def test_terms_drift_stops_acquisition_and_quarantines(root: Path, spine_samples
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 1, verify.output
     assert "0 of 0 snapshot(s) verified" in verify.output
-    assert "0 of 2 stage(s) done and intact; incomplete: acquire" in verify.output
+    assert "0 of 4 stage(s) done and intact; incomplete: acquire" in verify.output
     assert "quarantined (terms)" in verify.output
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
     assert "incomplete acquire" in status.output
 
 
 def test_real_and_fixture_state_files_never_mix(root: Path, spine_samples_dir: Path) -> None:
-    runner.run(root, real_pipeline(opener=SampleTransport(spine_samples_dir)))
+    runner.run(root, _pipeline(SampleTransport(spine_samples_dir)))
     with pytest.raises(StateError, match="belongs to pipeline 'real'"):
         runner.run(root, fixture_pipeline())
-    assert real_pipeline().names == fixture_pipeline().names[:2]
+    assert real_pipeline().names == fixture_pipeline().names[:4] == tuple(STAGES)

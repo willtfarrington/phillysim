@@ -1,18 +1,32 @@
 # Data dictionary
 
-> **Status: seeded (EP-3).** Schema version **1**. This document describes the
-> tables the pipeline produces; today the only instances are the synthetic
-> tinycity fixture's golden files (`phillysim/tests/fixtures/tinycity/`). The
-> integer schema version is one of the manifest-recorded version axes
+> **Status: seeded (EP-3); first real instances (EP-5b).** Schema version
+> **1**. This document describes the tables the pipeline produces. Instances
+> today: the synthetic tinycity fixture's golden files
+> (`phillysim/tests/fixtures/tinycity/`) for every table, and, since EP-5b,
+> the real curated tract spine and its ACS join in the gitignored data root.
+> The integer schema version is one of the manifest-recorded version axes
 > ([ADR-0006](../roadmap/adr/0006-versioning-axes.md)): any breaking change to
 > a table shape below bumps it, with a migration note here. Column names are
 > format-based and carry no nutrition-quality adjectives
 > ([docs/CLAIMS.md](CLAIMS.md)).
 
 Conventions: `geoid` is the eleven-digit 2020 census-tract GEOID (state +
-county + tract). Coordinates are WGS 84 (EPSG:4326) at every boundary shown
-here; the analysis CRS is chosen in EP-5b and will be recorded in this file.
-Times are minutes. Nullable columns say so; everything else is required.
+county + tract). Times are minutes. Nullable columns say so; everything else
+is required.
+
+**Coordinate reference systems.** The analysis CRS is **EPSG:26918, NAD 83 /
+UTM zone 18N, metres** ([ADR-0007](../roadmap/adr/0007-analysis-crs.md)),
+pinned in `phillysim.spine.ANALYSIS_CRS` and in the `spine` stage's `crs`
+parameter. Which tables carry which CRS:
+
+| Tables | CRS | Why |
+|---|---|---|
+| Raw-source tables (`raw/tiger_tracts`, `raw/cenpop` below) | NAD 83, EPSG:4269 | as delivered by the Census Bureau; never rewritten |
+| Curated tract spine `geometry`; every analysis-zone geometry derived from it (sites, travel-time inputs, metrics, from EP-6 on) | EPSG:26918 | the analysis CRS; recorded in each GeoParquet file's metadata |
+| `centroid_lon` / `centroid_lat` in the spine; `longitude` / `latitude` in the sites table | degrees (NAD 83 as published; treated as WGS 84 at publication, ADR-0007 datum note) | the form routing origins and destinations take; `phillysim.spine.centroids_in` projects the spine's centers on demand |
+| Public zone (`public/`, GeoJSON / CSV) | WGS 84, EPSG:4326 | the publication boundary, and nowhere else |
+| The tinycity fixture's tables | the fixture's own geographic CRS (EPSG:4326, the fixture pipeline's `crs` parameter) | a synthetic grid outside Pennsylvania and outside UTM zone 18; the invariant module takes the expected CRS as an argument for this reason |
 
 ## Snapshot manifest (`raw/<source>/<snapshot-id>/manifest.json`)
 
@@ -89,15 +103,34 @@ zone by atomic rename; a leftover staging directory is a coherence problem
 `verify` reports. The raw zone is immutable: a stage that re-produces an
 existing snapshot must produce identical content or it fails.
 
-## Curated tract spine (`tracts_spine.parquet`, GeoParquet)
+## Curated tract spine (`curated/tracts_spine.parquet`, GeoParquet)
+
+Written by the `spine` stage (real pipeline: `phillysim.spine`, EP-5b;
+fixture pipeline: computed from tinycity). One row per 2020 census tract of
+Philadelphia County, sorted by `geoid`; the real spine has **408** rows
+(`phillysim.spine.TRACT_COUNT`, the stage's `expected_tracts` parameter and
+its stop condition). Sources: geometry and name from TIGER/Line 2025,
+population and the population-weighted center from CenPop2020, joined
+one-to-one on GEOID (a tract without a center, or a center without a tract,
+fails the stage: the two vintages must agree). The center is never recomputed
+from the geometry. Data cards: [docs/data-cards/](data-cards/README.md).
 
 | Column | Type | Meaning |
 |---|---|---|
-| `geoid` | string | Tract GEOID (unique key) |
-| `name` | string | Display name |
-| `population` | integer | Decennial population (no sampling MOE) |
-| `centroid_lon`, `centroid_lat` | float | Population-weighted centroid (the routing origin) |
-| `geometry` | Polygon / MultiPolygon | Tract boundary |
+| `geoid` | string | Tract GEOID `42101######` (unique key) |
+| `name` | string | Display name: TIGER `NAMELSAD` (`Census Tract 1.01`) |
+| `population` | integer ≥ 0 | 2020 Census population from CenPop2020 (no sampling MOE); five real tracts have zero |
+| `centroid_lon`, `centroid_lat` | float | Population-weighted center as published by CenPop2020, decimal degrees (NAD 83); the routing origin |
+| `geometry` | Polygon / MultiPolygon | Tract boundary in the analysis CRS EPSG:26918 (ADR-0007); valid; within the county bounds |
+
+The geospatial invariants (`phillysim.spine.check_spine`; roadmap/quality.md
+test matrix) hold for every instance and are enforced by the stage itself:
+CRS as declared; every geometry present, polygonal, valid, and inside the
+county bounds (`adapters.base.COUNTY_BOUNDS` reprojected); every center
+inside the county bounds; every `geoid` an eleven-digit Philadelphia County
+2020 tract GEOID, unique, and the expected count; exactly one CenPop center
+and (after `demographics`) one ACS row per tract, none unmatched.
+`pytest --real-data-root DIR` runs them on a real data root.
 
 ## Conflated sites (`sites.parquet`)
 
@@ -166,7 +199,7 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 |---|---|---|---|
 | `intermediate/acquisition.json` | `acquire` (real pipeline, EP-5a) | nobody (report) | Per-source acquisition report: snapshot ID, acquisition URL, whether an existing verified snapshot was re-used, each fetch's URL / bytes / attempts / seconds, the filter placement note, and the guard limits applied |
 | `intermediate/validation.json` | `validate` | nobody (report) | Per-source contract report: snapshot ID, license bucket, schema version, row count, null counts per contract column (real pipeline), violations |
-| `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract |
+| `intermediate/acs_tracts.parquet` | `demographics` | `metrics` | ACS estimate / MOE columns (`<table>_<line>E` / `…M`) per spine tract; real pipeline (EP-5b): `geoid` + the pinned `B01003_001E/M`, `B08201_002E/M` as float64, exactly one row per spine tract in spine order, suppressed cells null (ADR-0004), join cardinality enforced |
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
 | `intermediate/network.json` | `network` | `travel_times` | Routing-input summary: stop count, edge count, total edge length, CRS |
@@ -189,7 +222,8 @@ the Philadelphia County filter is applied when the adapter reads them; the
 tables below describe what the adapter's `read` returns, which is what the
 `validate` stage checks against the contract
 (`phillysim/src/phillysim/adapters/`). Coordinates in these tables are NAD 83
-(EPSG:4269) as delivered; the analysis CRS is chosen in EP-5b. Every snapshot
+(EPSG:4269) as delivered; the `spine` stage reprojects into the analysis CRS
+(EPSG:26918, [ADR-0007](../roadmap/adr/0007-analysis-crs.md)). Every snapshot
 directory also holds `terms.html`, the archived Census Bureau Open Government
 page (the terms in force), and a manifest with `license_bucket = "A"`.
 

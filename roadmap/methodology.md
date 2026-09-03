@@ -11,7 +11,9 @@ results at publication. `required release evidence`: method card per metric.
 - Mandatory sensitivity: block-group population-weighted centroids aggregated
   to tract, giving an empirical aggregation-error estimate (MAUP mitigation).
 - CRS: a single pinned projected CRS for analysis (documented in the data
-  dictionary); WGS84 only at the publication boundary.
+  dictionary); WGS84 only at the publication boundary. Chosen in EP-5b:
+  EPSG:26918, NAD 83 / UTM zone 18N, metres
+  ([ADR-0007](adr/0007-analysis-crs.md)).
 
 ## Destination layers
 

@@ -9,7 +9,9 @@ refuses the other one, and the CLI picks the pipeline and the root together
 from ``--fixture``.
 
 EP-5a registers ``acquire`` and ``validate`` for the three spine sources;
-EP-5b adds ``spine`` and ``demographics``; later packets append the rest.
+EP-5b adds ``spine`` and ``demographics`` (bodies in :mod:`phillysim.spine`,
+which also holds the geospatial invariants and the analysis CRS); later
+packets append the rest.
 
 Snapshot IDs are pinned in :data:`SNAPSHOT_ID` rather than taken from the
 clock, because a stage's outputs are static paths in the DAG. ``acquire``
@@ -33,6 +35,7 @@ from phillysim.adapters import ADAPTERS
 from phillysim.contracts import check_frame
 from phillysim.download import Acquisition, Opener, acquire_snapshot, urllib_open
 from phillysim.manifest import SCHEMA_VERSION, read_manifest, verify_snapshot
+from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, TRACT_COUNT, demographics, spine
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
 PIPELINE_NAME = "real"
@@ -165,6 +168,23 @@ def real_pipeline(opener: Opener = urllib_open) -> Pipeline:
                 outputs=(VALIDATION,),
                 params={"schema_version": SCHEMA_VERSION},
                 description="check every spine source against its contract",
+            ),
+            Stage(
+                "spine",
+                spine,
+                inputs=(_raw("tiger_tracts"), _raw("cenpop"), VALIDATION),
+                outputs=(SPINE,),
+                params={"crs": ANALYSIS_CRS, "expected_tracts": TRACT_COUNT},
+                description="curated tract spine: geometry in the analysis CRS, "
+                "CenPop population and centers, invariants enforced",
+            ),
+            Stage(
+                "demographics",
+                demographics,
+                inputs=(SPINE, _raw("acs")),
+                outputs=(ACS_TRACTS,),
+                params={"schema_version": SCHEMA_VERSION},
+                description="ACS estimates and margins of error joined one-to-one to the spine",
             ),
         ],
     )

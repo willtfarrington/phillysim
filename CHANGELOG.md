@@ -10,6 +10,33 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-5b — curated tract spine + geospatial invariants + analysis-CRS ADR**
+  (Planning Baseline v1.0; second half of the EP-5 set, which is now
+  complete):
+  - **ADR-0007**: the analysis CRS is EPSG:26918 (NAD 83 / UTM zone 18N,
+    metres), with the alternatives (State Plane feet and metres, NAD83(2011),
+    Web Mercator, geographic) and the publication-boundary datum note
+    recorded; pinned in `phillysim.spine.ANALYSIS_CRS` and the `spine`
+    stage's `crs` parameter; methodology.md and the data dictionary point at
+    it, and the dictionary now says which tables carry which CRS.
+  - `phillysim.spine`: the real `spine` stage (`curated/tracts_spine.parquet`:
+    TIGER geometry reprojected into the analysis CRS, CenPop 2020 population
+    and population-weighted centers joined one-to-one, keyed by GEOID, 408
+    rows) and `demographics` stage (`intermediate/acs_tracts.parquet`: the
+    pinned ACS estimates and MOEs joined one-to-one to the spine, nulls
+    kept), both registered in the real pipeline after `validate`, plus the
+    geospatial invariant module `check_spine` (CRS as declared, geometry
+    valid and inside the county bounds, GEOID pattern / uniqueness / count,
+    one center and one ACS row per tract) that both stages enforce on their
+    own output.
+  - `tests/test_spine_invariants.py`: the invariants on the committed samples
+    (positive, and one negative per check) in CI, and on the real spine with
+    the new `pytest --real-data-root DIR` option (skipped otherwise; the
+    real-run result is in the EP-5b handoff). The real-pipeline integration
+    test now covers all four stages.
+  - Data cards for the three spine sources under `docs/data-cards/` (what
+    each contributes, vintage, terms, CRS, known limits, claims-matrix
+    notes).
 - **EP-5a — spine source adapters: acquisition path + TIGER/CenPop/ACS
   snapshots** (Planning Baseline v1.0; first half of the EP-5 set):
   - `phillysim.download`: the guarded outbound acquisition path, in a fixed

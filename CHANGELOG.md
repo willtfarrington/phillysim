@@ -54,7 +54,9 @@ recorded separately in manifests once the pipeline exists.
 - **EP-15 — the M3 verdict: criteria against the records, the determinism
   band, the hand check, the walk concordance, the `travel_times` stage**
   (M3; 2026-09-03; **in progress**: the hand check's planner tally and the
-  owner's outcome code are pending, see the packet's handoff).
+  owner's outcome code are pending, see the packet's handoff; work commit
+  `7202f43`, the scipy-free Spearman fix `9638bd2`, CI run 33828405482
+  green).
   `phillysim route verdict --night ID [--json] [--write] [--record CODE]`
   (`phillysim.routing.verdict`) reads a finished or killed night against
   every criterion of milestones.md, methodology.md, architecture.md, and

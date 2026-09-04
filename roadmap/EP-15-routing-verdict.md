@@ -272,8 +272,16 @@ provisional one (the band), recorded as an amendment with the date.
   `concordance/` under the night); `route handcheck` (the two runs under
   `handcheck/`; the forty times below); `phillysim status` on the real root:
   nine stages fresh and **`travel_times` missing**, as the brief's
-  evidence asks, until its night runs. CI: not yet run (nothing committed;
-  the owner decides).
+  evidence asks, until its night runs. **Commits and CI (owner decision 4
+  below):** the work commit `7202f43`, pushed; CI run 33828141148 on it
+  **failed on both platforms** (one test: `compare()` used pandas'
+  `corr(method="spearman")`, which imports scipy, absent in CI where the
+  routing group is not installed); fixed in `9638bd2` (Spearman ρ as the
+  Pearson correlation of pandas' average ranks; the recorded ρ = 0.993453
+  re-computed from the saved fallback table to the same six decimals); CI
+  run **33828405482 green** on Windows and Linux (660 passed, 5 skipped
+  there: the three OSMnx-side tests and the two `--real-data-root` ones
+  skip). The handoff record commit follows.
 - **The verdict table** (night `20260903T223607Z-m3-spike`; every number
   from `night.json`, the run records, `concordance.json`, and
   `handcheck.json`; the criteria quoted verbatim in
@@ -354,8 +362,9 @@ provisional one (the band), recorded as an amendment with the date.
   `routing` group per ADR-0008, so the OSMnx side of the concordance test
   skips in CI (decision 5); the concordance compares fractional fallback
   minutes with R5's integer minutes (ranks are what ρ measures) and adds
-  both snap distances at walking speed; `verdict.json` is the reader's
-  file and `night.json` stays the driver's.
+  both snap distances at walking speed; Spearman ρ is computed from
+  pandas' average ranks (no scipy, so the comparison runs in CI);
+  `verdict.json` is the reader's file and `night.json` stays the driver's.
 - **Owner decisions (put to the owner interactively at the end of the
   session; answers recorded after the list):**
   1. *The finite-pairs gate for walk.* methodology.md's "≥95% finite

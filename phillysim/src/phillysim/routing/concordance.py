@@ -246,6 +246,12 @@ def walk_times(
 # --- the comparison ----------------------------------------------------------------------------
 
 
+def spearman(a: pd.Series, b: pd.Series) -> float:
+    """Spearman's ρ as the Pearson correlation of average ranks (pandas' own ranking; the
+    comparison runs where scipy is not installed, CI included)."""
+    return float(a.rank(method="average").corr(b.rank(method="average")))
+
+
 def compare(fallback: pd.DataFrame, r5: pd.DataFrame, *, max_time_minutes: int) -> dict[str, Any]:
     """Spearman ρ between the fallback's minutes and R5's typical minutes over the pairs both
     engines report under the censor, with the counts of what was excluded and why."""
@@ -257,11 +263,7 @@ def compare(fallback: pd.DataFrame, r5: pd.DataFrame, *, max_time_minutes: int) 
     r5_finite = joined["time_median_min"] < max_time_minutes
     fb_finite = joined["fallback_minutes"].notna() & (joined["fallback_minutes"] < max_time_minutes)
     both = joined[r5_finite & fb_finite]
-    rho = (
-        float(both["fallback_minutes"].corr(both["time_median_min"], method="spearman"))
-        if len(both) > 2
-        else None
-    )
+    rho = spearman(both["fallback_minutes"], both["time_median_min"]) if len(both) > 2 else None
     pearson = (
         float(both["fallback_minutes"].corr(both["time_median_min"])) if len(both) > 2 else None
     )

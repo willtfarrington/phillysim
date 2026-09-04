@@ -528,9 +528,19 @@ provisional one (the band), recorded as an amendment with the date.
   `phillysim run --stage travel_times` detached; `route status`;
   `phillysim status` (10 fresh); `pre-commit run --all-files` clean; no
   test re-run was needed for a documentation close (the suite last ran
-  green on `9638bd2`, CI 33828405482); the closing commit and its CI run
-  are recorded in the commit message's successor (the memory) and the
-  session's final message, since a commit cannot name itself.
+  green on `9638bd2`, CI 33828405482). **The closing commit `c6a3b35`**
+  (pushed 19:33Z): CI run 33911808003 **failed on Linux** (Windows green)
+  in `test_travel_times_stage.py::test_a_second_run_reuses_the_finished_night_and_a_stopped_one_is_resumed`,
+  a test the commit did not touch: on the fast runner the test's second
+  and third nights started within the same UTC second, so the third took
+  the second's one-second-coarse night ID and `run_matrix` treated it as
+  a resume of a finished night with different inputs (no error raised).
+  A real defect, not a flaky test: fixed in the commit that follows this
+  line (`matrix.fresh_night_id`: an implicit night ID advances a second at
+  a time until no directory holds it; an explicit `--night ID` still
+  resumes in place; a test with two nights on one stamp; the full suite
+  664 passed locally). The fix commit's CI run is in the memory and the
+  final message.
 - **Owner decisions (put interactively, 2026-09-04) and answers.**
   (1) *The outcome code:* **go** (recommended; the reader's suggestion);
   applied by `--record go`. (2) *The second night:* launch now and wait to

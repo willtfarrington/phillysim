@@ -650,7 +650,7 @@ here, at the r5py boundary), reads `feed_info.txt` from both feed zips and
 window**, touches r5py's cache so its two-week expiry cannot rebuild the
 network mid-night, and then executes the runs in order, one child process
 per run under the sampler (EP-13). A **night** is
-`<data root>/runs/routing/<night-id>/` (`<UTC stamp>-<plan name>`, with
+`<data root>/runs/routing/<night-id>/` (`<UTC stamp>-<plan name>`, the stamp advanced a second at a time while a night already holds it, with
 `-subsetN` for a rehearsal): `night.json` (the plan's name and digest, the
 points' digest, the feeds' windows, per run its status, wall, peak RSS,
 output digests and sanity counts, the core wall against the limit, the peak

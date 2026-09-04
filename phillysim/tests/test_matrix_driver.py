@@ -14,6 +14,7 @@ import os
 import sys
 import textwrap
 import zipfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -31,6 +32,8 @@ from phillysim.routing.matrix import (
     NIGHT_FILE,
     STOPPED,
     Night,
+    fresh_night_id,
+    list_nights,
     matrix_from_output,
     run_matrix,
     sanity_counts,
@@ -307,6 +310,25 @@ def test_a_dropped_destination_is_censored_and_counted(roots, monkeypatch) -> No
 
 
 # --- resume ---------------------------------------------------------------------------------
+
+
+def test_an_implicit_night_id_never_collides_with_an_existing_night(roots) -> None:
+    """Two nights started in the same UTC second (a fast machine, the stage's tests) must
+    not share an ID: the second would otherwise be taken for a resume of the first."""
+    data_root, chain = roots
+    plan = small_plan()
+    stamp = datetime(2026, 9, 3, 23, 0, 0, tzinfo=UTC)
+    first = run_matrix(plan, data_root=data_root, toolchain=chain, runner=make_runner(), now=stamp)
+    second = run_matrix(plan, data_root=data_root, toolchain=chain, runner=make_runner(), now=stamp)
+    assert first.id == "20260903T230000Z-test-plan" and first.state == FINISHED
+    assert second.id == "20260903T230001Z-test-plan" and second.state == FINISHED
+    assert [p.name for p in list_nights(data_root)] == [first.id, second.id]
+    assert fresh_night_id(data_root, plan, now=stamp) == "20260903T230002Z-test-plan"
+    # An explicit ID still resumes in place.
+    again = run_matrix(
+        plan, data_root=data_root, toolchain=chain, night_id_=first.id, runner=make_runner()
+    )
+    assert again.id == first.id and len(list_nights(data_root)) == 2
 
 
 def test_resume_skips_completed_runs_and_reruns_an_interrupted_one(roots) -> None:

@@ -118,7 +118,15 @@ recorded separately in manifests once the pipeline exists.
   (1,312,944 rows) with `intermediate/travel_times.json`; `phillysim status`
   ten stages fresh. `roadmap/EP-16-checkpoint-3.md` authored (the third
   checkpoint, whose fresh-clone re-run includes the routing night and
-  whose pre-read authors the M4 gate as EP-17). Tests:
+  whose pre-read authors the M4 gate as EP-17). **Fixed after the close:**
+  an implicit night ID (`route matrix` and the stage without `--night`)
+  is one second coarse, and a night started within a second of another on
+  the same plan took its ID and was treated as a resume of it, silently,
+  with the earlier night's inputs (CI run 33911808003 on the closing
+  commit, Linux only: the stage's own test started two nights in one
+  second); `matrix.fresh_night_id` now advances the stamp until no
+  directory holds it, an explicit `--night ID` still resumes in place.
+  Tests:
   `test_verdict.py`, `test_handcheck.py`, `test_concordance.py`,
   `test_travel_times_stage.py` (crafted records and scripted children, no
   JVM; the sample pipeline runs the stage on a scripted child too).

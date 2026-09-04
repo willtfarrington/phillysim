@@ -39,7 +39,7 @@ import shutil
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -103,6 +103,25 @@ def night_id(
 
 def night_dir(data_root: Path, night_id_: str) -> Path:
     return data_root / records.RUNS_DIR / night_id_
+
+
+def fresh_night_id(
+    data_root: Path,
+    plan: MatrixPlan,
+    origins_subset: int | None = None,
+    now: datetime | None = None,
+) -> str:
+    """A night ID no directory under the data root holds yet. The stamp is one second
+    coarse, so a night started within a second of another on the same plan would take
+    that night's ID and be treated as its resume, silently and with whatever inputs the
+    earlier night had; the stamp advances a second at a time until it is free."""
+    now = (now or datetime.now(UTC)).astimezone(UTC)
+    for _ in range(3600):
+        candidate = night_id(plan, origins_subset, now)
+        if not night_dir(data_root, candidate).exists():
+            return candidate
+        now += timedelta(seconds=1)
+    raise PlanError(f"no free night ID within an hour of {records.utc_stamp(now)}")
 
 
 def list_nights(data_root: Path) -> list[Path]:
@@ -618,7 +637,7 @@ def run_matrix(
         raise PlanError(
             "the plan's dates are outside a feed's authoritative window: " + "; ".join(problems)
         )
-    night_id_ = night_id_ or night_id(plan, origins_subset, now)
+    night_id_ = night_id_ or fresh_night_id(data_root, plan, origins_subset, now)
     directory = night_dir(data_root, night_id_)
     resumed = (directory / NIGHT_FILE).is_file()
     if resumed:

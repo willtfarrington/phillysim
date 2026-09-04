@@ -34,7 +34,7 @@ against fixture data once M1's schema contract is stable.
 | M0 | Governed public repo: hygiene, licensing docs, claims matrix, honest reframe (README + repo description), CI skeleton | All M0 packets' acceptance criteria met; repo presentable at any commit | EP-1, EP-2 | 3–4 | high |
 | M1 | Pipeline skeleton runs end-to-end on tinycity synthetic fixture: manifest engine, zones, CLI, contract tests | `phillysim run --fixture` green in offline CI | EP-3, EP-4a, EP-4b | 4–6 | high |
 | M2 | Thin vertical slice on real data: TIGER/ACS spine + SNAP adapter → tract-joined GeoParquet → trivial public-safe GeoJSON + minimal page | Slice reproducible from fresh clone; license buckets applied | EP-5 … EP-8 | 4–6 | high |
-| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | [EP-11](EP-11-m3-refinement-gate.md) (the gate, authored by EP-10), then, as EP-11 authored them on 2026-09-03: [EP-12](EP-12-routing-sources.md) (the two routing sources), [EP-13](EP-13-routing-toolchain-harness.md) (toolchain and harness), [EP-14](EP-14-routing-run-matrix.md) (run matrix and the first unattended night), [EP-15](EP-15-routing-verdict.md) (the verdict; the fallback packet only on a kill); pins and decision numbers in [ADR-0008](adr/0008-routing-toolchain-pins.md) | 3 attended (+ unattended runs) | medium |
+| M3 | Routing spike verdict: r5py benchmarks vs budgets + determinism measured; go = walk+transit within budgets; kill = documented fallback invoked | Numeric criteria (methodology/baseline): wall ≤8 h, process-tree RSS ≤22 GB, determinism within band, sanity gates | [EP-11](EP-11-m3-refinement-gate.md) (the gate, authored by EP-10), then, as EP-11 authored them on 2026-09-03: [EP-12](EP-12-routing-sources.md) (the two routing sources), [EP-13](EP-13-routing-toolchain-harness.md) (toolchain and harness), [EP-14](EP-14-routing-run-matrix.md) (run matrix and the first unattended night), [EP-15](EP-15-routing-verdict.md) (the verdict; the fallback packet only on a kill); pins and decision numbers in [ADR-0008](adr/0008-routing-toolchain-pins.md); **verdict go, 2026-09-04** (the evidence in the README's M3 paragraph and the EP-15 handoff) | 3 attended (+ unattended runs) | medium |
 | M4 | All v1 sources snapshotted, conflated (POI dedup), hours parsed with QA report | Adapter contract tests green; hours-coverage % published; conflation QA reviewed | refinement gate after EP-8 | 5–7 | medium |
 | M5 | Metrics + MOE + reliability tiers + sensitivity runs + SRAM like-for-like validation | Golden tests green; validation memo written; method cards drafted | refinement gate (carry-ins below) | 5–7 | medium |
 | M6 | Public-safe accessible site: map + parity table + panel + methods/data cards + exports | Playwright+axe green; internal keyboard/NVDA dry run passes | refinement gate | 6–10 | medium (first NVDA loop included) |
@@ -69,8 +69,9 @@ routing determinism remediation (M3).
   [EP-11](EP-11-m3-refinement-gate.md), on 2026-09-03; the third falls
   due about five packets after EP-10 (with the M3 verdict packet or
   EP-15, whichever comes first) and takes the next free integer: **EP-15
-  (2026-09-03) makes it due now, as EP-16**, the packet that follows the
-  M3 close; its fresh-clone re-run includes the unattended `travel_times`
+  (M3 closed 2026-09-04) made it due, and EP-15's closing session
+  authored it as [EP-16](EP-16-checkpoint-3.md)**, the packet that follows
+  the M3 close; its fresh-clone re-run includes the unattended `travel_times`
   stage (a routing night of about a quarter of an hour on the development
   machine, needing the routing group and the toolchain installed first)
   and must plan for it (EP-15's carry-in to the M5 gate says how the
@@ -160,13 +161,14 @@ entry:
 - The block-group population-weighted centroid sensitivity (methodology.md
   "Units and origins") multiplies the origin count by roughly three and
   needs a routing night of its own; it was never in the spike.
-- On a go verdict EP-15 registered the real `travel_times` stage and
-  launched its first run as a second night: confirm that run finished,
-  that `curated/travel_times.parquet` is in the dictionary's shape, and
-  that its canonicalized-value digest equals the first night's core
-  digests (the cross-night determinism repeat), before any metric reads
-  it; the third checkpoint's fresh-clone re-run now includes an
-  unattended routing stage and must plan for it.
+- On the go verdict EP-15 registered the real `travel_times` stage and
+  ran its first night, `20260904T191646Z-travel-times` (2026-09-04, finished;
+  `curated/travel_times.parquet` 1,312,944 rows in the dictionary's shape;
+  both core runs' canonicalized-value digests equal to the spike's night,
+  `100625cd…` walk and `e35b466d…` transit: the first cross-night determinism
+  repeat); the third checkpoint (EP-16) repeats the comparison from a
+  fresh clone; before any metric reads the matrix, confirm its digests
+  once more against those nights.
 - The all-retailer matrix (408 × 1,609) already exists from the spike;
   the SRAM comparison reads it, and the supermarket-format layer is its
   subset.
@@ -247,8 +249,8 @@ packet handoffs; the ratio is actual ÷ estimate midpoint.
 | EP-12 | S, 1 | 1 | 1.0 | The two routing sources; the first Bucket B source; the clip |
 | EP-13 | S, 1 | 1 | 1.0 | The toolchain and harness; the ADR-0008 jar pin amended in-session |
 | EP-14 | S, 1 | 1 | 1.0 | The run matrix and the first unattended night (48 min, outside the box) |
-| EP-15 | S, 1 | 1 attended so far (+ the owner's hour with the trip planner and a short closing session for the code, the M3 close, and the second night) | 1.0 provisional | The verdict reader, the hand check's forty times, the concordance, the stage; the tally is a person's, not a session's (recorded by EP-15's closing, confirmed by the third checkpoint) |
-| M3 | 3 attended (+ unattended runs) | 4 attended (EP-12 to EP-15) plus the gate (EP-11) plus 1 unattended night (48 min) so far | 1.33 on the attended box (1.67 with the gate) | EP-11's count (4 S packets after the gate, 3 in the box + the sources packet) was the better estimate, as EP-10 predicted; the box itself (EP-13 to EP-15) held at 3 |
+| EP-15 | S, 1 | 2 (the work session: the verdict reader, the forty times, the concordance, the stage; the owner's hour with the trip planner between; a short closing session: the tally, the code, the M3 close, the second night, EP-16) | 2.0 | The first packet over its estimate. The brief put the forty planner checks inside the session, and a person's hour in a browser does not fit an agent session; the owner chose the split (2026-09-03) over doing the checks in-session or deferring them; confirmed by the third checkpoint |
+| M3 | 3 attended (+ unattended runs) | 5 attended sessions (EP-12 to EP-15, EP-15 twice) plus the gate (EP-11) plus 2 unattended nights (48 min; 15 min) | 1.33 on the attended box (EP-13 to EP-15 took 4 sessions); 1.67 with the sources packet; 2.0 with the gate | EP-11's packet count (4 S packets after the gate) predicted the packets exactly and the box overran by one short session, the hand check's hour being a person's, not an agent's; the nights stayed outside the box as planned; verdict go |
 
 **What this implies (EP-10, 2026-09-03).** Twelve of twelve packets have
 landed in one session each, which is now true by construction (the sizing

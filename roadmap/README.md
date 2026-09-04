@@ -75,7 +75,7 @@ were all resolved before this roadmap was drafted.
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
 | [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md); EP-5 split into [EP-5a](EP-5a-spine-acquisition.md) / [EP-5b](EP-5b-spine-curated.md); EP-8 split into [EP-8a](EP-8a-slice-page.md) / [EP-8b](EP-8b-basemap-roads.md)); later EPs authored at refinement gates |
-| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11); later checkpoints take the next free integer |
+| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md), [EP-16](EP-16-checkpoint-3.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11), the third after M3 (authored by EP-15's closing session; it pre-reads the M4 gate and authors it as EP-17); later checkpoints take the next free integer |
 | [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward; its pins and decision numbers are [ADR-0008](adr/0008-routing-toolchain-pins.md) |
 | [EP-12](EP-12-routing-sources.md) … [EP-15](EP-15-routing-verdict.md) | The M3 routing spike as authored by EP-11 (2026-09-03): the two routing sources ([EP-12](EP-12-routing-sources.md)), the toolchain and harness ([EP-13](EP-13-routing-toolchain-harness.md)), the run matrix and the first unattended night ([EP-14](EP-14-routing-run-matrix.md)), the verdict ([EP-15](EP-15-routing-verdict.md)); a walk-only fallback packet is authored by EP-15 only on a kill |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
@@ -123,13 +123,16 @@ depends on it. The first fell due with EP-4b (owner decision 2026-09-02)
 and closed on 2026-09-02; the second fell due with EP-8b (M2 done) and was
 authored on 2026-09-03 as EP-10 and closed the same day, authoring the M3
 refinement gate as its own documentation-only packet, EP-11 (owner
-decision 2026-09-03); the third falls due about five packets after EP-10
-(with the M3 verdict packet or EP-15, whichever comes first).
+decision 2026-09-03); the third fell due with EP-15 (M3 closed on
+2026-09-04) and was authored by EP-15's closing session as EP-16, the next
+packet, whose fresh-clone re-run includes the unattended `travel_times`
+stage; the fourth falls due about five packets after EP-16.
 
 | # | Packet | Size | Depends on | Status |
 |---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
 | EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | [x] a1d22fd |
+| EP-16 | [Checkpoint 3: fresh-clone re-run with real data and the routing night, docs sync, license sweep, budgets with peak RSS, dependency triage, estimate accuracy with the M3 actual, M4 gate pre-read](EP-16-checkpoint-3.md) | S | EP-15 (M3 done) | [ ] |
 
 ### M2 — Spine + first source end-to-end · `[x] 5cb5092`
 
@@ -156,12 +159,12 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
 | EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [x] 5cb5092 |
 
-### M3 — Routing spike · `[~]`
+### M3 — Routing spike · `[x] 9638bd2`
 
 Go/no-go: numeric criteria in [milestones.md](milestones.md) (wall ≤ 8 h,
 process-tree RSS ≤ 22 GB, determinism within band, sanity gates); go =
 walk+transit within budgets, kill = the documented walk-only fallback
-invoked. **Evidence (EP-15, 2026-09-03, on the first unattended night
+invoked. **Evidence (EP-15, 2026-09-03 and 2026-09-04, on the first unattended night
 `20260903T223607Z-m3-spike`, read by `phillysim route verdict`):** the two
 core runs together took 830 s of the 8 h wall (walk 54 s, walk+transit
 776 s; all seven runs of the matrix in 47 min); the peak process-tree RSS
@@ -177,12 +180,19 @@ on the walk+transit run and the walk run is reported against the reach
 bound, recorded in methodology.md "Validation"); the walk concordance
 against the fallback engine (OSMnx 2.1.1 + scipy on the same clip) is
 Spearman ρ = 0.9935 over 28,256 pairs both engines report under the
-censor, against the 0.95 gate; the hand check's forty project-side times
-are routed (ten pairs by rule, 08:30 and 17:30, walk and walk+transit) and
-their comparison against a public trip planner is done by hand, so the
-tally and the outcome code are the owner's, recorded in the EP-15 handoff
-when the tally is in. The `travel_times` stage exists (EP-15, on the go
-path) and runs its first night on the owner's word. A gate packet belongs to the milestone it refines (unlike a
+censor, against the 0.95 gate; the hand check (ten pairs by rule, 08:30
+and 17:30, walk and walk+transit, compared by hand against SEPTA's planner
+and a general planner) tallied **34 of 40** within tolerance against the
+32-of-40 gate (walk 14 of 20, walk+transit 20 of 20; the six misses are
+walk checks 5 to 8 minutes under the planner on short trips, a finding
+for the M5 method card). **Outcome code: go**, confirmed by the owner on
+2026-09-04 and recorded in the night's `verdict.json`. The `travel_times`
+stage (EP-15) ran its first night the same day as the second unattended
+night (`20260904T191646Z-travel-times`: the two core runs in 886 s of child wall,
+peak RSS 5.26 GB, both matrices' canonicalized-value digests
+equal to the spike's night), so `curated/travel_times.parquet` exists in
+the dictionary's shape, Bucket B and unpublished, and the third
+checkpoint, [EP-16](EP-16-checkpoint-3.md), is due next. A gate packet belongs to the milestone it refines (unlike a
 checkpoint, which belongs to none): EP-11 is the M3 refinement gate,
 authored by EP-10 on 2026-09-03 from its pre-read. It applied the
 `milestones.md` carry-ins first (none named M3), fixed the spike's inputs,
@@ -204,7 +214,7 @@ on a kill or an exhausted time box.
 | EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | [x] a4c8a38 |
 | EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [x] e4c2c95 |
 | EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | [x] b35370d |
-| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [~] |
+| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [x] 9638bd2 |
 
 ### M4–M8 · `[ ]` refinement gates pending
 
@@ -215,7 +225,9 @@ reads the documents its pre-read lists, puts every hard-to-reverse value in
 an ADR with the owner (as ADR-0008 does for M3), and authors its packets
 from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one session each, taking
 the next free integers and adding their rows here. The M4 gate is the
-next gate due (M4 parallels M3 and depends on M2 only).
+next gate due (M4 parallels M3 and depends on M2 only); the third
+checkpoint, [EP-16](EP-16-checkpoint-3.md), pre-reads it and authors it as
+EP-17.
 
 ## Phase overview
 
@@ -223,7 +235,7 @@ next gate due (M4 parallels M3 and depends on M2 only).
 |---|---|---|---|
 | Foundation | M0–M1 | Governed repo + pipeline skeleton proven on synthetic fixture | [x] M0 and M1 done |
 | First data | M2 | Real geography + first source end-to-end, reproducibly | [x] M2 done |
-| Routing | M3 | Travel-time spike passed or walk-only fallback invoked | [ ] |
+| Routing | M3 | Travel-time spike passed or walk-only fallback invoked | [x] M3 done (verdict go, 2026-09-04) |
 | Full ingest | M4 | All v1 sources snapshotted, conflated, hours-parsed | [ ] |
 | Metrics | M5 | Access metrics + uncertainty + validation vs SRAM | [ ] |
 | Site | M6 | Public-safe accessible map + table + methods pages | [ ] |

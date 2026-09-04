@@ -53,10 +53,10 @@ recorded separately in manifests once the pipeline exists.
 
 - **EP-15 — the M3 verdict: criteria against the records, the determinism
   band, the hand check, the walk concordance, the `travel_times` stage**
-  (M3; 2026-09-03; **in progress**: the hand check's planner tally and the
-  owner's outcome code are pending, see the packet's handoff; work commit
-  `7202f43`, the scipy-free Spearman fix `9638bd2`, CI run 33828405482
-  green).
+  (M3; 2026-09-03 and 2026-09-04; work commit `7202f43`, the scipy-free
+  Spearman fix `9638bd2`, CI run 33828405482 green; **closed 2026-09-04:
+  the hand check 34 of 40, the outcome code go, M3 closed, the second
+  night run and verified, the third checkpoint authored as EP-16**).
   `phillysim route verdict --night ID [--json] [--write] [--record CODE]`
   (`phillysim.routing.verdict`) reads a finished or killed night against
   every criterion of milestones.md, methodology.md, architecture.md, and
@@ -107,7 +107,18 @@ recorded separately in manifests once the pipeline exists.
   confirmed); walk+transit 99.95 % finite; walk 46.95 % against a reach
   bound of 56.24 % (the owner's reading); concordance ρ = 0.9935 over
   28,256 pairs (graph 265,006 nodes, 748,296 edges; 2.3 min; peak RSS
-  5.46 GB); forty hand-check times routed (10 s per run, 4.4 GB). Tests:
+  5.46 GB); forty hand-check times routed (10 s per run, 4.4 GB) and, on
+  2026-09-04, compared by hand against SEPTA's planner and a general
+  planner: **34 of 40** within tolerance (walk 14 of 20, walk+transit 20
+  of 20; the six misses walk checks 5 to 8 minutes under the planner on
+  short trips, a finding for the M5 method card). **Outcome code go**,
+  confirmed by the owner and recorded in the night's `verdict.json`;
+  **M3 closed**. **The second unattended night** (`phillysim run --stage
+  travel_times` detached, night `20260904T191646Z-travel-times`): finished 19:31Z after 15 min: `walk-48-wed` 80.8 s (first night 54.2 s), `transit-48-wed` 804.8 s (first night 775.7 s); core wall 885.6 s = 0.25 h of 8 h; peak process-tree RSS 5.26 GB (walk 5.26 GB, transit 3.32 GB) against the 20 GB budget; 656,472 rows per run; finite pairs walk 46.95%, walk+transit 99.95%; both runs' canonicalized-value digests **equal to the first night's** (`100625cd…` walk, `e35b466d…` transit), byte digests equal too; `curated/travel_times.parquet`
+  (1,312,944 rows) with `intermediate/travel_times.json`; `phillysim status`
+  ten stages fresh. `roadmap/EP-16-checkpoint-3.md` authored (the third
+  checkpoint, whose fresh-clone re-run includes the routing night and
+  whose pre-read authors the M4 gate as EP-17). Tests:
   `test_verdict.py`, `test_handcheck.py`, `test_concordance.py`,
   `test_travel_times_stage.py` (crafted records and scripted children, no
   JVM; the sample pipeline runs the stage on a scripted child too).

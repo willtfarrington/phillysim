@@ -795,7 +795,9 @@ uv run phillysim status                  # travel_times: missing until the night
 If the machine restarts mid-night, the next `phillysim run` resumes the
 stopped night in place (the stage finds it by plan, points, and input
 digests). `--keep-awake` is `route matrix`'s; for the stage, keep the
-machine awake by other means.
+machine awake by other means. Used for the first time on 2026-09-04
+(EP-15's closing session, attended): night `20260904T191646Z-travel-times`, the row in the
+baselines table below.
 
 ## Resource baselines
 
@@ -918,6 +920,7 @@ its descendants.
 | `phillysim route handcheck` on that night (EP-15): two single-departure runs, 10 origins × 10 retailers, both modes | 9.9 s and 9.0 s wall, peak RSS 4.36 GB and 4.42 GB (the network from cache) | 20 GB budget: well under |
 | `phillysim route concordance` on that night (EP-15): the fallback engine on the clip | walkable ways selected in 8 s (201,525 of 224,252 highway ways, 838,148 nodes, 171 MB of XML); OSMnx graph in 112 s (265,006 nodes, 748,296 edges, 41,120 km); 66,912 pairs walked in 18 s; 139 s in all; **peak RSS 5.46 GB** (OSMnx's XML parse, in the CLI process: not "a few hundred megabytes" as the brief sized it); Spearman ρ 0.9935 over 28,256 pairs | routine peak RAM ≤ 24 GB |
 | test suite (EP-15) | 663 passed, 3 skipped in about 2 min (the routing group installed: the OSMnx-side tests run; the sample pipeline routes its `travel_times` stage on a scripted child) | — |
+| **The second unattended night** (EP-15's closing session, launched 2026-09-04 19:16Z by the procedure above; `phillysim run --stage travel_times` detached, night `20260904T191646Z-travel-times`): the two core runs of `travel-times.json`, 408 origins × 1,609 retailers | finished 19:31Z after 15 min: `walk-48-wed` 80.8 s (first night 54.2 s), `transit-48-wed` 804.8 s (first night 775.7 s); core wall 885.6 s = 0.25 h of 8 h; peak process-tree RSS 5.26 GB (walk 5.26 GB, transit 3.32 GB) against the 20 GB budget; 656,472 rows per run; finite pairs walk 46.95%, walk+transit 99.95%; both runs' canonicalized-value digests **equal to the first night's** (`100625cd…` walk, `e35b466d…` transit), byte digests equal too; `curated/travel_times.parquet` 1,312,944 rows, 4.1 MB; the stage's own overhead (points, the plan, the concatenation) seconds; `phillysim status` afterwards ten stages fresh | 8 h core wall, 20 GB budget, 22 GB kill: 3.1% and 26% |
 
 ## Decisions this package honors
 

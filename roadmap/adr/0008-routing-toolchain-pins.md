@@ -135,7 +135,12 @@ downloaded or installed by the gate.
   (08:30, 17:30) on the pinned Wednesday, both modes, forty checks
   against a public trip planner by hand (never a data source); walk
   within 3 minutes or 15 % (the larger), walk+transit within 10 minutes
-  or 25 % (the larger); the gate is 32 of 40.
+  or 25 % (the larger); the gate is 32 of 40. *Measured 2026-09-04
+  (EP-15, not an amendment):* 34 of 40 within tolerance (walk 14 of 20,
+  walk+transit 20 of 20); the six misses are walk checks 5 to 8 minutes
+  under a general planner's estimate on short trips, so the walk floor of
+  3 minutes is the binding part of the tolerance; the gate as written
+  stands.
 - **Outputs and publication:** run records under `<data root>/runs/
   routing/`; on go the matrix becomes `curated/travel_times.parquet` in
   the data dictionary's shape through a `travel_times` stage; the spike

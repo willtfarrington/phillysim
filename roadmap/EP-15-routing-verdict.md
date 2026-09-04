@@ -1,6 +1,6 @@
 # EP-15 — The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill, M3 closes
 
-**Status:** [~] in progress (2026-09-03: the mechanical criteria, the concordance, the forty project-side hand-check times, and the `travel_times` stage are done; the planner tally, the outcome code, the M3 close, and the second night wait on the owner, see the handoff) · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
+**Status:** [x] 9638bd2 (done 2026-09-04: the hand check tallied 34 of 40, the outcome code **go** recorded and confirmed by the owner, M3 closed, the second night `20260904T191646Z-travel-times` finished and its digests equal to the first's; two handoff payloads below, the work session's and the closing session's) · **Milestone:** M3 · **Effort:** S (1 session, medium confidence) · **Parallel with:** —
 
 ## Outcome & value
 The routing spike has a verdict with its evidence written down: every
@@ -174,20 +174,20 @@ checkpoint's fresh-clone re-run must plan for it (recorded for the
 checkpoint's author).
 
 ## Acceptance criteria & evidence
-- [ ] The verdict table in the handoff: every criterion with its number,
+- [x] The verdict table in the handoff: every criterion with its number,
       its source document quoted, and pass / fail; the outcome code
       recorded and confirmed by the owner.
-- [ ] OQ-C closed in `open-questions.md` with the measured band (or
+- [x] OQ-C closed in `open-questions.md` with the measured band (or
       recorded as failed with the numbers); the AM-2 wording in
       quality.md confirmed or amended to the measured band.
-- [ ] The hand check tallied (n of 40 within tolerance) and the walk
+- [x] The hand check tallied (n of 40 within tolerance) and the walk
       concordance ρ recorded, each against its gate.
-- [ ] On go: the `travel_times` stage registered and tested on crafted
+- [x] On go: the `travel_times` stage registered and tested on crafted
       inputs without the JVM; the second night launched on the owner's
       word; the M5-gate carry-in written. On kill or time box: the
       fallback packet file exists from the template with its README row,
       and the risk table row is updated.
-- [ ] `roadmap/README.md` M3 heading closed with the evidence paragraph;
+- [x] `roadmap/README.md` M3 heading closed with the evidence paragraph;
       `milestones.md` M3 row and "Estimate accuracy" updated; CHANGELOG.
 - Evidence: the records; CI green; the owner review in the handoff.
 
@@ -296,7 +296,7 @@ provisional one (the band), recorded as an amendment with the date.
   | ≥ 95 % finite pairs, `transit-48-wed` (methodology.md "Validation") | 656,172 of 656,472 = 99.95 % finite (300 at the censor; 0 missing rows; every origin has a finite pair) | **pass** |
   | ≥ 95 % finite pairs, `walk-48-wed` (methodology.md "Validation") | 308,225 of 656,472 = 46.95 % under the 120-min censor; the straight-line reach bound at 4.8 km/h (9.6 km) admits at most 369,178 pairs = 56.24 %, so no engine can meet 95 % for walk over all 1,609 retailers under this censor (the county spans 27 km × 28 km); 83.5 % of the pairs the bound admits are finite; every origin has a finite pair; the fallback engine over the 164 supermarket-format destinations reports 42.5 % finite where R5 reports 43.1 % | **owner reading** (decision 1 below) |
   | walk-network concordance ρ ≥ 0.95 vs the fallback engine (methodology.md) | Spearman ρ = **0.9935** over 28,256 pairs both engines report under the censor, of 66,912 (408 × 164 supermarket-format); excluded: R5-censored only 168, fallback-censored only 550, both 37,938; Pearson r 0.9942; mean absolute difference 1.51 min, median 0.80 min; the fallback is slower by 1.10 min on average (median ratio 1.009); graph 265,006 nodes, 748,296 edges, 41,120 km from 201,525 walkable of 224,252 highway ways | **pass** |
-  | ≥ 80 % of hand-checked OD times within tolerance, 32 of 40 (methodology.md; ADR-0008) | the forty project-side times are routed (below); the planner comparison is a person's hour in a browser and has not been done | **pending** (decision 2) |
+  | ≥ 80 % of hand-checked OD times within tolerance, 32 of 40 (methodology.md; ADR-0008) | **34 of 40** within tolerance (walk 14 of 20, walk+transit 20 of 20; tallied 2026-09-04 by `route handcheck --tally` from the owner's hand-typed `planner.csv`; the forty differences below) | **pass** |
 
   Sensitivity and Saturday runs, timed and reported, not judged (M5's
   inputs): `walk-30-wed` 30.5 s, 5.15 GB, 23.09 % finite; `transit-30-wed`
@@ -328,12 +328,43 @@ provisional one (the band), recorded as an amendment with the date.
   The coordinates of every point are printed by `route handcheck --night
   20260903T223607Z-m3-spike` (and are in `handcheck.json`); the planner
   file is `route handcheck --template`, typed by hand, tallied by `route
-  handcheck --tally`. **Tally: pending.** The forty differences go here
-  when the owner has them. Note for the tally: fourteen of the twenty pairs
-  are short walks where walk+transit equals walk (R5 finds no faster
-  transit trip); a planner that proposes a bus for a six-minute walk still
-  answers within tolerance as long as its door-to-door time is within 10
-  minutes.
+  handcheck --tally`. **Tally (the owner, 2026-09-04; SEPTA's planner for
+  transit, a general planner for walking; nothing stored but the minutes):
+  34 of 40 within tolerance, the gate 32 of 40 met; walk 14 of 20,
+  walk+transit 20 of 20; no check without an answer; nothing substituted.**
+  Per pair, the planner's minutes at 08:30 / 17:30 and, in parentheses,
+  the project time minus the planner's (the tolerance in minutes where it
+  is not the floor of 3 or 10):
+
+  | # | walk planner 08:30 / 17:30 (difference) | walk+transit planner 08:30 / 17:30 (difference) | within |
+  |---|---|---|---|
+  | 1 | 6 / 6 (0 / 0) | 6 / 6 (0 / 0) | 4 of 4 |
+  | 2 | 11 / 11 (−2 / −2) | 11 / 11 (−2 / −2) | 4 of 4 |
+  | 3 | 10 / 10 (**−5 / −5**) | 10 / 10 (−5 / −5) | 2 of 4 |
+  | 4 | 35 / 35 (−2 / −2; 5.2) | 20 / 28 (−1 / −1) | 4 of 4 |
+  | 5 | 136 / 136 (−17 / −17; 20.4) | 46 / 40 (−8 / −2; 11.5 / 10) | 4 of 4 |
+  | 6 | 21 / 21 (**−5 / −5**; 3.1) | 16 / 14 (−2 / −2) | 2 of 4 |
+  | 7 | 15 / 15 (**−8 / −8**) | 15 / 15 (−8 / −8) | 2 of 4 |
+  | 8 | 6 / 6 (−1 / −1) | 6 / 6 (−1 / −1) | 4 of 4 |
+  | 9 | 8 / 8 (−2 / −2) | 8 / 8 (−2 / −2) | 4 of 4 |
+  | 10 | 120 / 120 (−6 / −6; 18) | 46 / 58 (+9 / −3; 11.5 / 14.5) | 4 of 4 |
+
+  The six misses are the walk checks of pairs 3, 6, and 7 at both
+  departures: the project's walk time is 5 to 8 minutes under the general
+  planner's on trips the planner puts at 10 to 21 minutes, where the
+  3-minute floor binds. Over the twenty walk checks the project is never
+  slower than the planner (median difference −3.5 min, mean −4.8 min):
+  R5 on the clipped OSM network at a flat 4.8 km/h is faster than a
+  consumer planner's walking estimate on short trips, which is a finding
+  for the M5 method card, not a criterion (the gate is 32 of 40 and the
+  tolerance is ADR-0008's). The walk+transit checks all pass, seven of them
+  by the wider 10-minute floor on the same short pairs; the owner's note
+  beside the planner file records that where both planners agreed walking
+  alone was fastest, the general planner's walking estimate was entered for
+  the walk+transit row too, keeping the pair symmetric (so those
+  walk+transit rows compare against a walking answer, as the EP-15 note for
+  the tally anticipated). Pair 10's morning transit check is the only one
+  where the project is slower (+9 of 11.5 allowed).
 - **The concordance:** ρ = 0.9935 over 28,256 pairs (the row above);
   `concordance.json` and `fallback_walk_times.parquet` under the night; the
   walkable ways as XML under `cache/concordance/` (171 MB). The engine is
@@ -447,3 +478,104 @@ provisional one (the band), recorded as an amendment with the date.
   fresh-clone re-run includes the unattended `travel_times` stage), unless
   the code is a kill, in which case the walk-only fallback packet (next
   free integer) comes first if the owner so decides.
+
+## Handoff payload (closing session, 2026-09-04; the packet closes)
+
+- **Packet:** EP-15, `[x]` done at `9638bd2` (the last code commit; this
+  session changed no code, test, or dependency). Planning Baseline v1.0;
+  roadmap as of the handoff record commit `d9828d4`.
+- **What the session did, in order.** Read the tally the owner had entered
+  (`handcheck/planner.csv` under the night, typed by hand from SEPTA's
+  planner and a general planner; `handcheck.json` tallied by `route
+  handcheck --tally`: 34 of 40, the table in the first payload); read the
+  night with `route verdict` (every criterion pass, the walk finite-pairs
+  row the owner's reading, suggested outcome `go`); put the code, the
+  launch, and the commit to the owner interactively (answers below);
+  recorded the code (`route verdict --night 20260903T223607Z-m3-spike --record go --confirmed-by
+  "W. Taylor Farrington (owner)"`, 2026-09-04T19:16:41Z, the
+  note in `verdict.json`); launched the second night by the README's
+  procedure (`phillysim run --stage travel_times` detached with
+  `Start-Process`, 19:16:43Z, streams to `runs/travel_times-launch.log` and
+  `.err`); watched it with `route status`; verified it (below); closed M3
+  in the README, milestones.md, the CHANGELOG, the method card, and
+  ADR-0008 (a measured note on the hand check, not an amendment); authored
+  the third checkpoint, `EP-16-checkpoint-3.md`, from the template with
+  its README row (owner decision below); updated this file.
+- **The second unattended night** (`20260904T191646Z-travel-times`, the `travel_times` stage's
+  first run, the plan `travel-times.json` = the spike's two core runs
+  verbatim): finished 19:31Z after 15 min: `walk-48-wed` 80.8 s (first night 54.2 s), `transit-48-wed` 804.8 s (first night 775.7 s); core wall 885.6 s = 0.25 h of 8 h; peak process-tree RSS 5.26 GB (walk 5.26 GB, transit 3.32 GB) against the 20 GB budget; 656,472 rows per run; finite pairs walk 46.95%, walk+transit 99.95%; both runs' canonicalized-value digests **equal to the first night's** (`100625cd…` walk, `e35b466d…` transit), byte digests equal too. The stage wrote `curated/travel_times.parquet`
+  (1,312,944 rows, 4.1 MB, value digest `fc50873d…`, byte digest
+  `f2ed818a…`, Bucket B by derivation, never read by `publish`) and
+  `intermediate/travel_times.json` (the night's ID, each core run's wall,
+  peak, digests, and sanity counts, the plan's digest and parameters, the
+  input digests). `phillysim status` afterwards: **ten stages fresh**, none
+  missing. This is the cross-night determinism repeat the M5-gate carry-in
+  asks for, done once; the third checkpoint repeats it from a fresh clone.
+- **Files changed (documentation only).** `roadmap/EP-15-routing-verdict.md`
+  (status, the hand-check row of the verdict table, the tally, the
+  acceptance boxes, this payload), `roadmap/README.md` (the EP-15 row, the
+  M3 heading and its evidence paragraph closed, the Checkpoints paragraph
+  and the EP-16 row, the packet-file table, the M4–M8 note, the phase
+  table), `roadmap/milestones.md` (the M3 row's verdict, "Spikes & gates",
+  the "Estimate accuracy" rows for EP-15 and M3, the M5 carry-in's first
+  item with the night's facts), `roadmap/EP-16-checkpoint-3.md` (new),
+  `roadmap/adr/0008-routing-toolchain-pins.md` (the hand check as
+  measured), `docs/method-cards/travel-times.md` (status, the hand-check
+  row), `CHANGELOG.md`, `phillysim/README.md` (the second night's baseline
+  row; the launch procedure marked as used). Nothing under `data/` is
+  tracked; `verdict.json` and the tally live there.
+- **Commands / tests.** `route verdict` (read, then `--record go`);
+  `phillysim run --stage travel_times` detached; `route status`;
+  `phillysim status` (10 fresh); `pre-commit run --all-files` clean; no
+  test re-run was needed for a documentation close (the suite last ran
+  green on `9638bd2`, CI 33828405482); the closing commit and its CI run
+  are recorded in the commit message's successor (the memory) and the
+  session's final message, since a commit cannot name itself.
+- **Owner decisions (put interactively, 2026-09-04) and answers.**
+  (1) *The outcome code:* **go** (recommended; the reader's suggestion);
+  applied by `--record go`. (2) *The second night:* launch now and wait to
+  verify (recommended); applied, verified as above. (3) *Commit and push:*
+  yes (recommended); applied at the end of the session. (4) *EP-16
+  authored now* (a deviation from this brief's scope, which names EP-16
+  as the next packet but does not author it; the checkpoint packets before
+  it were authored in a "Roadmap: author EP-N" step with the owner): put
+  to the owner with the draft in place: **adopt as authored**
+  (recommended; the alternatives were to keep it marked draft or to drop
+  it and author it at pickup); applied, the file and its README row are in
+  the closing commit with status planned.
+- **Routine calls logged.** The estimate-accuracy row reads EP-15 as two
+  sessions (the work session and this closing one), the honest count; the
+  M3 roll-up counts the box as four attended sessions; the walk-time
+  finding from the tally (the project never slower than the planner on
+  walk, median −3.5 min) is written as a finding for the M5 method card,
+  not as a criterion; the M5 carry-in keeps its wording and gains the
+  night's facts; the second night's byte digests are reported beside the
+  value digests, the value digests being the determinism criterion
+  (quality.md).
+- **Resource observations.** The night: the line above; the walk run's
+  wall differs from the first night's by the r5py import and network
+  cache state, the transit run's by the departure-window routing (both
+  inside the wall criterion by a wide margin); the machine stayed awake
+  because the session was attended (`phillysim run` has no
+  `--keep-awake`; still a small addition for whoever launches a night
+  unattended for real, recorded for EP-16's re-run).
+- **Unresolved risks / questions.** For the M5 method card: R5's walk
+  times on the clipped OSM network at 4.8 km/h are shorter than a consumer
+  planner's on short trips (the six misses; every walk check at or under
+  the planner's time), which M5 states when it publishes a walk metric;
+  the concordance's peak RSS in the CLI process (first payload); the
+  fallback engine stays as the concordance code, not a packet. Nothing
+  else new.
+- **No-go areas touched:** none. Nothing published (`publish` did not run;
+  the public zone's digests are the EP-8b references); nothing from a
+  trip planner stored beyond the minutes the owner typed into
+  `planner.csv` under the gitignored data root; no machine identifier or
+  absolute path in a tracked file (the diff scanned); no system setting
+  changed.
+- **`roadmap/README.md`:** EP-15 row `[x] 9638bd2`; the M3 heading `[x]`
+  with the closed evidence paragraph; EP-16's row in the Checkpoints
+  table.
+- **Exact next packet: EP-16** (the third checkpoint, authored;
+  `roadmap/EP-16-checkpoint-3.md`), whose fresh-clone re-run includes the
+  unattended `travel_times` stage and whose pre-read authors the M4
+  refinement gate as EP-17.

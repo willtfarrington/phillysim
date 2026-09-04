@@ -1,7 +1,8 @@
 # Method card: network travel times to SNAP retailers (stub, EP-15)
 
-> **Status: stub (EP-15, 2026-09-03). The matrix exists in the curated zone
-> once the `travel_times` stage has run and is not published.** M5 completes
+> **Status: stub (EP-15, 2026-09-03; the verdict recorded as go on
+> 2026-09-04). The matrix exists in the curated zone since the
+> `travel_times` stage's first night and is not published.** M5 completes
 > this card when a travel-time metric is published; until then the numbers
 > below describe the M3 routing spike's evidence, not a public claim. Access
 > is *measured* as travel time (C-1); nothing here is a score, a rank, or a
@@ -65,7 +66,7 @@ origin × destination × mode.
 | ≥ 95 % finite pairs, walk+transit core run (methodology.md) | 99.95 % (300 pairs of 656,472 at the censor); every origin reaches a retailer | pass |
 | ≥ 95 % finite pairs, walk core run (methodology.md) | 46.95 % under the 120-min censor; the straight-line reach bound at 4.8 km/h admits at most 56.24 % of the pairs (a walk of 120 minutes covers 9.6 km; the county spans 27 × 28 km), so no engine can meet the gate for walk over all 1,609 retailers under this censor; 83.5 % of the pairs the bound admits are finite; every origin has a finite pair | reported, not judged: the gate is read on the walk+transit run (owner decision at EP-15, recorded in methodology.md "Validation") |
 | Walk-network concordance ρ ≥ 0.95 against the fallback engine (methodology.md) | Spearman ρ = 0.9935 over 28,256 pairs both engines report under the censor (of 408 × 164 supermarket-format pairs; OSMnx 2.1.1 + scipy 1.18.1 on the same clip); median absolute difference 0.8 min | pass |
-| ≥ 80 % of hand-checked OD times within tolerance, 32 of 40 (methodology.md; ADR-0008) | forty project-side times routed (ten pairs by rule, 08:30 and 17:30, both modes); the comparison against a public trip planner is done by hand and tallied in the EP-15 handoff | pending the owner's tally |
+| ≥ 80 % of hand-checked OD times within tolerance, 32 of 40 (methodology.md; ADR-0008) | 34 of 40 within tolerance (walk 14 of 20, walk+transit 20 of 20; ten pairs by rule, 08:30 and 17:30, both modes, compared by hand against SEPTA's planner and a general planner, 2026-09-04); the six misses are walk checks where the project's time is 5 to 8 minutes under the planner's on 10- to 21-minute trips, and over all twenty walk checks the project is never slower than the planner (median difference −3.5 min): R5 at a flat 4.8 km/h is faster than a consumer planner's walking estimate on short trips, a finding for the M5 card | pass |
 
 ## What it is not
 

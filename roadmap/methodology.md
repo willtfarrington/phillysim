@@ -87,7 +87,13 @@ never imputed or reverse-engineered.)
   directional only.
 - Known-answer tests on the synthetic fixture; spot-check gates (≥95% finite
   pairs; ≥80% of hand-checked OD times within tolerance; walk-network
-  concordance ρ ≥ 0.95 vs fallback engine).
+  concordance ρ ≥ 0.95 vs fallback engine). *Reading fixed at EP-15 (owner
+  decision, 2026-09-03):* the finite-pairs gate is read on the walk+transit
+  core run; the walk-only run is reported against the straight-line reach
+  bound the 120-minute censor allows (a 4.8 km/h walk covers 9.6 km; the
+  county spans about 27 km), since no engine can reach 95 % of all pairs on
+  foot under that censor, and every origin must reach at least one
+  destination.
 - Face-validity review against PDPH's published Neighborhood Food Retail
   analysis (prior art; cited and complemented, not claimed as novel ground).
 

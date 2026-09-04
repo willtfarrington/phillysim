@@ -69,6 +69,7 @@ STAGES = [
     "snap_retailers",
     "basemap",
     "network",
+    "travel_times",
     "metrics",
     "publish",
 ]
@@ -320,16 +321,17 @@ def test_acquire_and_validate_end_to_end(root: Path, sample_transport, samples: 
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 0, verify.output
     assert "7 of 7 snapshot(s) verified" in verify.output
-    assert "pipeline 'real'" in verify.output and "9 of 9 stage(s) done and intact" in verify.output
+    assert "pipeline 'real'" in verify.output
+    assert "10 of 10 stage(s) done and intact" in verify.output
     gate = CliRunner().invoke(app, ["gate", "--data-root", str(root)])
     assert gate.exit_code == 0, gate.output
     assert "Bucket A (CC-BY-4.0)" in gate.output and "pipeline 'real'" in gate.output
     assert "5 file(s) labeled, 4 source(s)" in gate.output
     # The CLI's pipeline expects the county's 408 tracts and the county clip's bands, so the
     # six-tract spine and the sample clip built with the overridden parameters are stale on
-    # parameters there (and only there).
+    # parameters there (and only there); since EP-15 the sample-sized travel_times stage too.
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
-    assert status.exit_code == 0 and "7 fresh, 2 stale, 0 missing, 0 incomplete" in status.output
+    assert status.exit_code == 0 and "7 fresh, 3 stale, 0 missing, 0 incomplete" in status.output
     assert "stale      spine" in status.output and "stale      network" in status.output
     assert "changed: parameters" in status.output
     assert all(s.status == "fresh" for s in runner.status(root, _pipeline(transport, samples)))
@@ -383,7 +385,7 @@ def test_terms_drift_stops_acquisition_and_quarantines(
     verify = CliRunner().invoke(app, ["verify", "--data-root", str(root)])
     assert verify.exit_code == 1, verify.output
     assert "0 of 0 snapshot(s) verified" in verify.output
-    assert "0 of 9 stage(s) done and intact; incomplete: acquire" in verify.output
+    assert "0 of 10 stage(s) done and intact; incomplete: acquire" in verify.output
     assert "quarantined (terms)" in verify.output
     status = CliRunner().invoke(app, ["status", "--data-root", str(root)])
     assert "incomplete acquire" in status.output

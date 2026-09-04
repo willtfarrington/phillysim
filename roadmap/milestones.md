@@ -68,7 +68,13 @@ routing determinism remediation (M3).
   refinement gate, which it authored as its own packet,
   [EP-11](EP-11-m3-refinement-gate.md), on 2026-09-03; the third falls
   due about five packets after EP-10 (with the M3 verdict packet or
-  EP-15, whichever comes first) and takes the next free integer.
+  EP-15, whichever comes first) and takes the next free integer: **EP-15
+  (2026-09-03) makes it due now, as EP-16**, the packet that follows the
+  M3 close; its fresh-clone re-run includes the unattended `travel_times`
+  stage (a routing night of about a quarter of an hour on the development
+  machine, needing the routing group and the toolchain installed first)
+  and must plan for it (EP-15's carry-in to the M5 gate says how the
+  stage's matrix is verified against the spike's night).
 
 ## Refinement-gate carry-ins
 
@@ -236,6 +242,13 @@ packet handoffs; the ratio is actual ÷ estimate midpoint.
 | EP-8a | S, 1 (split from the M packet EP-8 at pickup) | 1 | 1.0 | First browser page; Playwright + axe on both CI platforms |
 | EP-8b | S, 1 (the other half of EP-8) | 1 | 1.0 | Fifth source, public schema 2, measured contrast; M2 go/no-go met |
 | M2 | 4–6 (four M packets as authored, 4–8) | 6 | 1.20 | Every packet one session; the two split M packets took two sessions each, the two unsplit ones one each |
+| EP-10 | S, 1 | 1 | 1.0 | Checkpoint 2 (2026-09-03); belongs to no milestone; authored EP-11 |
+| EP-11 | S, 1 | 1 | 1.0 | The M3 refinement gate (documentation only; ADR-0008) |
+| EP-12 | S, 1 | 1 | 1.0 | The two routing sources; the first Bucket B source; the clip |
+| EP-13 | S, 1 | 1 | 1.0 | The toolchain and harness; the ADR-0008 jar pin amended in-session |
+| EP-14 | S, 1 | 1 | 1.0 | The run matrix and the first unattended night (48 min, outside the box) |
+| EP-15 | S, 1 | 1 attended so far (+ the owner's hour with the trip planner and a short closing session for the code, the M3 close, and the second night) | 1.0 provisional | The verdict reader, the hand check's forty times, the concordance, the stage; the tally is a person's, not a session's (recorded by EP-15's closing, confirmed by the third checkpoint) |
+| M3 | 3 attended (+ unattended runs) | 4 attended (EP-12 to EP-15) plus the gate (EP-11) plus 1 unattended night (48 min) so far | 1.33 on the attended box (1.67 with the gate) | EP-11's count (4 S packets after the gate, 3 in the box + the sources packet) was the better estimate, as EP-10 predicted; the box itself (EP-13 to EP-15) held at 3 |
 
 **What this implies (EP-10, 2026-09-03).** Twelve of twelve packets have
 landed in one session each, which is now true by construction (the sizing

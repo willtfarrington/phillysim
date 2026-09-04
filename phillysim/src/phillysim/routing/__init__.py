@@ -13,7 +13,16 @@ Everything the M3 spike's numbers come from, and nothing CI runs:
   environment built per invocation (``JAVA_HOME``, the processor cap, r5py's
   heap, classpath, cache, and temporary directory under the data root);
 * :mod:`~phillysim.routing.smoke` is the first route: one tract center to one
-  supermarket-format retailer on EP-12's clipped network, three times.
+  supermarket-format retailer on EP-12's clipped network, three times;
+* :mod:`~phillysim.routing.plan` and :mod:`~phillysim.routing.matrix` (EP-14)
+  are the spike's runs as data and the resumable night driver;
+* :mod:`~phillysim.routing.verdict`, :mod:`~phillysim.routing.handcheck`, and
+  :mod:`~phillysim.routing.concordance` (EP-15) read a night against the M3
+  criteria, route the hand check's pairs, and compare the walk times with the
+  fallback engine (OSMnx + scipy, in the same optional group);
+* :mod:`~phillysim.routing.stage` (EP-15) is the real pipeline's
+  ``travel_times`` stage: the two core runs as a night, the matrix in the
+  dictionary's shape.
 
 No module here imports r5py or JPype at import time; only the harness child
 does, inside the function that runs in the child (``tests/test_no_jvm_in_ci.py``

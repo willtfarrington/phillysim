@@ -109,7 +109,13 @@ stage writes the first Bucket B output of the real pipeline,
 the two source snapshots). Nothing downstream of it reaches `publish`
 during the spike, so the public zone stays Bucket A; the first published
 Bucket B files are M5's routing outputs, and the SEPTA feed's own bucket
-is A (nothing OSM-derived comes from it).
+is A (nothing OSM-derived comes from it). **Since EP-15 (2026-09-03)** the
+real pipeline's `travel_times` stage writes the second Bucket B output,
+`curated/travel_times.parquet` (the matrix computed over the clipped
+network; `intermediate/travel_times.json` records the bucket and the
+derivation), and the spike's run records under `<data root>/runs/routing/`
+are Bucket B the same way; `publish` reads none of them, so the public zone
+is still Bucket A, and the spike published nothing.
 
 ## Source terms summary (to be expanded per snapshot)
 

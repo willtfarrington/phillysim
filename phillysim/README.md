@@ -77,10 +77,17 @@ phillysim/
                           imports r5py, inside the child), smoke (the first route, three
                           times); plan (matrix plans: the spike's runs as data, EP-14;
                           `plans/m3-spike.json`, tracked) and matrix (the resumable night
-                          driver behind `route matrix` / `route status`, EP-14)
+                          driver behind `route matrix` / `route status`, EP-14); verdict
+                          (a night read against the M3 criteria, `route verdict`),
+                          handcheck (the ten pairs by rule, the forty times, the tally of
+                          a hand-typed planner file, `route handcheck`), concordance (the
+                          fallback engine, OSMnx + scipy, against the core walk run,
+                          `route concordance`), and stage (the real pipeline's
+                          `travel_times` stage on `plans/travel-times.json`) (EP-15)
     pipeline.py           the real pipeline: `acquire` + `validate` (EP-5a), `spine` +
                           `demographics` (EP-5b), `snap_retailers` (EP-6), `basemap`
-                          (EP-8b), `metrics` + `publish` (EP-7) on the pinned snapshots
+                          (EP-8b), `network` (EP-12), `travel_times` (EP-15), `metrics` +
+                          `publish` (EP-7) on the pinned snapshots
     spine.py              the curated tract spine, the analysis CRS (ADR-0007), and the
                           geospatial invariants every later packet inherits (EP-5b)
     contracts.py          source-contract harness (schema/license/geometry) + the
@@ -143,6 +150,19 @@ phillysim/
                                 records, the matrix in the dictionary's shape and its sanity
                                 counts, resume, kills and the outcome code, the rehearsal's
                                 extrapolation, `route status` (EP-14)
+    test_verdict.py             the verdict reader on crafted records: every criterion with
+                                its source and number, the pair-by-pair band, the reach
+                                bound, the killed night, the recorded code, the CLI (EP-15)
+    test_handcheck.py           the pairs by rule and the substitution, the two
+                                single-departure runs and the forty checks on a scripted
+                                child, the tally and tolerance, the CLI (EP-15)
+    test_concordance.py         OSMnx's walk filter as tag rules and the walkable ways of
+                                the OSM sample as XML (everywhere); the graph with every
+                                network path disabled, the nearest nodes, Dijkstra, the
+                                comparison (where the routing group is installed) (EP-15)
+    test_travel_times_stage.py  the stage's plan against the spike's core runs, the stage
+                                on crafted inputs and a scripted child, re-use and resume of
+                                a night, the refusals, its place in the pipeline (EP-15)
     contracts/            harness unit tests; tinycity sources; the three spine sources,
                           the SNAP retailer source, the TIGER roads source, and the two
                           routing sources on the committed samples (EP-5a, EP-6, EP-8b,
@@ -270,13 +290,14 @@ name `real`) on the resolved data root. It shares the fixture pipeline's
 stage names, zones, and output paths where the two overlap, so the
 architecture.md stage table describes both, but the two never meet: the
 state file records its pipeline's name and refuses the other one, and the
-roots differ (`<data root>/` versus `<data root>/fixture/`). Nine stages
+roots differ (`<data root>/` versus `<data root>/fixture/`). Ten stages
 exist: `acquire` and `validate` (EP-5a), `spine` and `demographics`
 (EP-5b), `snap_retailers` (EP-6; the first per-source destination layer,
 which the fixture pipeline has no counterpart for), `basemap` (EP-8b; the
 roads layer of the basemap, likewise real-only), `network` (EP-12; the
-routing inputs, the same stage name as the fixture's with a real body), and
-`metrics` and `publish` (EP-7, EP-8b).
+routing inputs, the same stage name as the fixture's with a real body),
+`travel_times` (EP-15; the routing night behind the same stage name as the
+fixture's stub, see below), and `metrics` and `publish` (EP-7, EP-8b).
 
 - `acquire` brings in the pinned snapshot of each registered source
   (`phillysim.pipeline.SNAPSHOT_IDS`, one acquisition date per source since
@@ -355,6 +376,38 @@ routing inputs, the same stage name as the fixture's with a real body), and
   license bucket, **B** by derivation. Its parameters are `buffer_m`,
   `crs`, `node_band`, and `way_band`. No JVM runs here; nothing downstream
   of it reaches `publish`, so the public zone stays Bucket A.
+- `travel_times` (EP-15, `phillysim.routing.stage`) writes
+  `curated/travel_times.parquet`, the travel-time matrix in the data
+  dictionary's shape: the M3 spike's two core runs (the tracked plan
+  `travel-times.json`: walk at 4.8 km/h, and walk+transit at 4.8 km/h over
+  the pinned Wednesday 2026-09-23 from 08:00 to 20:00 at one departure per
+  minute; percentiles 50 and 85; censored at 120 minutes) routed by R5 as a
+  **night** under `runs/routing/<UTC stamp>-travel-times/` through the EP-14
+  driver (one sampled child per run, every EP-13 and EP-14 record), then
+  concatenated (408 × 1,609 × 2 = 1,312,944 rows, sorted by key), **Bucket
+  B** by derivation from the clipped OSM network; `publish` does not read
+  it. `intermediate/travel_times.json` holds the night's ID, each run's
+  wall, peak RSS, digests, and sanity counts, and the matrix's digests. Its
+  parameters are the plan's (`plan`, `plan_sha256`, `runs`, `percentiles`,
+  `max_time_minutes`, `snap_to_network`, `time_zone`,
+  `core_wall_limit_hours`, `rehearsal_origins`, and the table sizes
+  `origins_count` / `destinations_count`, which the suite overrides for
+  the samples), so a parameter change re-runs routing like a refreshed
+  input does. **This is an unattended stage:** about a quarter of an hour
+  on the development machine (EP-14's night: walk 54 s, walk+transit
+  13 min), and it needs the routing group and the toolchain installed
+  first (`uv sync --locked --group routing`, `phillysim toolchain
+  install`); it refuses with those instructions otherwise, and a fresh
+  clone's `phillysim run` now includes it (the third checkpoint's
+  fresh-clone re-run plans for it). Before routing, the stage looks for the
+  latest night of the same plan on the same points whose completed core
+  runs recorded the same input digests: a `finished` one is re-used without
+  routing (so a stage that failed after its night, or a night launched by
+  hand with `route matrix --plan travel-times.json`, is adopted), a
+  `stopped` one is resumed in place; the next `phillysim run` after an
+  interruption therefore resumes rather than restarts. A night the driver
+  marked `KILLED-BY-EVIDENCE` fails the stage and is evidence for the
+  owner, never retried by the stage.
 
 `phillysim run` (or `run --stage network`) needs the network once (about
 490 MB: 98 MB from `www2.census.gov` and `www.census.gov`, 24 MB from
@@ -648,6 +701,102 @@ The driver accepts an empty, pre-created night directory (so the launch log
 can live inside it) and writes only under `runs/routing/` and `cache/r5py/`.
 If the machine restarts, re-invoke with the same `--night` to resume.
 
+## The verdict, the hand check, and the concordance (EP-15)
+
+Three read-mostly verbs turn a finished night into the M3 verdict's
+evidence; none changes `night.json`, and only the owner calls the code.
+
+```
+uv run phillysim route verdict [--night <id>] [--json] [--write]      # the criteria table
+uv run phillysim route verdict --night <id> --record go --note "..."  # the owner's code
+uv run phillysim route handcheck --night <id> [--skip <geoid>]        # the forty project-side times
+uv run phillysim route handcheck --night <id> --template > ..\data\runs\routing\<id>\handcheck\planner.csv
+uv run phillysim route handcheck --night <id> --tally                 # the tally of the typed answers
+uv run phillysim route concordance --night <id> [--rebuild]           # the fallback engine, Spearman rho
+```
+
+`route verdict` (`phillysim.routing.verdict`) prints one row per criterion
+with the document it comes from quoted, the number, and a status (`pass`,
+`pass-with-finding`, `fail`, `pending`, `owner-reading`): the two core
+runs' walls together against the plan's 8 h; the night's peak process-tree
+RSS against the 20 GB budget and the 22 GB kill line (no core run killed;
+a peak between the two is a pass with a finding); each core run against
+its repeat **pair by pair** in integer minutes on both time columns (the
+count and share identical, the largest difference, its distribution, both
+runs' byte and canonicalized-value digests) against ADR-0008's band; each
+core run's share of finite pairs against methodology.md's 95 %, the walk
+run also against the **straight-line reach bound** (the share of pairs a
+walk of 120 minutes at the run's speed could reach at all, an upper bound
+for any engine under the censor), because the reading of that gate for
+walk is the owner's; the hand check's tally against 32 of 40 and the
+concordance against ρ ≥ 0.95, both `pending` until their files exist under
+the night. It suggests an outcome and never calls it: `--record CODE`
+(`go`, `KILLED-BY-EVIDENCE`, `TIMEBOX-EXHAUSTED`) writes the code the
+owner confirmed, with `--confirmed-by` and `--note`, into `verdict.json`
+beside a fresh read. Exit status 1 when a criterion fails or the night is
+not readable (`running` or `stopped`: the TIMEBOX path).
+
+`route handcheck` (`phillysim.routing.handcheck`) selects **ten pairs by
+rule** (every fortieth tract in sorted GEOID order from the first, each
+with its nearest supermarket-format retailer by the QA slice's planar
+rule; the fifth and tenth with the **farthest** supermarket-format
+retailer under the censor by the night's core walk run, so the long tail
+is covered for both modes), routes them in EP-13's single-departure mode
+(a one-minute window) at 08:30 and 17:30 on the pinned Wednesday for walk
+and walk+transit as two harness runs under `<night>/handcheck/`, and prints
+the forty project-side typical minutes with both points' WGS 84
+coordinates and the retailers' names, so a person can put the same points,
+date, and departure into a public trip planner (SEPTA's for transit, a
+general one for walking) **by hand**. Nothing here reaches a planner:
+`--template` prints a `planner.csv` (`check_id,planner_minutes`) to type
+the answers into (blank where the planner gave none), `--tally` or
+`--planner FILE` computes the tally (walk within 3 minutes or 15 % of the
+planner's minutes, whichever is larger; walk+transit within 10 minutes or
+25 %; a censored project time counts only when the planner is at or over
+120 too; the gate is 32 of 40) and the per-check differences, and only
+those go into the packet's handoff. `--skip GEOID` substitutes the next
+tract in sorted order for one the planner cannot answer, and the
+substitution is recorded.
+
+`route concordance` (`phillysim.routing.concordance`) is methodology.md's
+**fallback engine, rehearsed**: the walkable ways of the night's clip
+selected with pyosmium by the same tag rules as OSMnx's `walk` network
+filter (substring semantics included) and written as OSM XML under
+`cache/concordance/`, read with OSMnx 2.1.1's `graph_from_xml` with every
+network path disabled (no cache, Overpass and Nominatim pointed at a dead
+URL; the suite also refuses every socket), bidirectional, simplified, the
+largest component, projected to the analysis CRS; each point snapped to
+its nearest node; scipy's sparse Dijkstra from every origin on the edge
+lengths; the walk time the path plus both snap distances at the core run's
+speed. It walks the 408 origins × the 164 supermarket-format retailers
+(`--all-retailers` for the whole layer) and reports Spearman ρ against the
+night's core walk run over the pairs **both** engines report under the
+censor, with every exclusion counted (R5-censored only, fallback-censored
+only, both), Pearson r, the mean and median absolute differences, and the
+median ratio, into `<night>/concordance/concordance.json` beside the
+fallback's own table. `osmnx` and `scipy` live in the optional `routing`
+group, so the OSMnx side of `tests/test_concordance.py` skips where the
+group is not installed (CI).
+
+**Launching the `travel_times` stage unattended** (the second night, on
+the owner's word; Windows, from `phillysim/`, the machine left on): the
+stage is the night, so the launch is the pipeline verb detached, and the
+night lands under `runs/routing/<UTC stamp>-travel-times/`:
+
+```
+Start-Process -WindowStyle Hidden -FilePath .\.venv\Scripts\python.exe `
+  -ArgumentList "-m", "phillysim.cli", "run", "--stage", "travel_times" `
+  -RedirectStandardOutput ..\data\runs\travel_times-launch.log `
+  -RedirectStandardError ..\data\runs\travel_times-launch.err
+uv run phillysim route status            # the latest night: which run, wall so far
+uv run phillysim status                  # travel_times: missing until the night finishes
+```
+
+If the machine restarts mid-night, the next `phillysim run` resumes the
+stopped night in place (the stage finds it by plan, points, and input
+digests). `--keep-awake` is `route matrix`'s; for the stage, keep the
+machine awake by other means.
+
 ## Resource baselines
 
 Recorded at the EP-9 checkpoint (2026-09-02) from a fresh clone of `main`
@@ -764,6 +913,11 @@ its descendants.
 | r5py's network cache (`data/cache/r5py/`) | `<digest>.transport_network` 416 MB, `.mapdb.p` 106 MB, `.mapdb` 4 MB; the three inputs linked, not copied (symlinks on this machine); about 0.9 GB with the temporary directories the killed and failed children left under `tmp/`; r5py expires files older than two weeks | workspace ≤ 50 GB |
 | run records | about 12 KB per run (`rss.csv` dominates: 160 rows for the cold run) | — |
 | test suite | 583 passed, 3 skipped in about 44 s (516 before the packet) | — |
+| **The first unattended night** (EP-14, launched 2026-09-03 22:36Z; `phillysim route matrix --plan m3-spike.json`, night `20260903T223607Z-m3-spike`): 408 origins × 1,609 retailers, the seven runs | finished 23:24Z, **47 min 54 s** wall for all seven runs (2,833 s of child walls): `walk-48-wed` 54.2 s, `transit-48-wed` 775.7 s (720 departures; routing 768 s), `walk-48-wed-repeat` 55.8 s, `transit-48-wed-repeat` 710.9 s, `walk-30-wed` 30.5 s, `transit-30-wed` 626.6 s, `transit-48-sat` 579.7 s; **core wall 829.9 s (0.23 h)**; **peak RSS 5.39 GB** (`transit-48-sat`; every run 5.13–5.39 GB; the network from cache 2.2–2.3 GB); 656,472 rows per run, no missing pair; both repeats byte- and value-identical to their originals; finite pairs: transit 99.95 % (Wed 4.8), 99.65 % (Wed 3.0), 99.85 % (Sat 4.8); walk 46.95 % (4.8) and 23.09 % (3.0) | 8 h core wall, 20 GB budget, 22 GB kill: 2.9 % and 27 % |
+| `phillysim route verdict` on that night (EP-15) | seconds: the two pair-by-pair joins of 656,472 rows and the 656,472-pair straight-line bound | — |
+| `phillysim route handcheck` on that night (EP-15): two single-departure runs, 10 origins × 10 retailers, both modes | 9.9 s and 9.0 s wall, peak RSS 4.36 GB and 4.42 GB (the network from cache) | 20 GB budget: well under |
+| `phillysim route concordance` on that night (EP-15): the fallback engine on the clip | walkable ways selected in 8 s (201,525 of 224,252 highway ways, 838,148 nodes, 171 MB of XML); OSMnx graph in 112 s (265,006 nodes, 748,296 edges, 41,120 km); 66,912 pairs walked in 18 s; 139 s in all; **peak RSS 5.46 GB** (OSMnx's XML parse, in the CLI process: not "a few hundred megabytes" as the brief sized it); Spearman ρ 0.9935 over 28,256 pairs | routine peak RAM ≤ 24 GB |
+| test suite (EP-15) | 663 passed, 3 skipped in about 2 min (the routing group installed: the OSMnx-side tests run; the sample pipeline routes its `travel_times` stage on a scripted child) | — |
 
 ## Decisions this package honors
 

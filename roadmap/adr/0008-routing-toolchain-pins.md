@@ -126,7 +126,11 @@ downloaded or installed by the gate.
   **Within band** = every pair identical, or at least 99.9 % of pairs
   identical with no difference above 1 minute; the measured numbers
   become the documented variance band of AM-2 / quality.md. Wider goes to
-  the owner (widen with a claims-wording change, or kill).
+  the owner (widen with a claims-wording change, or kill). *Measured
+  2026-09-03 (EP-15, not an amendment):* on the first night both core runs
+  were identical to their repeats pair for pair (656,472 of 656,472 each,
+  both columns; byte and value digests equal); the band as written stands
+  and OQ-C is closed with it.
 - **Hand-check tolerance:** ten OD pairs by rule (EP-15), two departures
   (08:30, 17:30) on the pinned Wednesday, both modes, forty checks
   against a public trip planner by hand (never a data source); walk

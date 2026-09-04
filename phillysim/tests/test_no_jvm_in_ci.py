@@ -96,6 +96,13 @@ def test_importing_the_cli_and_the_routing_modules_starts_no_jvm() -> None:
         "phillysim.routing.records",
         "phillysim.routing.harness",
         "phillysim.routing.smoke",
+        "phillysim.routing.plan",
+        "phillysim.routing.matrix",
+        "phillysim.routing.verdict",
+        "phillysim.routing.handcheck",
+        "phillysim.routing.concordance",
+        "phillysim.routing.stage",
+        "phillysim.pipeline",
     ):
         importlib.import_module(name)
     loaded = {name.split(".")[0] for name in sys.modules}
@@ -105,11 +112,26 @@ def test_importing_the_cli_and_the_routing_modules_starts_no_jvm() -> None:
 def test_routing_group_is_optional_and_psutil_is_core() -> None:
     pyproject = tomllib.loads((PROJECT_DIR / "pyproject.toml").read_text("utf-8"))
     groups = pyproject["dependency-groups"]
-    assert {s.split("==")[0] for s in groups["routing"]} == {"r5py", "jpype1", "psutil"}
+    # EP-15 (ADR-0008): osmnx and scipy, the fallback engine and the concordance, join the
+    # group; CI still installs none of it, so the OSMnx-side tests skip there.
+    assert {s.split("==")[0] for s in groups["routing"]} == {
+        "r5py",
+        "jpype1",
+        "psutil",
+        "osmnx",
+        "scipy",
+    }
     assert "routing" not in pyproject["tool"]["uv"]["default-groups"]
     core = {s.split(">=")[0].split("==")[0] for s in pyproject["project"]["dependencies"]}
     assert "psutil" in core and "r5py" not in core and "jpype1" not in core
-    assert groups["routing"] == ["r5py==1.1.7", "jpype1==1.7.1", "psutil==7.2.2"]
+    assert "osmnx" not in core and "scipy" not in core
+    assert groups["routing"] == [
+        "r5py==1.1.7",
+        "jpype1==1.7.1",
+        "psutil==7.2.2",
+        "osmnx==2.1.1",
+        "scipy==1.18.1",
+    ]
 
 
 def test_ci_installs_no_routing_group_and_runs_no_routing_verb() -> None:

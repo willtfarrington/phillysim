@@ -172,16 +172,87 @@ def sample_transport(spine_samples_dir: Path):
     return make
 
 
+#: The SNAP sample's rows (all of them are the travel_times stage's destinations).
+SAMPLE_RETAILER_ROWS = 26
+
+#: A scripted routing child for the sample pipeline (EP-15): the harness's contract without
+#: a JVM. Times are a deterministic function of the pair, some over the censor.
+SAMPLE_ROUTING_CHILD = """
+import json, sys
+from datetime import UTC, datetime
+from pathlib import Path
+import pandas as pd
+from phillysim.routing import records
+run_dir = Path(sys.argv[1])
+plan = json.loads((run_dir / "plan.json").read_text("utf-8"))
+now = lambda: datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+phases = {"import": {"start": now(), "end": now()},
+          "build": {"start": now(), "end": now(), "network_cached_before": True}}
+rows = []
+for mode in plan["modes"]:
+    phases["route:" + mode] = {"start": now()}
+    for o in plan["origins"]["points"]:
+        for d in plan["destinations"]["points"]:
+            v = (int(o["id"][-4:]) * 3 + int(d["id"].split(":")[-1]) * 7 + len(mode)) % 150
+            p50 = float("nan") if v >= 120 else float(v)
+            rows.append({"mode": mode, "from_id": o["id"], "to_id": d["id"],
+                         "travel_time_p50": p50, "travel_time_p85": p50})
+    phases["route:" + mode]["end"] = now()
+records.write_output(pd.DataFrame(rows), run_dir / records.OUTPUT_FILE)
+(run_dir / records.PHASES_FILE).write_text(json.dumps(phases), "utf-8")
+"""
+
+
+def sample_routing():
+    """What binds the ``travel_times`` stage in the suite: a scripted child under the real
+    harness, a crafted toolchain record in a scratch home, and a check that accepts it."""
+    import json
+    import sys
+    import tempfile
+
+    from phillysim.routing import harness
+    from phillysim.routing.toolchain import JAR_NAME, Check, Toolchain, ToolchainReport
+
+    home = Path(tempfile.mkdtemp(prefix="phillysim-toolchain-"))
+    chain = Toolchain(home, "windows")
+    chain.record_path.write_text(
+        json.dumps(
+            {
+                "jdk": {"release": "jdk-21.0.12.1+1", "version": "21.0.12.1", "sha256": "f9"},
+                "jar": {"release": "v7.5.1-r5py", "name": JAR_NAME, "sha256": "d5"},
+            }
+        ),
+        "utf-8",
+    )
+
+    def runner(plan, **kwargs):
+        return harness.run(
+            plan,
+            command=lambda run_dir: [sys.executable, "-c", SAMPLE_ROUTING_CHILD, str(run_dir)],
+            interval=0.05,
+            **kwargs,
+        )
+
+    def check(_chain) -> ToolchainReport:
+        return ToolchainReport(checks=(Check("test", True, "crafted record accepted"),))
+
+    return {"routing_runner": runner, "toolchain": chain, "routing_check": check}
+
+
 def sample_real_pipeline(transport, samples: Path | None = None):
     """The real pipeline on a fake transport, expecting the samples' six tracts, pinned
-    to the samples' digests, with the network stage's bands set for the sample clip."""
+    to the samples' digests, with the network stage's bands set for the sample clip and
+    the ``travel_times`` stage on a scripted child (no JVM)."""
     from phillysim.pipeline import real_pipeline
 
     samples = FIXTURES_DIR / "spine-samples" if samples is None else samples
-    return real_pipeline(opener=transport, pins=sample_pins(samples)).with_params(
+    return real_pipeline(
+        opener=transport, pins=sample_pins(samples), **sample_routing()
+    ).with_params(
         {
             "spine": {"expected_tracts": 6},
             "network": {"node_band": SAMPLE_NODE_BAND, "way_band": SAMPLE_WAY_BAND},
+            "travel_times": {"origins_count": 6, "destinations_count": SAMPLE_RETAILER_ROWS},
         }
     )
 

@@ -15,7 +15,14 @@ Reproducing an old result: check out the release tag → restore pinned
 snapshots via manifests (or use the published derived tables if upstream is
 gone) → run documented commands → checksum-identical within the pinned
 Windows environment; canonicalized-value hashes cross-platform.
-`required release evidence`
+`required release evidence` **Measured for routing at EP-15 (2026-09-03,
+OQ-C closed):** the M3 night's two core runs against their repeats were
+identical pair for pair (656,472 of 656,472 pairs each, both time columns),
+with equal byte digests and equal canonicalized-value digests, so the
+documented variance band for R5 travel times on the pinned toolchain is
+zero and the wording above stands as written; a change of R5, r5py, or the
+JDK re-measures it by the same pair-by-pair procedure (`phillysim route
+verdict`).
 
 ## Test matrix
 

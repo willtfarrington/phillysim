@@ -48,6 +48,8 @@ routing = [
   "r5py==1.1.7",
   "jpype1==1.7.1",
   "psutil==7.2.2",
+  "osmnx==2.1.1",
+  "scipy==1.18.1",
 ]
 
 [tool.uv]

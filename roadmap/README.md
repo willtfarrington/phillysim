@@ -156,12 +156,33 @@ split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 | EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
 | EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [x] 5cb5092 |
 
-### M3 — Routing spike · `[ ]`
+### M3 — Routing spike · `[~]`
 
 Go/no-go: numeric criteria in [milestones.md](milestones.md) (wall ≤ 8 h,
 process-tree RSS ≤ 22 GB, determinism within band, sanity gates); go =
 walk+transit within budgets, kill = the documented walk-only fallback
-invoked. A gate packet belongs to the milestone it refines (unlike a
+invoked. **Evidence (EP-15, 2026-09-03, on the first unattended night
+`20260903T223607Z-m3-spike`, read by `phillysim route verdict`):** the two
+core runs together took 830 s of the 8 h wall (walk 54 s, walk+transit
+776 s; all seven runs of the matrix in 47 min); the peak process-tree RSS
+over the night was 5.39 GB against the 20 GB budget and the 22 GB kill
+line, no run killed; both core runs were identical to their repeats pair
+for pair (656,472 of 656,472 pairs each, both time columns, byte and
+canonicalized-value digests equal), so OQ-C closes with a measured band of
+zero; the walk+transit core run has 99.95 % finite pairs against the 95 %
+gate, and the walk core run 46.95 % under the 120-minute censor, where the
+straight-line reach bound at 4.8 km/h admits at most 56.24 % of the pairs
+(every origin reaches a retailer; owner decision at EP-15: the gate is read
+on the walk+transit run and the walk run is reported against the reach
+bound, recorded in methodology.md "Validation"); the walk concordance
+against the fallback engine (OSMnx 2.1.1 + scipy on the same clip) is
+Spearman ρ = 0.9935 over 28,256 pairs both engines report under the
+censor, against the 0.95 gate; the hand check's forty project-side times
+are routed (ten pairs by rule, 08:30 and 17:30, walk and walk+transit) and
+their comparison against a public trip planner is done by hand, so the
+tally and the outcome code are the owner's, recorded in the EP-15 handoff
+when the tally is in. The `travel_times` stage exists (EP-15, on the go
+path) and runs its first night on the owner's word. A gate packet belongs to the milestone it refines (unlike a
 checkpoint, which belongs to none): EP-11 is the M3 refinement gate,
 authored by EP-10 on 2026-09-03 from its pre-read. It applied the
 `milestones.md` carry-ins first (none named M3), fixed the spike's inputs,
@@ -183,7 +204,7 @@ on a kill or an exhausted time box.
 | EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | [x] a4c8a38 |
 | EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [x] e4c2c95 |
 | EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | [x] b35370d |
-| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [ ] |
+| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [~] |
 
 ### M4–M8 · `[ ]` refinement gates pending
 

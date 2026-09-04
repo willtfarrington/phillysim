@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "name": "travel-times",
+  "title": "The real pipeline's travel_times stage: the two core runs of the M3 spike (EP-15)",
+  "references": [
+    "roadmap/adr/0008-routing-toolchain-pins.md (calendar, decision numbers)",
+    "roadmap/methodology.md (Travel model; Units and origins)",
+    "roadmap/EP-15-routing-verdict.md (the stage on the go verdict)",
+    "phillysim/src/phillysim/routing/plans/m3-spike.json (the core runs, verbatim)"
+  ],
+  "time_zone": "America/New_York",
+  "dates": {
+    "wednesday": "2026-09-23"
+  },
+  "percentiles": [50, 85],
+  "max_time_minutes": 120,
+  "snap_to_network": true,
+  "origins": {
+    "table": "tracts_spine",
+    "id": "geoid",
+    "lon": "centroid_lon",
+    "lat": "centroid_lat",
+    "count": 408,
+    "description": "the 408 spine centers (CenPop2020 population-weighted centers; block-group origins are M5's)"
+  },
+  "destinations": {
+    "table": "snap_retailers",
+    "id": "site_id",
+    "lon": "longitude",
+    "lat": "latitude",
+    "count": 1609,
+    "description": "all 1,609 SNAP retailers (the 164 supermarket-format rows are a subset; one run serves the headline layer and M5's all-retailer variant)"
+  },
+  "rehearsal_origins": [
+    "42101000101",
+    "42101000102",
+    "42101000200",
+    "42101000300",
+    "42101000401",
+    "42101000403"
+  ],
+  "core_runs": ["walk-48-wed", "transit-48-wed"],
+  "core_wall_limit_hours": 8,
+  "runs": [
+    {
+      "name": "walk-48-wed",
+      "mode": "walk",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 1,
+      "role": "core"
+    },
+    {
+      "name": "transit-48-wed",
+      "mode": "walk_transit",
+      "speed_walking_kmh": 4.8,
+      "date": "2026-09-23",
+      "departure_time": "08:00",
+      "window_minutes": 720,
+      "role": "core"
+    }
+  ]
+}

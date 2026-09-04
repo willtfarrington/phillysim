@@ -14,7 +14,11 @@ build the static slice page from a gated public zone and serve it locally.
 JDK and R5 jar project-local; ``route smoke`` runs the first JVM route in a
 sampled child process and leaves run records under ``<data root>/runs/routing/``;
 ``route matrix`` (EP-14) executes a pre-scripted plan of runs as a resumable
-night under the same harness and ``route status`` reads a night back.
+night under the same harness and ``route status`` reads a night back;
+``route verdict`` (EP-15) reads a night against the M3 criteria, ``route
+handcheck`` routes the hand check's forty project-side times and tallies the
+hand-typed planner answers, and ``route concordance`` compares the night's
+walk times with the fallback engine's.
 
 Without ``--fixture`` the verbs use the real pipeline (:mod:`phillysim.pipeline`,
 EP-5a onward) on the resolved data root, and ``run`` acquires real snapshots
@@ -46,7 +50,7 @@ from phillysim.preflight import FIXTURE_SCALE, REAL_RUN, run_preflight
 from phillysim.publish import sitebuild
 from phillysim.publish.export import PUBLIC_MANIFEST, PUBLIC_ZONE
 from phillysim.publish.gate import check_public_zone
-from phillysim.routing import matrix, smoke, toolchain
+from phillysim.routing import concordance, handcheck, matrix, smoke, toolchain, verdict
 from phillysim.routing import plan as plans
 from phillysim.runner import StateError, verify_state
 from phillysim.stages import CancelledError, Pipeline, PipelineError, StageError, parse_params
@@ -704,6 +708,181 @@ def route_status(
         return
     for line in matrix.status_lines(report):
         typer.echo(line)
+
+
+# --- the verdict, the hand check, the concordance (EP-15) ------------------------------------
+
+
+@route_app.command("verdict")
+def route_verdict(
+    data_root: DataRootOption = None,
+    night: NightOption = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the report as JSON.")] = False,
+    write: Annotated[
+        bool,
+        typer.Option("--write", help="Write the report as verdict.json under the night."),
+    ] = False,
+    record: Annotated[
+        str | None,
+        typer.Option(
+            "--record",
+            help="Record the owner's confirmed outcome code (go, KILLED-BY-EVIDENCE, "
+            "TIMEBOX-EXHAUSTED) in verdict.json.",
+        ),
+    ] = None,
+    confirmed_by: Annotated[
+        str, typer.Option("--confirmed-by", help="Who confirmed the code (with --record).")
+    ] = "owner",
+    note: Annotated[str, typer.Option("--note", help="A note kept with the code.")] = "",
+) -> None:
+    """Read a night against the M3 criteria (wall, RSS, determinism pair by pair, finite
+    pairs, the hand check's tally, the walk concordance), each with its source quoted, its
+    number, and pass / fail / pending; the reader suggests, the owner calls. Exit status 1
+    when a criterion fails or the night is not readable.
+    """
+    root, _label = _resolve_root(False, data_root)
+    directory = _night_dir(root, night)
+    try:
+        if record is not None:
+            report = verdict.record_outcome(directory, record, confirmed_by=confirmed_by, note=note)
+        else:
+            report = verdict.read_verdict(directory)
+            if write:
+                verdict.write_verdict(directory, report)
+    except ValueError as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    if as_json:
+        typer.echo(verdict.to_json(report))
+    else:
+        for line in verdict.verdict_lines(report):
+            typer.echo(line)
+    if report["failing"] or not report["readable"]:
+        raise typer.Exit(code=1)
+
+
+@route_app.command("handcheck")
+def route_handcheck(
+    data_root: DataRootOption = None,
+    home: HomeOption = None,
+    night: NightOption = None,
+    planner: Annotated[
+        Path | None,
+        typer.Option(
+            "--planner",
+            help="Tally the hand-typed planner file (check_id,planner_minutes; default "
+            "planner.csv under the night's handcheck directory) instead of routing.",
+        ),
+    ] = None,
+    tally_only: Annotated[
+        bool,
+        typer.Option("--tally", help="Tally planner.csv under the night's handcheck directory."),
+    ] = False,
+    skip: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--skip",
+            help="A tract GEOID the planner gave no answer for: substitute the next tract in "
+            "sorted order by the same rule (repeatable).",
+        ),
+    ] = None,
+    template: Annotated[
+        bool,
+        typer.Option("--template", help="Print the planner.csv template for the checks."),
+    ] = False,
+) -> None:
+    """The hand check (ADR-0008): ten origin–destination pairs by rule routed in
+    single-departure mode at 08:30 and 17:30 on the pinned Wednesday for walk and
+    walk+transit (two child runs under <night>/handcheck/), the forty project-side times
+    printed for comparison against a public trip planner by hand; then, with --planner or
+    --tally, the tally of the hand-typed answers against the tolerance and the 32-of-40
+    gate. Nothing here reaches a planner.
+    """
+    root, label = _resolve_root(False, data_root)
+    directory = _night_dir(root, night)
+    if planner is not None or tally_only:
+        try:
+            report = handcheck.apply_planner(directory, planner)
+        except (FileNotFoundError, ValueError, KeyError) as exc:
+            typer.echo(f"FAIL {exc}")
+            raise typer.Exit(code=1) from exc
+        for line in handcheck.handcheck_lines(report):
+            typer.echo(line)
+        if not report["tally"]["gate_met"]:
+            raise typer.Exit(code=1)
+        return
+    existing = directory / handcheck.HANDCHECK_DIR / handcheck.HANDCHECK_FILE
+    if template:
+        if not existing.is_file():
+            typer.echo("FAIL no handcheck.json yet: run `route handcheck` first")
+            raise typer.Exit(code=1)
+        typer.echo(handcheck.planner_template(matrix.records.read_json(existing)), nl=False)
+        return
+    chain = _toolchain(home)
+    typer.echo(f"route handcheck at {label}: {root}")
+    preflight = run_preflight(root, REAL_RUN, extra=toolchain.check(chain).checks)
+    for line in preflight.lines():
+        typer.echo(line)
+    if not preflight.ok:
+        typer.echo("refusing to run: preflight failed")
+        raise typer.Exit(code=1)
+    try:
+        report = handcheck.run_handcheck(
+            directory, data_root=root, toolchain=chain, skip=skip or (), echo=typer.echo
+        )
+    except (FileNotFoundError, ValueError, RuntimeError) as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for line in handcheck.handcheck_lines(report):
+        typer.echo(line)
+
+
+@route_app.command("concordance")
+def route_concordance(
+    data_root: DataRootOption = None,
+    night: NightOption = None,
+    rebuild: Annotated[
+        bool,
+        typer.Option("--rebuild", help="Re-select the walkable ways even if the XML exists."),
+    ] = False,
+    all_retailers: Annotated[
+        bool,
+        typer.Option(
+            "--all-retailers",
+            help="Compare over all retailers instead of the supermarket-format subset.",
+        ),
+    ] = False,
+) -> None:
+    """The walk concordance (methodology.md "Validation"): the fallback engine (OSMnx 2.x +
+    scipy sparse Dijkstra) built from the night's clipped extract with no network call,
+    its walk times for the night's origins × the supermarket-format retailers at the core
+    run's speed, and Spearman ρ against the night's core walk run over finite pairs; the
+    report under <night>/concordance/. Exit status 1 below the 0.95 gate.
+    """
+    root, label = _resolve_root(False, data_root)
+    directory = _night_dir(root, night)
+    typer.echo(f"route concordance at {label}: {root}")
+    try:
+        report = concordance.run_concordance(
+            directory,
+            data_root=root,
+            rebuild=rebuild,
+            supermarket_only=not all_retailers,
+            echo=typer.echo,
+        )
+    except ImportError as exc:
+        typer.echo(
+            f"FAIL {exc}: the concordance needs the routing group "
+            "(`uv sync --locked --group routing`)"
+        )
+        raise typer.Exit(code=1) from exc
+    except (FileNotFoundError, ValueError) as exc:
+        typer.echo(f"FAIL {exc}")
+        raise typer.Exit(code=1) from exc
+    for line in concordance.concordance_lines(report):
+        typer.echo(line)
+    if not report["gate_met"]:
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":  # pragma: no cover - `python -m phillysim.cli`

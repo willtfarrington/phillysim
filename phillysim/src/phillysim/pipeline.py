@@ -24,8 +24,10 @@ in the analysis CRS) and publishes the basemap file beside the rest (public
 schema version 2); EP-12 adds the two routing sources (``osm_network``, the
 first Bucket B source of the real pipeline, and ``gtfs``) and the ``network``
 stage (body in :mod:`phillysim.network`: the clipped street network and the
-unwrapped feeds, no JVM); later packets append the rest (``destinations`` ..
-``travel_times`` between ``snap_retailers`` and ``metrics`` at M3 / M4).
+unwrapped feeds, no JVM); EP-15 adds ``travel_times`` on the M3 go verdict (body in
+:mod:`phillysim.routing.stage`: the spike's two core runs as a night under the harness,
+concatenated in the dictionary's shape, Bucket B by derivation); M4 appends
+``destinations`` .. ``hours`` between ``snap_retailers`` and ``network``.
 
 Snapshot IDs are pinned **per source** in :data:`SNAPSHOT_IDS` (ADR-0006,
 ADR-0008) rather than taken from the clock, because a stage's outputs are
@@ -44,7 +46,7 @@ from __future__ import annotations
 import json
 import shutil
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import Any
 
@@ -62,6 +64,9 @@ from phillysim.manifest import SCHEMA_VERSION, read_manifest, verify_snapshot
 from phillysim.metrics import slice as qa_slice
 from phillysim.network import NETWORK_DIR, NETWORK_REPORT, network
 from phillysim.publish import bins, export
+from phillysim.routing import stage as routing_stage
+from phillysim.routing.records import RunRecord
+from phillysim.routing.toolchain import Toolchain, ToolchainReport
 from phillysim.spine import ACS_TRACTS, ANALYSIS_CRS, SPINE, TRACT_COUNT, demographics, spine
 from phillysim.stages import Pipeline, Stage, StageContext, StageError
 
@@ -251,13 +256,24 @@ def publish(ctx: StageContext) -> None:
 # --- the pipeline -------------------------------------------------------------------------------
 
 
-def real_pipeline(opener: Opener = urllib_open, pins: Pins | None = None) -> Pipeline:
+def real_pipeline(
+    opener: Opener = urllib_open,
+    pins: Pins | None = None,
+    *,
+    routing_runner: Callable[..., RunRecord] | None = None,
+    toolchain: Toolchain | None = None,
+    routing_check: Callable[[Toolchain], ToolchainReport] | None = None,
+) -> Pipeline:
     """The real stages registered so far, wired over the pinned snapshot paths.
 
     ``opener`` is the transport ``acquire`` uses; the CLI passes nothing (the real
     https path), the test suite passes a fake that serves the committed samples and
-    ``pins`` the samples' digests over the adapters' pinned ones.
+    ``pins`` the samples' digests over the adapters' pinned ones. ``routing_runner`` and
+    ``toolchain`` bind the ``travel_times`` stage (EP-15): the CLI passes nothing (the
+    harness child on the project-local toolchain), the suite a scripted child, a crafted
+    toolchain record, and ``routing_check`` accepting it, so no JVM runs in the suite.
     """
+    routing_plan = routing_stage.stage_plan()
     return Pipeline(
         PIPELINE_NAME,
         [
@@ -343,6 +359,25 @@ def real_pipeline(opener: Opener = urllib_open, pins: Pins | None = None) -> Pip
                 description="routing inputs: the OSM extract clipped to the county bounds "
                 "+ 5 km (way-complete, Bucket B by derivation) and SEPTA's two GTFS zips "
                 "unwrapped as files; no JVM",
+            ),
+            Stage(
+                "travel_times",
+                routing_stage.make_travel_times(
+                    toolchain=toolchain,
+                    **({"runner": routing_runner} if routing_runner is not None else {}),
+                    **({"check": routing_check} if routing_check is not None else {}),
+                ),
+                inputs=(SPINE, SNAP_RETAILERS, NETWORK_DIR, NETWORK_REPORT),
+                outputs=(routing_stage.TRAVEL_TIMES, routing_stage.TRAVEL_TIMES_REPORT),
+                # The plan's digest and every run's parameters are the methods axis
+                # (ADR-0006): a parameter change, like a refreshed input, re-runs routing
+                # (an unattended night). The table sizes are overridable for the samples.
+                params=routing_stage.stage_params(routing_plan),
+                description="travel-time matrices (EP-15): the M3 spike's two core runs "
+                "(walk 4.8 km/h; walk+transit 4.8 km/h over the pinned Wednesday's "
+                "08:00-20:00 window) routed by R5 in a sampled child per run as a night "
+                "under runs/routing/, concatenated in the dictionary's shape, censored at "
+                "120 min; Bucket B by derivation; never published before M5",
             ),
             Stage(
                 "metrics",

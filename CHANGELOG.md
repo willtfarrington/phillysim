@@ -51,6 +51,69 @@ recorded separately in manifests once the pipeline exists.
 
 ### Added
 
+- **EP-15 — the M3 verdict: criteria against the records, the determinism
+  band, the hand check, the walk concordance, the `travel_times` stage**
+  (M3; 2026-09-03; **in progress**: the hand check's planner tally and the
+  owner's outcome code are pending, see the packet's handoff).
+  `phillysim route verdict --night ID [--json] [--write] [--record CODE]`
+  (`phillysim.routing.verdict`) reads a finished or killed night against
+  every criterion of milestones.md, methodology.md, architecture.md, and
+  ADR-0008, each with its source quoted, its number, and a status: the core
+  wall against 8 h, the peak process-tree RSS against the 20 GB budget and
+  the 22 GB kill (a peak between them is a pass with a finding), each core
+  run against its repeat **pair by pair** in integer minutes on both time
+  columns against the band (identical, or ≥ 99.9 % identical with no
+  difference over 1 min), each core run's finite pairs against 95 % (the
+  walk run also against the straight-line reach bound the censor allows at
+  all, because its reading is the owner's), the hand check's tally against
+  32 of 40, the concordance against ρ ≥ 0.95; it suggests, and `--record`
+  writes the code the owner confirmed into `verdict.json` beside the
+  measurements. `phillysim route handcheck --night ID [--skip GEOID]`
+  (`phillysim.routing.handcheck`) selects the ten pairs by rule (every
+  fortieth tract by GEOID from the first, the nearest supermarket-format
+  retailer by the QA slice's rule; the fifth and tenth the farthest one
+  under the censor by the core walk run; a skipped tract substituted by the
+  next in sorted order), routes them in single-departure mode at 08:30 and
+  17:30 on the pinned Wednesday for walk and walk+transit (two harness runs
+  under `<night>/handcheck/`), prints the forty project-side times with both
+  points' coordinates, and, with `--planner FILE` or `--tally`, tallies a
+  **hand-typed** `planner.csv` against the tolerance (walk 3 min or 15 %,
+  walk+transit 10 min or 25 %, the larger) and the gate; nothing reaches a
+  planner. `phillysim route concordance --night ID` (`phillysim.routing.concordance`)
+  builds methodology.md's fallback engine on the night's clip with no
+  network call (the walkable ways selected with pyosmium by OSMnx's own
+  `walk` filter rules, written as OSM XML under `cache/concordance/`, read
+  with `graph_from_xml`, Overpass and Nominatim disabled), walks the 408 ×
+  164 supermarket-format pairs with scipy's sparse Dijkstra at 4.8 km/h,
+  and reports Spearman ρ against the core walk run over the pairs both
+  engines report under the censor, with every exclusion counted. `osmnx
+  2.1.1` and `scipy 1.18.1` join the optional `routing` group (ADR-0008);
+  CI installs none of it, so the OSMnx-side tests skip there. **The
+  `travel_times` stage** (`phillysim.routing.stage`, registered between
+  `network` and `metrics`; ten real stages): the two core runs as the
+  tracked plan `travel-times.json` (the spike's core runs verbatim), routed
+  as a night under the EP-14 driver, concatenated into
+  `curated/travel_times.parquet` in the dictionary's shape (1,312,944 rows,
+  Bucket B by derivation, never read by `publish`) with
+  `intermediate/travel_times.json`; the plan's digest and parameters are the
+  stage's parameters; a finished night on the same plan, points, and inputs
+  is re-used, a stopped one resumed; the stage refuses without the routing
+  group and the toolchain and names the install. **The evidence** (night
+  `20260903T223607Z-m3-spike`): core wall 830 s of 8 h; peak RSS 5.39 GB;
+  both core runs identical to their repeats pair for pair (656,472 of
+  656,472 each; OQ-C closed with a zero band; quality.md's wording
+  confirmed); walk+transit 99.95 % finite; walk 46.95 % against a reach
+  bound of 56.24 % (the owner's reading); concordance ρ = 0.9935 over
+  28,256 pairs (graph 265,006 nodes, 748,296 edges; 2.3 min; peak RSS
+  5.46 GB); forty hand-check times routed (10 s per run, 4.4 GB). Tests:
+  `test_verdict.py`, `test_handcheck.py`, `test_concordance.py`,
+  `test_travel_times_stage.py` (crafted records and scripted children, no
+  JVM; the sample pipeline runs the stage on a scripted child too).
+  Documentation: `docs/method-cards/travel-times.md` (stub), the data
+  dictionary (the curated matrix, the stage's report, the night's verdict,
+  hand-check, and concordance files), architecture.md stage 9,
+  open-questions.md (OQ-C), quality.md, ADR-0008 (the band as measured),
+  DATA-LICENSES, milestones.md, `phillysim/README.md`.
 - **EP-14 — the pre-scripted run matrix and the first unattended night**
   (M3; 2026-09-03). The spike's runs are data before they run:
   `phillysim/src/phillysim/routing/plans/m3-spike.json` (tracked;

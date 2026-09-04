@@ -1,7 +1,8 @@
 # Data dictionary
 
 > **Status: seeded (EP-3); first real instances (EP-5b, EP-6, EP-7, EP-8b,
-> EP-12); routing run records since EP-13, routing nights since EP-14.** Schema version **1**; public schema version **2** (EP-7 wrote
+> EP-12); routing run records since EP-13, routing nights since EP-14, the
+> curated travel-time matrix since EP-15.** Schema version **1**; public schema version **2** (EP-7 wrote
 > version 1; EP-8b added the basemap file). This document describes the
 > tables the pipeline produces. Instances today: the synthetic tinycity
 > fixture's golden files (`phillysim/tests/fixtures/tinycity/`) for every
@@ -174,6 +175,9 @@ path. Scrubbing and canonical JSON as for run records.
 | `<run>/` | One EP-13 run directory per run of the plan (the files above), plus `travel_times.parquet` (the matrix in the travel-time matrix's shape, below) and `matrix.json` (its `matrix` digests and the `sanity` counts, with the run's `mode`, `speed_walking_kmh`, `departure`, `window_minutes`, `departures`, `max_time_minutes`) |
 | `<run>.attempt<N>/` | An earlier attempt of the run that did not complete (failed, cancelled, killed, or interrupted), kept as it was when the run was re-run on resume |
 | `launch.log`, `launch.err` | Only when the night was launched detached (the README's launch step): the process's standard streams |
+| `verdict.json` (EP-15) | Written by `phillysim route verdict --write` / `--record`: `criteria` (per criterion its `id`, `title`, `source` quoted from the baseline document, `threshold`, `status` = `pass` / `pass-with-finding` / `fail` / `pending` / `owner-reading`, `measured`, `note`), `failing`, `pending`, `owner_readings`, `findings`, `suggested_outcome`, and, once the owner confirmed it, `outcome_code` (`go`, `KILLED-BY-EVIDENCE`, `TIMEBOX-EXHAUSTED`) with `outcome_recorded_at`, `outcome_confirmed_by`, `outcome_note`; `night.json` is never rewritten by it. The determinism entries carry the pair-by-pair comparison (`pairs`, `identical_pairs`, `identical_share`, `max_abs_diff_minutes`, `diff_distribution`, the two runs' digests); the walk finite-pairs entry carries the straight-line reach bound |
+| `handcheck/` (EP-15) | The hand check: `handcheck.json` (`pairs`: the ten origin–destination pairs by rule with both points' WGS 84 coordinates, the retailer's name, the straight-line metres, the core walk time, the rule, and any substitution; `checks`: forty `check_id`s (`<position>-<HHMM>-<mode>`) with the project-side typical minutes or `censored`; `tolerance`, `gate`, `runs`; `tally`, empty until the planner file is tallied: `checks`, `within`, `gate_met`, `no_answer`, `by_mode`, `rows` with each check's planner minutes, difference, tolerance, and within-or-not), the two EP-13 run directories `handcheck-0830/` and `handcheck-1730/` (single-departure, both modes), and `planner.csv`, **typed by hand** (`check_id,planner_minutes`; never a data source, never tracked) |
+| `concordance/` (EP-15) | The walk concordance against the fallback engine: `concordance.json` (the walkable-way `selection` counts, the OSMnx `graph` counts and build seconds with the settings that disable every network path, the `routing` counts and snap distances, `pairs`, `r5_finite_pairs`, `fallback_finite_pairs`, `pairs_compared`, the three `excluded_*` counts, `spearman_rho`, `pearson_r`, the mean and median absolute differences, `median_ratio_fallback_over_r5`, `gate`, `gate_met`, `peak_rss_bytes`) and `fallback_walk_times.parquet` (`origin_geoid`, `site_id`, `fallback_minutes`, `fallback_metres`; NaN beyond the censor). The walkable ways as OSM XML live under `<data root>/cache/concordance/` and are rebuilt on demand |
 
 `night.json` fields (`schema_version` **1**):
 
@@ -311,10 +315,22 @@ key). Times are the integer minutes R5 reports, **censored at 120**: a pair
 with no route within 120 minutes, or a point R5 could not snap to the street
 network, reads 120 in both columns, and nothing exceeds it. The walking speed,
 the departure date and time, and the window live in the run's record
-(`plan.json`, `matrix.json`, `night.json`), not in the table. Until the M3
-verdict registers a `travel_times` stage, these tables stay under
-`runs/routing/` (Bucket B by derivation from the clipped OSM network) and
-are never published.
+(`plan.json`, `matrix.json`, `night.json`), not in the table.
+
+**The curated instance (`curated/travel_times.parquet`, real pipeline, EP-15).**
+Written by the `travel_times` stage (`phillysim.routing.stage`): the two core
+runs of the tracked plan `travel-times.json` (walk at 4.8 km/h; walk+transit
+at 4.8 km/h over the pinned Wednesday 2026-09-23, 08:00–20:00, one departure
+per minute; percentiles 50 and 85; censored at 120), routed as a night under
+`runs/routing/<UTC stamp>-travel-times/` and concatenated: 408 origins ×
+1,609 destinations × 2 modes = 1,312,944 rows, sorted by key. **Bucket B** by
+derivation from the clipped OSM network (ADR-0003); `publish` does not read
+it, so nothing of it is public before M5. `intermediate/travel_times.json`
+holds the night's ID, per core run its wall, peak RSS, digests, and sanity
+counts, and the matrix's byte and canonicalized-value digests (the M5-gate
+carry-in compares them with the spike's night). The walking speed, dates,
+window, and percentiles are the stage's parameters (the methods axis), not
+columns. The spike's night records stay under `runs/routing/` beside it.
 
 ## Analytic table (`tract_metrics.parquet`) — locked schema
 
@@ -374,7 +390,8 @@ checkpoint, 2026-09-02); their columns are deliberately not documented.
 | `intermediate/destinations.parquet` | `destinations` | `conflate` | The destination sources as one point table (site ID, source, category, name, tract, coordinates) |
 | `intermediate/sites_conflated.parquet` | `conflate` | `hours` | Destinations after cross-source de-duplication (identity on the fixture) |
 | `intermediate/network.json` | `network` | `travel_times` (fixture); the routing harness's smoke plan (`phillysim.routing.smoke`, EP-13) for the clip's file name and the feed names | Routing-input summary. Fixture: stop count, edge count, total edge length, CRS. Real pipeline (EP-12): the routing box (county bounds + `buffer_m`, WGS 84), CRS, the two source snapshots, the license bucket by derivation (B), the clip's file name, bytes, node / way / highway-way / relation counts and the state file's counts, and per feed zip its bytes, stops, stops outside the box, and stops inside the county's tracts |
-| `intermediate/network/` | `network` (real pipeline, EP-12) | the routing harness's child (EP-13, `phillysim.routing.harness`; r5py copies the three files into `cache/r5py/` as working copies and builds the network there); no stage yet | A directory output (like `public/`): `pennsylvania-260831-philadelphia-5km.osm.pbf`, the OSM extract clipped to the routing box (way-complete, the source order, the box in its header; **Bucket B** by derivation from the `osm_network` snapshot), and `google_bus.zip` / `google_rail.zip`, SEPTA's two feed zips copied out of the release asset as files and never expanded (never copied under `public/` or `site/`) |
+| `intermediate/network/` | `network` (real pipeline, EP-12) | `travel_times` (real pipeline, EP-15) through the routing harness's child (EP-13, `phillysim.routing.harness`; r5py copies the three files into `cache/r5py/` as working copies and builds the network there); the walk concordance (`route concordance`) reads the clip | A directory output (like `public/`): `pennsylvania-260831-philadelphia-5km.osm.pbf`, the OSM extract clipped to the routing box (way-complete, the source order, the box in its header; **Bucket B** by derivation from the `osm_network` snapshot), and `google_bus.zip` / `google_rail.zip`, SEPTA's two feed zips copied out of the release asset as files and never expanded (never copied under `public/` or `site/`) |
+| `intermediate/travel_times.json` | `travel_times` (real pipeline, EP-15) | nobody (report; the M5-gate carry-in and the checkpoints compare its digests with the spike's night) | The matrix's report: the stage name, the license bucket (B) and its note, the plan (file, digest, the two runs' parameters), the night's ID and whether it was re-used or resumed, the points' digest, the routing inputs' digests, the core wall and the night's peak RSS, per core run its wall, peak RSS, matrix digests and sanity counts, and the written matrix's rows, bytes, byte and canonicalized-value digests, and modes |
 
 ## Public zone (`public/`) — public schema version 2 (EP-7, EP-8b)
 

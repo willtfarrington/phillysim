@@ -55,6 +55,19 @@ def spike() -> MatrixPlan:
     return load_plan(DEFAULT_PLAN)
 
 
+def test_the_packaged_plans_are_the_spike_and_the_stages() -> None:
+    """EP-15: ``travel-times.json`` (the stage's plan) sits beside ``m3-spike.json``; its
+    content is pinned against the spike's core runs in ``test_travel_times_stage.py``."""
+    assert sorted(p.name for p in PLANS_DIR.glob("*.json")) == [
+        "m3-spike.json",
+        "travel-times.json",
+    ]
+    for name in ("m3-spike.json", "travel-times.json"):
+        plan = load_plan(name)
+        assert plan.core_runs == ("walk-48-wed", "transit-48-wed")
+        assert plan.core_wall_limit_hours == 8.0 and plan.max_time_minutes == 120
+
+
 def test_the_plan_file_is_packaged_and_resolves_by_name_or_path(spike: MatrixPlan) -> None:
     assert plan_path(DEFAULT_PLAN) == PLANS_DIR / DEFAULT_PLAN
     assert plan_path(PLANS_DIR / DEFAULT_PLAN) == PLANS_DIR / DEFAULT_PLAN

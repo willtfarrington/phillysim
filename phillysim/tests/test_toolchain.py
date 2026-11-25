@@ -206,7 +206,9 @@ def test_install_is_idempotent_and_downloads_nothing_twice(tmp_path: Path, craft
 
 def test_wrong_jar_digest_is_refused_and_the_download_deleted(tmp_path: Path, crafted) -> None:
     jdk, jar, _opener, pins = crafted
-    tampered = FakeOpener({JDK_ARCHIVES["windows"].url: jdk, JAR.url: jar[:-1] + b"\0"})
+    tampered = FakeOpener(
+        {JDK_ARCHIVES["windows"].url: jdk, JAR.url: jar[:-1] + bytes([jar[-1] ^ 0xFF])}
+    )
     with pytest.raises(ToolchainError, match="the pin is"):
         install(tmp_path, tampered, pins)
     assert not (tmp_path / ".r5").exists() or list((tmp_path / ".r5").iterdir()) == []

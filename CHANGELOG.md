@@ -76,6 +76,17 @@ recorded separately in manifests once the pipeline exists.
   tolerance, no routing-source adapters, one `SNAPSHOT_ID` for all
   sources).
 
+### Fixed
+
+- **A toolchain test that failed 1 run in 256** (2026-11-25). The EP-13
+  test `test_wrong_jar_digest_is_refused_and_the_download_deleted` crafts
+  the jar from random bytes and "tampered" it by setting its last byte to
+  zero, so whenever that byte was already zero the jar was unchanged, its
+  digest matched the pin and the expected refusal never came (CI run
+  45715672299 on Windows, on a docs-only commit). The tamper now flips
+  every bit of the last byte, so the jar always differs at the same size.
+  The toolchain code is unchanged.
+
 ### Added
 
 - **EP-15 — the M3 verdict: criteria against the records, the determinism

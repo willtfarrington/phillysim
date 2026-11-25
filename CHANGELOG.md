@@ -10,6 +10,19 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- **Roadmap tables in the house style** (2026-11-11; D-1 in the new root
+  `DECISIONS.md`, whose ADRs stay in `roadmap/adr/`). The five phase tables
+  of `roadmap/README.md` now use the header
+  `| # | Brief | Size | Depends on | Core | Done |`, a done row's cell `☑`
+  and its backticked commit hash, an open row's `☐`, and the milestone
+  headings the same marks; every row, id, link, size and dependency is as
+  it was and `core` fills the new column. Each of the 18 done briefs ends
+  with a `> **Completion note (<date>).**` block dated by its handoff
+  payload, and a `**Brief notes.**` bullet for EP-16 sits under the
+  Checkpoints table. Nothing renamed, moved or deleted; the handoff
+  payloads, the briefs' wording and `_TEMPLATE.md` are unchanged. Asked by
+  the owner from Roadmap Wrangler; checked with `crw roadmap` (house
+  profile, next EP-16, 18 of 19 done, no problem).
 - **EP-10 — checkpoint 2** (after M2, before the M3 refinement gate;
   2026-09-03). Fresh clone of `main` at `deb21fc` re-run green, fixture
   and real: `uv sync --locked`, 461 tests; `phillysim run --fixture` (11

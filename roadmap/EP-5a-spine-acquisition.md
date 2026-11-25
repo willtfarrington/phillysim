@@ -240,3 +240,9 @@ in `roadmap/README.md`. No ADR (the CRS ADR belongs to EP-5b).
 - `roadmap/README.md` packet row updated to `[x] 39a6828`.
 - **Exact next packet: EP-5b** (curated spine, invariants, ADR-0007 analysis
   CRS, data cards).
+
+> **Completion note (2026-09-02).** Done at `39a6828` (the packet's status
+> line reads `[x] 39a6828`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-02)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

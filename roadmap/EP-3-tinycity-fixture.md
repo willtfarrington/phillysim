@@ -151,3 +151,9 @@ Fixture README; data dictionary seeded.
   documented as such with its MIT-by-construction license.
 - **Exact next packet:** EP-4 (manifest engine, zones, stages, preflight,
   guards — proven on tinycity).
+
+> **Completion note (2026-09-02).** Done at `4ed065a` (the packet's status
+> line reads `[x] 4ed065a`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-02)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

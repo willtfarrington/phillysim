@@ -136,3 +136,9 @@ from code docs if a docs stub exists.
 > Program page lists) with info@opendataphilly.org in cc; draft prepared for
 > owner review. (2) Delisting window confirmed as two-tier (7 days standard,
 > 72 hours safety-motivated) in `docs/policies.md`.
+
+> **Completion note (2026-09-02).** Done at `9bcb7b2` (the packet's status
+> line reads `[x] 9bcb7b2`; the handoff's status commit followed; M0 closed
+> with it). The record is the "Handoff payload (filled 2026-09-02)" section
+> above. *Note added 2026-11-11 by the house-style migration (DECISIONS.md
+> D-1); the payload is as it was.*

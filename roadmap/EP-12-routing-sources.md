@@ -454,3 +454,9 @@ recommended option was accepted for every one**:
   clip.
 - **Commit, push, CI, handoff:** yes. Work commit `a4c8a38`, CI run
   33805499558 green on both platforms, then this status commit.
+
+> **Completion note (2026-09-03).** Done at `a4c8a38` (the packet's status
+> line reads `[x] a4c8a38`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-03)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

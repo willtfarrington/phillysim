@@ -188,3 +188,9 @@ screenshot.
 - **Exact next packet: EP-8b** ([EP-8b-basemap-roads.md](EP-8b-basemap-roads.md));
   after it, the second checkpoint (next free integer), then the M3
   refinement gate.
+
+> **Completion note (2026-09-03).** Done at `dd66884` (the packet's status
+> line reads `[x] dd66884`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-03)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

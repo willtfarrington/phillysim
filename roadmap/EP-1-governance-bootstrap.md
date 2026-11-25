@@ -92,3 +92,9 @@ This packet IS documentation; CHANGELOG.md started.
   untouched, no machine identifiers or absolute paths in tracked files, no
   outbound calls.
 - **Exact next packet:** EP-2 (scaffold + CI).
+
+> **Completion note (2026-08-23).** Done at `102af00` (the packet's status
+> line reads `[x] 102af00`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-08-23)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

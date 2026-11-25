@@ -278,3 +278,9 @@ basemap made concrete; site README (contrast table); CHANGELOG;
   license-label sweep, budgets, estimate accuracy including the EP-5a …
   EP-8b actuals, re-plan triggers), then the **M3 refinement gate** (apply
   the `milestones.md` carry-ins first).
+
+> **Completion note (2026-09-03).** Done at `5cb5092` (the packet's status
+> line reads `[x] 5cb5092`; the handoff's status commit followed; M2 closed
+> with it). The record is the "Handoff payload (filled 2026-09-03)" section
+> above. *Note added 2026-11-11 by the house-style migration (DECISIONS.md
+> D-1); the payload is as it was.*

@@ -376,3 +376,10 @@ present in state `running`. One limitation noticed here: the harness writes
 a run's `rss.csv` when the run ends, so `route status` shows a running run's
 wall so far but its last RSS sample only for completed attempts (writing the
 series incrementally is a small later change, not needed for the verdict).
+
+> **Completion note (2026-09-03).** Done at `b35370d` (the packet's status
+> line reads `[x] b35370d`: the work commit `5fc052a` plus `b35370d`, as the
+> payload names them; the handoff's status commit followed). The record is
+> the "Handoff payload (filled 2026-09-03)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

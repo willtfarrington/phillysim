@@ -449,3 +449,10 @@ recommended option was accepted for every one**:
   beside the brief's two hosts, as at EP-12.
 - **Commit, push, CI, handoff:** yes, once green. Work commit `e4c2c95`,
   CI run 33810585588 green on both platforms, then this status commit.
+
+> **Completion note (2026-09-03).** Done at `e4c2c95` (the packet's status
+> line reads `[x] e4c2c95`: the work commit `5a21379` plus the Linux CI fixes
+> in `e4c2c95`, as the payload names them; the handoff's status commit
+> followed). The record is the "Handoff payload (filled 2026-09-03)" section
+> above. *Note added 2026-11-11 by the house-style migration (DECISIONS.md
+> D-1); the payload is as it was.*

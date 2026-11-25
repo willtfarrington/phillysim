@@ -196,3 +196,10 @@ package README layout list; packet row in `roadmap/README.md`.
   `[~]` (2 of 3 packets done) until EP-4b meets the go/no-go criterion.
 - **Exact next packet:** EP-4b (stage runner: fingerprints, resume/cancel,
   preflight, `run/status/verify --fixture`; M1 go/no-go).
+
+> **Completion note (2026-09-02).** Done at `361b1eb` (the packet's status
+> line reads `[x] 361b1eb`), with the one-line test portability fix
+> `1dfdb9f` the payload names; the handoff's status commit followed. The
+> record is the "Handoff payload (filled 2026-09-02)" section above. *Note
+> added 2026-11-11 by the house-style migration (DECISIONS.md D-1); the
+> payload is as it was.*

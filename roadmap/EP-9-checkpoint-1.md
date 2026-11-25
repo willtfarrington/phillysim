@@ -279,3 +279,9 @@ CHANGELOG line.
   integer.
 - **Exact next packet:** EP-5a (spine source adapters: acquisition path +
   TIGER/CenPop/ACS snapshots), then EP-5b.
+
+> **Completion note (2026-09-02).** Done at `84c9ec1` (the packet's status
+> line reads `[x] 84c9ec1`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-02)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

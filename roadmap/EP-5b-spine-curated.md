@@ -187,3 +187,9 @@ complete).
 - **Exact next packet: EP-6** (SNAP retailer adapter + supermarket-format
   classification; M-sized, so read at pickup and split before work starts
   if it will not fit one session).
+
+> **Completion note (2026-09-02).** Done at `b61d060` (the packet's status
+> line reads `[x] b61d060`; the handoff's status commit followed; the EP-5
+> set is complete with it). The record is the "Handoff payload (filled
+> 2026-09-02)" section above. *Note added 2026-11-11 by the house-style
+> migration (DECISIONS.md D-1); the payload is as it was.*

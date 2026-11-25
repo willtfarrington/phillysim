@@ -589,3 +589,14 @@ provisional one (the band), recorded as an amendment with the date.
   `roadmap/EP-16-checkpoint-3.md`), whose fresh-clone re-run includes the
   unattended `travel_times` stage and whose pre-read authors the M4
   refinement gate as EP-17.
+
+> **Completion note (2026-09-04).** Done at `9638bd2` (the packet's status
+> line reads `[x] 9638bd2`: the work commit `7202f43` and the scipy-free fix
+> `9638bd2`, the last code commit; the closing session changed no code; the
+> handoff record commit `d9828d4` and the closing commits followed). The
+> outcome code **go** was recorded and confirmed by the owner and M3 closed
+> with it. The record is the "Handoff payload (closing session, 2026-09-04;
+> the packet closes)" section above, after the work session's "Handoff
+> payload (session 1, 2026-09-03; the packet stays in progress)". *Note
+> added 2026-11-11 by the house-style migration (DECISIONS.md D-1); both
+> payloads are as they were.*

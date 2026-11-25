@@ -210,3 +210,9 @@ criterion is met.
   set to `[x] 9a0a3dc` (go/no-go met); phase overview row updated.
 - **Exact next packet:** EP-9, the first checkpoint packet (to be authored
   from `_TEMPLATE.md` per milestones.md "Spikes & gates"), then EP-5.
+
+> **Completion note (2026-09-02).** Done at `9a0a3dc` (the packet's status
+> line reads `[x] 9a0a3dc`; the handoff's status commit followed; M1 closed
+> with it). The record is the "Handoff payload (filled 2026-09-02)" section
+> above. *Note added 2026-11-11 by the house-style migration (DECISIONS.md
+> D-1); the payload is as it was.*

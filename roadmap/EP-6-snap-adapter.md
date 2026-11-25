@@ -193,3 +193,9 @@ Method-card stub (destination layers); data card (SNAP).
 - **Exact next packet: EP-7** (thin-slice metric + public zone + license
   bucketing; M-sized, so read at pickup and split before work starts if
   it will not fit one session).
+
+> **Completion note (2026-09-02).** Done at `907f8f8` (the packet's status
+> line reads `[x] 907f8f8`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-02)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

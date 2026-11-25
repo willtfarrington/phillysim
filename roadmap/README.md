@@ -12,6 +12,13 @@ interview, five specialist research workstreams with first-party evidence, and
 an adversarial red-team review whose findings (1 blocker, 7 material, 9 minor)
 were all resolved before this roadmap was drafted.
 
+From 2026-11-11 its phase tables follow the house style shared by every
+project under `DATA` ([DECISIONS.md](../DECISIONS.md) D-1): the header
+`| # | Brief | Size | Depends on | Core | Done |`, a done row's cell `☑` with
+its commit hash, an open row's `☐`, and the next brief the first unchecked
+row in table order. The packet vocabulary, the briefs and their handoff
+payloads are as they were.
+
 ## How to read this roadmap
 
 - Milestones **M0–M8** are listed in [milestones.md](milestones.md). Each ends
@@ -31,8 +38,12 @@ were all resolved before this roadmap was drafted.
 - Estimates use **agent sessions** (one focused, tested, committed sitting).
   One packet is one session; see "Packet sizing and splitting" below.
 - Architecture-level or hard-to-reverse choices are recorded in [adr/](adr/).
-- Status convention: `[ ]` planned · `[~]` in progress · `[x] <commit>` done
-  (the commit that landed the work; the handoff commit follows it).
+- Status convention (house style, 2026-11-11, D-1): a row's Done cell is `☐`
+  until its brief is committed, then `☑` and one backticked commit hash
+  (the commit that landed the work; the handoff commit follows it); a
+  milestone heading carries the same mark once its go/no-go holds. The
+  next brief is the first unchecked row in table order. A brief's own
+  header line keeps the older `[x] <commit>` form.
 
 ### Packet sizing and splitting
 
@@ -86,31 +97,31 @@ One row per packet, grouped by milestone. A milestone is done when every
 packet in its table is done and its go/no-go criterion in
 [milestones.md](milestones.md) holds; the milestone heading records that
 with the same status convention. A packet's session ends by updating its row
-here (status + commit) as part of the handoff. Milestones M3–M8 get tables
+here (its Done cell: `☑` and the commit) as part of the handoff. Milestones M3–M8 get tables
 at their refinement gates.
 
-### M0 — Governance bootstrap · `[x] 9bcb7b2`
+### M0 — Governance bootstrap · ☑ `9bcb7b2`
 
 Go/no-go: all M0 packets' acceptance criteria met; repo presentable at any
 commit. Met 2026-09-02 with EP-2.
 
-| # | Packet | Size | Depends on | Status |
-|---|---|---|---|---|
-| EP-1 | [Repository governance bootstrap](EP-1-governance-bootstrap.md) | S | — | [x] 102af00 |
-| EP-2 | [Python scaffold + offline CI skeleton](EP-2-scaffold-ci.md) | M | EP-1 | [x] 9bcb7b2 |
+| # | Brief | Size | Depends on | Core | Done |
+|---|---|---|---|---|---|
+| EP-1 | [Repository governance bootstrap](EP-1-governance-bootstrap.md) | S | — | core | ☑ `102af00` |
+| EP-2 | [Python scaffold + offline CI skeleton](EP-2-scaffold-ci.md) | M | EP-1 | core | ☑ `9bcb7b2` |
 
-### M1 — Pipeline skeleton + fixture · `[x] 9a0a3dc`
+### M1 — Pipeline skeleton + fixture · ☑ `9a0a3dc`
 
 Go/no-go: `phillysim run --fixture` green in offline CI. Met 2026-09-02 with
 EP-4b: CI runs `phillysim run --fixture`, `status --fixture`, and
 `verify --fixture` on Windows and Linux, and the integration suite asserts
 the curated outputs equal the golden tables.
 
-| # | Packet | Size | Depends on | Status |
-|---|---|---|---|---|
-| EP-3 | [tinycity synthetic fixture](EP-3-tinycity-fixture.md) | M | EP-2 | [x] 4ed065a |
-| EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | [x] 361b1eb |
-| EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | [x] 9a0a3dc |
+| # | Brief | Size | Depends on | Core | Done |
+|---|---|---|---|---|---|
+| EP-3 | [tinycity synthetic fixture](EP-3-tinycity-fixture.md) | M | EP-2 | core | ☑ `4ed065a` |
+| EP-4a | [Manifest/snapshot engine + zones + download guards](EP-4a-manifest-engine.md) | S | EP-3 | core | ☑ `361b1eb` |
+| EP-4b | [Stage runner: fingerprints, resume/cancel, preflight, `run/status/verify`](EP-4b-stage-runner.md) | S | EP-4a | core | ☑ `9a0a3dc` |
 
 ### Checkpoints · recurring
 
@@ -128,13 +139,31 @@ decision 2026-09-03); the third fell due with EP-15 (M3 closed on
 packet, whose fresh-clone re-run includes the unattended `travel_times`
 stage; the fourth falls due about five packets after EP-16.
 
-| # | Packet | Size | Depends on | Status |
-|---|---|---|---|---|
-| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | [x] 84c9ec1 |
-| EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | [x] a1d22fd |
-| EP-16 | [Checkpoint 3: fresh-clone re-run with real data and the routing night, docs sync, license sweep, budgets with peak RSS, dependency triage, estimate accuracy with the M3 actual, M4 gate pre-read](EP-16-checkpoint-3.md) | S | EP-15 (M3 done) | [ ] |
+| # | Brief | Size | Depends on | Core | Done |
+|---|---|---|---|---|---|
+| EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | core | ☑ `84c9ec1` |
+| EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | core | ☑ `a1d22fd` |
+| EP-16 | [Checkpoint 3: fresh-clone re-run with real data and the routing night, docs sync, license sweep, budgets with peak RSS, dependency triage, estimate accuracy with the M3 actual, M4 gate pre-read](EP-16-checkpoint-3.md) | S | EP-15 (M3 done) | core | ☐ |
 
-### M2 — Spine + first source end-to-end · `[x] 5cb5092`
+**Brief notes.**
+
+- **EP-16.** Checkpoint 3, authored 2026-09-04 by EP-15's closing session
+  from `_TEMPLATE.md` ([EP-16-checkpoint-3.md](EP-16-checkpoint-3.md)). A
+  fresh clone of the pushed `main` re-run green, fixture and real, with the
+  routing group synced and the pinned toolchain installed (ADR-0008): the
+  fixture verbs, then the real pipeline from an empty data root, its ten
+  stages reproducing the curated and public zones byte for byte, with the
+  `travel_times` stage routed as an unattended night of its own whose
+  matrix digests must equal the spike's night and the second night. Then
+  the data dictionary, data cards, method cards and READMEs checked against
+  the code; the license sweep on the real published output; resource use
+  recorded against the budgets, peak process-tree RSS included for the
+  first time at a checkpoint; the dependency set triaged; the effort
+  estimates checked against the M3 actual. It ends with the pre-read of
+  the M4 refinement gate and authors that gate as EP-17. If a re-plan
+  trigger fires, the session stops and surfaces it to the owner.
+
+### M2 — Spine + first source end-to-end · ☑ `5cb5092`
 
 Go/no-go: slice reproducible from a fresh clone; license buckets applied.
 Met 2026-09-03 with EP-8b: the eight-stage real pipeline reproduces the
@@ -150,16 +179,16 @@ split it into EP-5a / EP-5b; the EP-8 pickup did the same on 2026-09-02 and
 split it into EP-8a / EP-8b. [EP-5](EP-5-spine-adapters.md) and
 [EP-8](EP-8-slice-page.md) now name their sets.
 
-| # | Packet | Size | Depends on | Status |
-|---|---|---|---|---|
-| EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | [x] 39a6828 |
-| EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | [x] b61d060 |
-| EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | [x] 907f8f8 |
-| EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | [x] bf9df7f |
-| EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | [x] dd66884 |
-| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | [x] 5cb5092 |
+| # | Brief | Size | Depends on | Core | Done |
+|---|---|---|---|---|---|
+| EP-5a | [Spine source adapters: acquisition path + TIGER/CenPop/ACS snapshots](EP-5a-spine-acquisition.md) | S | EP-9 (checkpoint), EP-4b | core | ☑ `39a6828` |
+| EP-5b | [Curated tract spine + geospatial invariants + analysis-CRS ADR](EP-5b-spine-curated.md) | S | EP-5a | core | ☑ `b61d060` |
+| EP-6 | [SNAP retailer adapter + supermarket-format classification](EP-6-snap-adapter.md) | M | EP-5 (= EP-5b) | core | ☑ `907f8f8` |
+| EP-7 | [Thin-slice metric + public zone + license bucketing](EP-7-slice-publish.md) | M | EP-6 | core | ☑ `bf9df7f` |
+| EP-8a | [Minimal slice page: map + table from the public zone, county-boundary basemap, Playwright + axe](EP-8a-slice-page.md) | S | EP-7 | core | ☑ `dd66884` |
+| EP-8b | [Basemap roads: TIGER major-roads source, roads layer, contrast check; M2 closes](EP-8b-basemap-roads.md) | S | EP-8a | core | ☑ `5cb5092` |
 
-### M3 — Routing spike · `[x] 9638bd2`
+### M3 — Routing spike · ☑ `9638bd2`
 
 Go/no-go: numeric criteria in [milestones.md](milestones.md) (wall ≤ 8 h,
 process-tree RSS ≤ 22 GB, determinism within band, sanity gates); go =
@@ -208,15 +237,15 @@ further attended packet and one more night. EP-15 closes this heading
 with the go/no-go evidence and authors the walk-only fallback packet only
 on a kill or an exhausted time box.
 
-| # | Packet | Size | Depends on | Status |
-|---|---|---|---|---|
-| EP-11 | [M3 refinement gate: decompose the routing spike into S packets](EP-11-m3-refinement-gate.md) | S | EP-10 (checkpoint) | [x] c6b5372 |
-| EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | [x] a4c8a38 |
-| EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | [x] e4c2c95 |
-| EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | [x] b35370d |
-| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | [x] 9638bd2 |
+| # | Brief | Size | Depends on | Core | Done |
+|---|---|---|---|---|---|
+| EP-11 | [M3 refinement gate: decompose the routing spike into S packets](EP-11-m3-refinement-gate.md) | S | EP-10 (checkpoint) | core | ☑ `c6b5372` |
+| EP-12 | [Routing sources: OSM extract (Geofabrik, Bucket B) and SEPTA GTFS through the guarded path; per-source snapshot IDs; the clipped network](EP-12-routing-sources.md) | S | EP-11 | core | ☑ `a4c8a38` |
+| EP-13 | [Routing toolchain and harness: pinned JDK 21 and R5 jar, r5py behind the wheel-only rule, the RSS sampler, run records, the smoke route, CI performance smoke](EP-13-routing-toolchain-harness.md) | S | EP-12 | core | ☑ `e4c2c95` |
+| EP-14 | [The pre-scripted run matrix and the first unattended night](EP-14-routing-run-matrix.md) | S | EP-13 | core | ☑ `b35370d` |
+| EP-15 | [The M3 verdict: criteria against the records, the determinism band, the hand check, go or kill; M3 closes](EP-15-routing-verdict.md) | S | EP-14 (its night finished) | core | ☑ `9638bd2` |
 
-### M4–M8 · `[ ]` refinement gates pending
+### M4–M8 · ☐ refinement gates pending
 
 No packet files exist yet. The M4 (full ingest) gate and later gates follow
 the procedure EP-11 established for M3 on 2026-09-03: a documentation-only

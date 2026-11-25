@@ -177,3 +177,9 @@ Data dictionary (public schema v1).
   stays open (EP-8 remains).
 - **Exact next packet: EP-8** (minimal slice page; M-sized, so read at
   pickup and split before work starts if it will not fit one session).
+
+> **Completion note (2026-09-02).** Done at `bf9df7f` (the packet's status
+> line reads `[x] bf9df7f`; the handoff's status commit followed). The record
+> is the "Handoff payload (filled 2026-09-02)" section above. *Note added
+> 2026-11-11 by the house-style migration (DECISIONS.md D-1); the payload is
+> as it was.*

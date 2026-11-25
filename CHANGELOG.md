@@ -10,6 +10,19 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- **Formalised; house brief sizes** (2026-11-25; D-2 and D-3 in
+  `DECISIONS.md`). Settled with the owner in Roadmap Wrangler's sweep
+  (inbox IN-1): `CLAUDE.md` now holds the session rules, the project's own
+  above Roadmap Wrangler's rule block, and `roadmap/owner-tasks.md` is new
+  beside `roadmap/inbox.md`; a packet is S (about 30 minutes of active
+  work) or M (about 45), never L, and one that proves larger at pickup is
+  split there, EP-16 first; `roadmap/_TEMPLATE.md` keeps the work-packet
+  sections and gains YAML front matter, the new sizing note and a closing
+  completion note. The project is active with EP-16 next and owes no manual
+  yet (the dated note in `roadmap/README.md`). "How far v1 runs" under the
+  README's M4–M8 heading states v1's remaining milestones from
+  `milestones.md` (inbox IN-2); EP-16's estimate review turns them into a
+  count of briefs. No code changed.
 - **Roadmap tables in the house style** (2026-11-11; D-1 in the new root
   `DECISIONS.md`, whose ADRs stay in `roadmap/adr/`). The five phase tables
   of `roadmap/README.md` now use the header

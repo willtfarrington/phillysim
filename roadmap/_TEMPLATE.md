@@ -1,13 +1,27 @@
+---
+ep: N
+title: <title>
+size: S
+model: <the model's id>
+effort: <the effort level>
+status: planned
+---
+
 # EP-N — <title>
 
-**Status:** [ ] planned · **Milestone:** M_ · **Effort:** S (1 session, confidence) · **Parallel with:** —
+**Milestone:** M_ · **Size:** S · **Depends on:** EP-k · **Parallel with:** —
 
-> Sizing rule (README "Packet sizing and splitting"): one packet is one
-> session. If the outcome needs more, author two packets with consecutive
-> integers. A packet split at pickup keeps its number, uses
-> `EP-Na-<slug>.md` / `EP-Nb-<slug>.md` file names, and appends
-> `· **Split from:** EP-N` to the header line. Add the packet's row to the
-> milestone table in README.md when the file is created. Delete this note.
+> Sizing rule (README "Packet sizing and splitting", D-2): a packet is S
+> (about 30 minutes of active work) or M (about 45), never L. If the
+> outcome needs more, author two packets with consecutive integers. A
+> packet that proves larger at pickup is split there, never run long: it
+> keeps its number, uses `EP-Na-<slug>.md` / `EP-Nb-<slug>.md` file names,
+> and appends `· **Split from:** EP-N` to the header line. The front
+> matter (D-3) is kept true to the session: `status` is `planned` when a
+> gate authors the packet, `in progress` while its session works and
+> `done` at its close; `model` and `effort` are the session's. Add the
+> packet's row to the milestone table in README.md when the file is
+> created. Delete this note.
 
 ## Outcome & value
 <one paragraph: what exists after this packet and why it matters to the user or the science>
@@ -52,6 +66,11 @@
 - resource observations
 - decisions/ADRs made; unresolved risks/questions
 - no-go areas touched? (must be none)
-- `roadmap/README.md` packet row updated to `[x] <commit>` (and the
-  milestone heading, if this was its last packet and the go/no-go holds)
+- `roadmap/README.md` packet row's Done cell updated to `☑` and its
+  backticked commit (and the milestone heading, if this was its last
+  packet and the go/no-go holds)
 - exact next packet
+
+> **Completion note (YYYY-MM-DD; model/effort; duration).** What was built;
+> each owner decision and its outcome; the routine choices; notes for later
+> sessions. The handoff payload above is the detailed record.

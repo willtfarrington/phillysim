@@ -19,6 +19,22 @@ its commit hash, an open row's `☐`, and the next brief the first unchecked
 row in table order. The packet vocabulary, the briefs and their handoff
 payloads are as they were.
 
+**Sweep (2026-11-25, inbox IN-1).** Settled with the owner in Roadmap
+Wrangler's sweep of its projects that were not active: the project is
+**active** (the state on its row in Roadmap Wrangler is the owner's to
+set), with EP-16 the next work. It is **formalised**: `CLAUDE.md` holds the
+session rules, the project's own above Roadmap Wrangler's block, and
+`roadmap/owner-tasks.md` sits beside `roadmap/inbox.md`; new briefs keep the
+work-packet template, now with YAML front matter and a closing completion
+note ([DECISIONS.md](../DECISIONS.md) D-3). A brief is **S (about 30
+minutes of active work) or M (about 45)**, never L, and a row that proves
+larger at pickup is split there (D-2, "Packet sizing and splitting" below),
+EP-16 first. It owes **no manual yet**: there is no `docs/manual.md`, so no
+brief writes a changes section; the question comes back at the M6 gate (the
+public site) or on the owner's word. How far v1 runs is stated under the
+M4–M8 heading (inbox IN-2). The house-style migration of 2026-11-11 was
+committed first, as `6dcf11d`.
+
 ## How to read this roadmap
 
 - Milestones **M0–M8** are listed in [milestones.md](milestones.md). Each ends
@@ -37,15 +53,30 @@ payloads are as they were.
   earlier packets, with the text to paste into the new EP files.
 - Estimates use **agent sessions** (one focused, tested, committed sitting).
   One packet is one session; see "Packet sizing and splitting" below.
+  *(2026-11-25, D-2: a packet is now S, about 30 minutes of active work, or
+  M, about 45; the estimates written before then count the older sittings.)*
 - Architecture-level or hard-to-reverse choices are recorded in [adr/](adr/).
 - Status convention (house style, 2026-11-11, D-1): a row's Done cell is `☐`
   until its brief is committed, then `☑` and one backticked commit hash
   (the commit that landed the work; the handoff commit follows it); a
   milestone heading carries the same mark once its go/no-go holds. The
   next brief is the first unchecked row in table order. A brief's own
-  header line keeps the older `[x] <commit>` form.
+  header line keeps the older `[x] <commit>` form; a brief written from
+  the template as amended on 2026-11-25 (D-3) carries its status in its
+  YAML front matter instead (`planned`, `in progress`, `done`) and ends
+  with a completion note.
 
 ### Packet sizing and splitting
+
+*(2026-11-25, D-2, the owner's sweep.)* From this date a packet is **S**
+(about 30 minutes of active work) or **M** (about 45), as the Sizes bullet
+in `CLAUDE.md` says: an S where its shape is known when it is written and
+it touches a handful of files, an M for an investigation, a state machine
+or the choice of a tool. **L** stays invalid. A packet is not cut only to
+make it smaller, and one that proves larger at pickup is split there by the
+convention below, never run long; EP-16, written as "S (1 session)", is the
+first. The bullets below are the rule as it stood from 2026-09-02, under
+which every row up to EP-16 was sized; their Size cells stay as written.
 
 - **S** — fits one session. Every packet authored from 2026-09-02 on is S:
   refinement gates decompose a milestone's outcome into S packets rather
@@ -89,7 +120,9 @@ payloads are as they were.
 | [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md), [EP-16](EP-16-checkpoint-3.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11), the third after M3 (authored by EP-15's closing session; it pre-reads the M4 gate and authors it as EP-17); later checkpoints take the next free integer |
 | [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward; its pins and decision numbers are [ADR-0008](adr/0008-routing-toolchain-pins.md) |
 | [EP-12](EP-12-routing-sources.md) … [EP-15](EP-15-routing-verdict.md) | The M3 routing spike as authored by EP-11 (2026-09-03): the two routing sources ([EP-12](EP-12-routing-sources.md)), the toolchain and harness ([EP-13](EP-13-routing-toolchain-harness.md)), the run matrix and the first unattended night ([EP-14](EP-14-routing-run-matrix.md)), the verdict ([EP-15](EP-15-routing-verdict.md)); a walk-only fallback packet is authored by EP-15 only on a kill |
-| [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions |
+| [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions; YAML front matter, the sizes of D-2 and a closing completion note since 2026-11-25 (D-3) |
+| [owner-tasks.md](owner-tasks.md) | What only the owner can do, one line each (house style, since 2026-11-25) |
+| [inbox.md](inbox.md) | Messages from other projects and from the owner through Roadmap Wrangler, triaged at a session's start |
 
 ## Milestones and work packets
 
@@ -162,6 +195,31 @@ stage; the fourth falls due about five packets after EP-16.
   estimates checked against the M3 actual. It ends with the pre-read of
   the M4 refinement gate and authors that gate as EP-17. If a re-plan
   trigger fires, the session stops and surfaces it to the owner.
+  **From IN-1 (2026-11-25):** the owner's sweep made the project active
+  with this brief as the next work and adopted the house sizes (D-2).
+  Written as "S (1 session)", its seven scope items are far more than one
+  S or M, so its pickup splits it before any work starts, by the split
+  convention in "Packet sizing and splitting": EP-16a, EP-16b, …, each S
+  or M and a complete packet from the template as amended (front matter,
+  completion note; D-3), the last carrying the checkpoint's acceptance
+  evidence. A cut along its own items reads naturally (the re-run; the
+  docs sync; the license sweep with the budgets; the dependency triage
+  with the estimate review; the M4 pre-read and EP-17), but the cut is the
+  pickup session's call, and the estimate review re-reads the checkpoint
+  cadence ("every ~5 packets"), set under the old sizes. The fresh clone
+  reads the pushed `main`, which has no code change since `8cf3fd9`; the
+  roadmap commits made on 2026-11-25 reach it only once pushed. Whether the
+  seven providers still serve the pinned files is unchecked since the last
+  fresh acquisitions (EP-10 and EP-12, 2026-09-03); a failed or changed
+  fetch is the brief's own stop and owner decision.
+  **From IN-2 (2026-11-25):** the estimate review (item 6) also restates
+  the remaining v1 work, M4 to M7 with their gates and checkpoints, as a
+  count of briefs under D-2, from milestones.md's high bounds and the M3
+  actual, and settles with the owner which rows carry it in the tables
+  (gate rows, provisional rows or none), so that the count Roadmap
+  Wrangler's site export reads says how far v1 runs ("How far v1 runs"
+  under the M4–M8 heading). The portfolio site's card holds its total at a
+  floor of 40 until then.
 
 ### M2 — Spine + first source end-to-end · ☑ `5cb5092`
 
@@ -257,6 +315,17 @@ the next free integers and adding their rows here. The M4 gate is the
 next gate due (M4 parallels M3 and depends on M2 only); the third
 checkpoint, [EP-16](EP-16-checkpoint-3.md), pre-reads it and authors it as
 EP-17.
+
+*(2026-11-25, inbox IN-2.)* **How far v1 runs.** v1 is M0 to M7, the
+v1.0.0 release; M8, the v1.x/v2 gate decisions, follows it. By
+[milestones.md](milestones.md), planned at its high bounds (owner decision
+2026-09-03), the v1 milestones still ahead are M4 at 7 sessions, M5 at 7,
+M6 at 10 and M7 at 4, as sized before D-2, each opened by its refinement
+gate (which now authors S or M packets, D-2), with a checkpoint about every
+five packets, EP-16 the next. None of them has rows yet, so the tables'
+count, which Roadmap Wrangler's site export reads, covers the work planned
+so far, not v1. EP-16's estimate review restates the remaining v1 work as a
+count of briefs under D-2 and settles with the owner which rows carry it.
 
 ## Phase overview
 

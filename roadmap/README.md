@@ -220,6 +220,16 @@ stage; the fourth falls due about five packets after EP-16.
   Wrangler's site export reads says how far v1 runs ("How far v1 runs"
   under the M4–M8 heading). The portfolio site's card holds its total at a
   floor of 40 until then.
+  **From the sweep's push (2026-11-25):** GitHub reported 42 open
+  Dependabot alerts on `main`: certifi 1 critical (it bundles emSign roots
+  whose intermediate keys are compromised; fixed in 2026.10.18, PR #14),
+  urllib3 3 (high and medium; no PR), virtualenv 19 and filelock 12 (PRs
+  #12 and #13, the latter a major bump), and 7 in the `source material/`
+  copy (PRs #5 and #16); 11 Dependabot PRs are open in all. The owner's
+  choice: the split puts the dependency triage (item 5) first, certifi
+  leading, over the implementation note that runs the re-run first, so
+  that the fresh-clone re-run tests the lock the triage leaves; each
+  upgrade still waits for the owner's word.
 
 ### M2 — Spine + first source end-to-end · ☑ `5cb5092`
 

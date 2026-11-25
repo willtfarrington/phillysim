@@ -22,7 +22,8 @@ recorded separately in manifests once the pipeline exists.
   yet (the dated note in `roadmap/README.md`). "How far v1 runs" under the
   README's M4–M8 heading states v1's remaining milestones from
   `milestones.md` (inbox IN-2); EP-16's estimate review turns them into a
-  count of briefs. No code changed.
+  count of briefs. EP-16's split puts its dependency triage first, the
+  certifi alert leading (its brief note). No code changed.
 - **Roadmap tables in the house style** (2026-11-11; D-1 in the new root
   `DECISIONS.md`, whose ADRs stay in `roadmap/adr/`). The five phase tables
   of `roadmap/README.md` now use the header

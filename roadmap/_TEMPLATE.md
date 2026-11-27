@@ -19,7 +19,9 @@ status: planned
 > and appends `· **Split from:** EP-N` to the header line. The front
 > matter (D-3) is kept true to the session: `status` is `planned` when a
 > gate authors the packet, `in progress` while its session works and
-> `done` at its close; `model` and `effort` are the session's. Add the
+> `done` at its close; `model` and `effort` are the session's. The closing
+> completion note is written at the close, never before: Roadmap Wrangler
+> reads a brief that carries one, even this placeholder, as complete. Add the
 > packet's row to the milestone table in README.md when the file is
 > created. Delete this note.
 

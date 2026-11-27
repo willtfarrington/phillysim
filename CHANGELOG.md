@@ -8,8 +8,45 @@ recorded separately in manifests once the pipeline exists.
 
 ## [Unreleased]
 
+### Security
+
+- **EP-16a — dependency triage** (checkpoint 3, part a; 2026-11-26). The 42
+  open Dependabot alerts and 11 open Dependabot pull requests on `main`
+  triaged with the owner, one decision per package. Upgraded in
+  `phillysim/uv.lock`: **certifi 2026.7.22 → 2026.11.20** (the critical
+  alert: bundled emSign roots whose intermediate keys are compromised),
+  urllib3 2.7.0 → 2.8.0 (three alerts), virtualenv 21.7.8 → 21.15.13 with
+  python-discovery 1.6.0 → 1.9.7 (nineteen alerts; dev only, through
+  pre-commit), filelock 3.32.5 → 4.3.1 (twelve alerts; through virtualenv
+  and r5py, whose `FileLock` the smoke route exercised on the new version).
+  The pipeline's own downloads use the standard library and the system
+  trust store, so none of these sat on the acquisition path. The seven
+  alerts on the vendored `source material/` tree were dismissed as not used
+  and its two pull requests (#5, #16) closed; `.github/dependabot.yml`'s
+  comment, which said `open-pull-requests-limit: 0` stopped security-update
+  pull requests, now says it stops version updates only. Also taken: ruff
+  0.16.5 → 0.16.9, playwright 1.62.0 → 1.63.0 and `astral-sh/setup-uv`
+  v10.0.1 → v10.3.3 in CI (#10, #11, #15). Deferred by the owner until the
+  fresh-clone re-run has confirmed the reference digests: geopandas, pyproj
+  and duckdb (#6 to #8), carried to the M4 gate. `uv lock --check` clean;
+  ruff clean; the full suite with the routing group 664 passed, 3 skipped
+  (the manual real-data-root tests); pre-commit green with its hook
+  environment built afresh by the new virtualenv. No code changed.
+
 ### Changed
 
+- **EP-16 split at its pickup** (2026-11-26; D-2). Checkpoint 3, written as
+  "S (1 session)" with seven scope items, is now six M parts, each a
+  complete packet from the template: EP-16a the dependency triage (first,
+  the owner's choice), EP-16b the fresh-clone re-run with the routing night
+  and the budgets, EP-16c the license sweep with the data-facing documents,
+  EP-16d the rest of the documentation sync, EP-16e the estimate review
+  with v1 counted in briefs, EP-16f the M4 pre-read and EP-17.
+  `roadmap/EP-16-checkpoint-3.md` now names the set. Inbox IN-3 (the
+  portfolio card's floor of 57) is parked in EP-16e's note.
+  `roadmap/_TEMPLATE.md`'s note gains one sentence: the completion note is
+  written at the close, since Roadmap Wrangler reads a brief that carries
+  one as complete.
 - **Formalised; house brief sizes** (2026-11-25; D-2 and D-3 in
   `DECISIONS.md`). Settled with the owner in Roadmap Wrangler's sweep
   (inbox IN-1): `CLAUDE.md` now holds the session rules, the project's own

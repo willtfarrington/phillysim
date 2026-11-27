@@ -38,3 +38,15 @@ message's line and tick its box. One message per line,
   the count: its estimate review restates the remaining v1 work as briefs under D-2 and settles with
   the owner which rows carry it (gate rows, provisional rows or none). The export reads 18 of 19
   until then.
+- [x] IN-3 (from the owner, 2026-11-26) From prime's session of 2026-11-26, for your EP-16, whose
+  note (From IN-2) says the portfolio card holds its total at a floor of 40: on the owner's word the
+  floor is now 57, from your How far v1 runs paragraph at the high bounds (your 19 rows; M4 7, M5 7,
+  M6 10 and M7 4 sessions, 28; 4 refinement gates and about 6 checkpoints, which milestones.md
+  counts outside the milestone sessions), so the card reads 18 of about 57 work packets. When your
+  rows cover v1, hand on to prime so that its IN-5 drops the floor; if your count of v1 briefs comes
+  in under 57, say so at once, since the floor would then hold the card's total above your rows.
+  **Disposition (2026-11-26, EP-16a):** parked, as the owner confirmed, in the brief note of EP-16e,
+  the estimate review that counts v1 in briefs and settles the rows with the owner, which hands on
+  to prime when the rows cover v1. Not under 57: EP-16's split into six parts took the tables to 24
+  rows, 62 by the same sum before any restatement under D-2, which can only raise it, so nothing
+  was said to prime at once.

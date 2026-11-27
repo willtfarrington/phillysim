@@ -1,6 +1,23 @@
 # EP-16 — Checkpoint 3: fresh-clone re-run with real data and the routing night, docs sync, license sweep, budgets with peak RSS, dependency triage, estimate accuracy with the M3 actual, M4 gate pre-read
 
-**Status:** [ ] planned (authored 2026-09-04 by EP-15's closing session) · **Milestone:** — (checkpoint after M3, before the M4 refinement gate) · **Effort:** S (1 session, high confidence) · **Parallel with:** —
+**Status:** split 2026-11-26 into [EP-16a](EP-16a-dependency-triage.md), [EP-16b](EP-16b-fresh-clone-rerun.md), [EP-16c](EP-16c-license-sweep-data-docs.md), [EP-16d](EP-16d-docs-sync.md), [EP-16e](EP-16e-estimate-review.md) and [EP-16f](EP-16f-m4-gate-preread.md) (authored 2026-09-04 by EP-15's closing session) · **Milestone:** — (checkpoint after M3, before the M4 refinement gate) · **Effort:** S (1 session, high confidence), as authored · **Parallel with:** —
+
+> **This file names the set, not a packet.** The pickup on 2026-11-26
+> (README "Packet sizing and splitting"; D-2; the brief note's segment
+> "From IN-1") found seven scope items where the house sizes hold one S or
+> M, and split the brief before any work started, along its own items:
+> **EP-16a** the dependency triage (item 5), first by the owner's choice at
+> the sweep's push, so that the re-run tests the lock it leaves; **EP-16b**
+> the fresh-clone re-run with the routing night and the resource use it
+> measures (items 1 and 4); **EP-16c** the license sweep with the
+> data-facing documents (item 3 and the data half of item 2: the
+> dictionary, the data cards, DATA-LICENSES, sources.md); **EP-16d** the
+> rest of the documentation sync (item 2's other half); **EP-16e** the
+> estimate review, with v1 counted in briefs (item 6; inbox IN-2 and
+> IN-3); **EP-16f** the M4 pre-read and EP-17 (item 7), which carries the
+> set's acceptance evidence. Each part is M, a complete packet from the
+> template as amended (D-3). References to "EP-16" elsewhere mean the set;
+> the text below is the brief as authored on 2026-09-04.
 
 ## Outcome & value
 The third recurring checkpoint packet ([milestones.md](milestones.md)

@@ -4,9 +4,11 @@
 #
 # The vendored `source material/` tree is reference material that is never
 # built, executed, or modified (CONTRIBUTING.md). Its Ruby and npm lockfiles
-# are still scanned for alerts, but the two entries with
-# `open-pull-requests-limit: 0` stop Dependabot from opening security-update
-# or version-update PRs against them.
+# are still scanned for alerts. The two entries with
+# `open-pull-requests-limit: 0` stop version-update PRs against them only:
+# security-update PRs have their own fixed limit in GitHub and still open,
+# and no setting in this file affects alerts. Such PRs are closed and their
+# alerts dismissed as not used (owner decision, EP-16a, 2026-11-26).
 version: 2
 updates:
   - package-ecosystem: "uv"

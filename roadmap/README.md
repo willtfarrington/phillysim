@@ -75,7 +75,8 @@ it touches a handful of files, an M for an investigation, a state machine
 or the choice of a tool. **L** stays invalid. A packet is not cut only to
 make it smaller, and one that proves larger at pickup is split there by the
 convention below, never run long; EP-16, written as "S (1 session)", is the
-first. The bullets below are the rule as it stood from 2026-09-02, under
+first (split at its pickup on 2026-11-26 into six M parts, EP-16a to
+EP-16f). The bullets below are the rule as it stood from 2026-09-02, under
 which every row up to EP-16 was sized; their Size cells stay as written.
 
 - **S** — fits one session. Every packet authored from 2026-09-02 on is S:
@@ -117,7 +118,7 @@ which every row up to EP-16 was sized; their Size cells stay as written.
 | [milestones.md](milestones.md) | Milestones, dependencies, critical path, risks, effort roll-up, refinement-gate carry-ins |
 | [open-questions.md](open-questions.md) | Open questions and consciously deferred items (OQ-A …) |
 | [EP-1](EP-1-governance-bootstrap.md) … [EP-8](EP-8-slice-page.md) | Issue-ready work packets, one file each (M0–M2; EP-4 split into [EP-4a](EP-4a-manifest-engine.md) / [EP-4b](EP-4b-stage-runner.md); EP-5 split into [EP-5a](EP-5a-spine-acquisition.md) / [EP-5b](EP-5b-spine-curated.md); EP-8 split into [EP-8a](EP-8a-slice-page.md) / [EP-8b](EP-8b-basemap-roads.md)); later EPs authored at refinement gates |
-| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md), [EP-16](EP-16-checkpoint-3.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11), the third after M3 (authored by EP-15's closing session; it pre-reads the M4 gate and authors it as EP-17); later checkpoints take the next free integer |
+| [EP-9](EP-9-checkpoint-1.md), [EP-10](EP-10-checkpoint-2.md), [EP-16](EP-16-checkpoint-3.md) | Checkpoint packets: the first after M1 (before EP-5), the second after M2 (before the M3 refinement gate, which EP-10 authored as EP-11), the third after M3 (authored by EP-15's closing session; split at pickup on 2026-11-26 into [EP-16a](EP-16a-dependency-triage.md) … [EP-16f](EP-16f-m4-gate-preread.md), the last of which pre-reads the M4 gate and authors it as EP-17); later checkpoints take the next free integer |
 | [EP-11](EP-11-m3-refinement-gate.md) | The M3 refinement gate: a documentation-only packet that decomposes the routing spike into S packets, EP-12 onward; its pins and decision numbers are [ADR-0008](adr/0008-routing-toolchain-pins.md) |
 | [EP-12](EP-12-routing-sources.md) … [EP-15](EP-15-routing-verdict.md) | The M3 routing spike as authored by EP-11 (2026-09-03): the two routing sources ([EP-12](EP-12-routing-sources.md)), the toolchain and harness ([EP-13](EP-13-routing-toolchain-harness.md)), the run matrix and the first unattended night ([EP-14](EP-14-routing-run-matrix.md)), the verdict ([EP-15](EP-15-routing-verdict.md)); a walk-only fallback packet is authored by EP-15 only on a kill |
 | [_TEMPLATE.md](_TEMPLATE.md) | Work-packet template with safety preconditions; YAML front matter, the sizes of D-2 and a closing completion note since 2026-11-25 (D-3) |
@@ -170,66 +171,78 @@ refinement gate as its own documentation-only packet, EP-11 (owner
 decision 2026-09-03); the third fell due with EP-15 (M3 closed on
 2026-09-04) and was authored by EP-15's closing session as EP-16, the next
 packet, whose fresh-clone re-run includes the unattended `travel_times`
-stage; the fourth falls due about five packets after EP-16.
+stage; its pickup on 2026-11-26 split it under D-2 into six M parts, EP-16a
+to EP-16f, the dependency triage first; the fourth falls due about five
+packets after EP-16 (EP-16e re-reads that cadence under D-2).
 
 | # | Brief | Size | Depends on | Core | Done |
 |---|---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | core | ☑ `84c9ec1` |
 | EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | core | ☑ `a1d22fd` |
-| EP-16 | [Checkpoint 3: fresh-clone re-run with real data and the routing night, docs sync, license sweep, budgets with peak RSS, dependency triage, estimate accuracy with the M3 actual, M4 gate pre-read](EP-16-checkpoint-3.md) | S | EP-15 (M3 done) | core | ☐ |
+| EP-16a | [Dependency triage with the owner (certifi first), the lock checked, the pins noted](EP-16a-dependency-triage.md) | M | EP-15 (M3 done) | core | ☐ |
+| EP-16b | [Fresh-clone re-run, fixture and real, with the routing night; resource use against the budgets, peak RSS included](EP-16b-fresh-clone-rerun.md) | M | EP-16a | core | ☐ |
+| EP-16c | [License-label sweep on the real published output and the Bucket B zone; the dictionary, data cards and license records checked](EP-16c-license-sweep-data-docs.md) | M | EP-16b | core | ☐ |
+| EP-16d | [Documentation sync of the READMEs, method cards, claims, roadmap documents, ADR-0008 and the changelog against the code](EP-16d-docs-sync.md) | M | EP-16c | core | ☐ |
+| EP-16e | [Estimate-accuracy review with the M3 actual, the re-plan triggers, and v1 counted in briefs under D-2](EP-16e-estimate-review.md) | M | EP-16d | core | ☐ |
+| EP-16f | [M4 refinement-gate pre-read, EP-17 authored, and the checkpoint's acceptance evidence](EP-16f-m4-gate-preread.md) | M | EP-16e | core | ☐ |
 
 **Brief notes.**
 
-- **EP-16.** Checkpoint 3, authored 2026-09-04 by EP-15's closing session
-  from `_TEMPLATE.md` ([EP-16-checkpoint-3.md](EP-16-checkpoint-3.md)). A
-  fresh clone of the pushed `main` re-run green, fixture and real, with the
-  routing group synced and the pinned toolchain installed (ADR-0008): the
-  fixture verbs, then the real pipeline from an empty data root, its ten
-  stages reproducing the curated and public zones byte for byte, with the
-  `travel_times` stage routed as an unattended night of its own whose
-  matrix digests must equal the spike's night and the second night. Then
-  the data dictionary, data cards, method cards and READMEs checked against
-  the code; the license sweep on the real published output; resource use
-  recorded against the budgets, peak process-tree RSS included for the
-  first time at a checkpoint; the dependency set triaged; the effort
-  estimates checked against the M3 actual. It ends with the pre-read of
-  the M4 refinement gate and authors that gate as EP-17. If a re-plan
-  trigger fires, the session stops and surfaces it to the owner.
-  **From IN-1 (2026-11-25):** the owner's sweep made the project active
-  with this brief as the next work and adopted the house sizes (D-2).
-  Written as "S (1 session)", its seven scope items are far more than one
-  S or M, so its pickup splits it before any work starts, by the split
-  convention in "Packet sizing and splitting": EP-16a, EP-16b, …, each S
-  or M and a complete packet from the template as amended (front matter,
-  completion note; D-3), the last carrying the checkpoint's acceptance
-  evidence. A cut along its own items reads naturally (the re-run; the
-  docs sync; the license sweep with the budgets; the dependency triage
-  with the estimate review; the M4 pre-read and EP-17), but the cut is the
-  pickup session's call, and the estimate review re-reads the checkpoint
-  cadence ("every ~5 packets"), set under the old sizes. The fresh clone
-  reads the pushed `main`, which has no code change since `8cf3fd9`; the
-  roadmap commits made on 2026-11-25 reach it only once pushed. Whether the
-  seven providers still serve the pinned files is unchecked since the last
-  fresh acquisitions (EP-10 and EP-12, 2026-09-03); a failed or changed
-  fetch is the brief's own stop and owner decision.
-  **From IN-2 (2026-11-25):** the estimate review (item 6) also restates
+**The EP-16 set (split 2026-11-26).** Checkpoint 3 was authored on
+2026-09-04 by EP-15's closing session as one packet, "S (1 session)", with
+seven scope items ([EP-16-checkpoint-3.md](EP-16-checkpoint-3.md), now the
+set's name). Its pickup on 2026-11-26 split it before any work started, as
+the brief note from IN-1 asked and D-2 requires, into six M parts along its
+own items: the dependency triage first (the owner's choice at the sweep's
+push, so that the re-run tests the lock the triage leaves), then the
+fresh-clone re-run with the resource use it measures, the license sweep with
+the data-facing documents, the rest of the documentation sync, the estimate
+review, and the M4 pre-read with EP-17, the last carrying the set's
+acceptance evidence. The note's segments moved to the parts they concern:
+the sweep's push (42 alerts, 11 pull requests, certifi critical) into EP-16a's
+brief, the rest to the bullets below.
+
+- **EP-16b.** The fresh clone reads the pushed `main`: the split and
+  EP-16a's lock reach it only once the owner pushes them (OT-1, gated before
+  this brief). Whether the seven providers still serve the pinned files is
+  unchecked since the last fresh acquisitions (EP-10 and EP-12, 2026-09-03);
+  a failed or changed fetch is the brief's own stop and owner decision.
+  `phillysim run` has no `--keep-awake`, so the machine is kept awake by
+  hand for the night. **From EP-16a (2026-11-26):** after the push, check
+  that Dependabot has closed the six pull requests EP-16a's lock and CI pin
+  supersede (#10 to #15) and that the 35 alerts on `phillysim/uv.lock` read
+  fixed; any left open is put to the owner. The three runtime version
+  updates (#6 to #8) stay out of the clone's lock by the owner's decision.
+- **EP-16c.** It sweeps the working clone's installed real public zone,
+  which EP-16b shows byte-equal to the fresh clone's (the scratch clone is
+  deleted by then), and the working clone's two nights for the Bucket B
+  records.
+- **EP-16d.** EP-16a's upgrades and EP-16b's baselines are in view when the
+  CHANGELOG and the READMEs are checked.
+- **EP-16e.** **From IN-2 (2026-11-25):** the estimate review also restates
   the remaining v1 work, M4 to M7 with their gates and checkpoints, as a
   count of briefs under D-2, from milestones.md's high bounds and the M3
   actual, and settles with the owner which rows carry it in the tables
   (gate rows, provisional rows or none), so that the count Roadmap
   Wrangler's site export reads says how far v1 runs ("How far v1 runs"
-  under the M4–M8 heading). The portfolio site's card holds its total at a
-  floor of 40 until then.
-  **From the sweep's push (2026-11-25):** GitHub reported 42 open
-  Dependabot alerts on `main`: certifi 1 critical (it bundles emSign roots
-  whose intermediate keys are compromised; fixed in 2026.10.18, PR #14),
-  urllib3 3 (high and medium; no PR), virtualenv 19 and filelock 12 (PRs
-  #12 and #13, the latter a major bump), and 7 in the `source material/`
-  copy (PRs #5 and #16); 11 Dependabot PRs are open in all. The owner's
-  choice: the split puts the dependency triage (item 5) first, certifi
-  leading, over the implementation note that runs the re-run first, so
-  that the fresh-clone re-run tests the lock the triage leaves; each
-  upgrade still waits for the owner's word.
+  under the M4–M8 heading); it also re-reads the checkpoint cadence ("every
+  ~5 packets"), set under the old sizes. **From IN-3 (2026-11-26, the owner
+  through prime):** the portfolio card's floor is now 57 (the 19 rows then;
+  M4 7, M5 7, M6 10 and M7 4 sessions, 28; 4 refinement gates and about 6
+  checkpoints), so the card reads 18 of about 57; when the rows cover v1,
+  hand on to prime so that its IN-5 drops the floor, and a count under 57
+  is said at once. At the split the tables went to 24 rows, 62 by the same
+  sum, and restating the older sessions as S or M briefs only raises it, so
+  nothing was said at once (EP-16a).
+- **EP-16f.** It opens the "M4 — Full ingest" heading with EP-17's row,
+  trims the M5 carry-in's first item once EP-16b has confirmed the
+  cross-clone repeat, and completes EP-16's row in "Estimate accuracy".
+  **From EP-16a (2026-11-26):** it carries the three runtime version updates
+  the owner deferred (Dependabot #6 geopandas 1.1.4 → 1.2.0, #7 pyproj
+  3.7.2 → 3.8.0, #8 duckdb 1.5.5 → 1.5.6, duckdb 2.0.1 also out) into
+  EP-17's inputs: a deliberate upgrade after EP-16b has confirmed the
+  reference digests, with the references re-recorded (these libraries
+  compute the ingest and conflation M4 adds).
 
 ### M2 — Spine + first source end-to-end · ☑ `5cb5092`
 
@@ -324,7 +337,7 @@ from [_TEMPLATE.md](_TEMPLATE.md) as S packets, one session each, taking
 the next free integers and adding their rows here. The M4 gate is the
 next gate due (M4 parallels M3 and depends on M2 only); the third
 checkpoint, [EP-16](EP-16-checkpoint-3.md), pre-reads it and authors it as
-EP-17.
+EP-17 (its last part, [EP-16f](EP-16f-m4-gate-preread.md)).
 
 *(2026-11-25, inbox IN-2.)* **How far v1 runs.** v1 is M0 to M7, the
 v1.0.0 release; M8, the v1.x/v2 gate decisions, follows it. By
@@ -334,8 +347,9 @@ M6 at 10 and M7 at 4, as sized before D-2, each opened by its refinement
 gate (which now authors S or M packets, D-2), with a checkpoint about every
 five packets, EP-16 the next. None of them has rows yet, so the tables'
 count, which Roadmap Wrangler's site export reads, covers the work planned
-so far, not v1. EP-16's estimate review restates the remaining v1 work as a
-count of briefs under D-2 and settles with the owner which rows carry it.
+so far, not v1. EP-16's estimate review ([EP-16e](EP-16e-estimate-review.md))
+restates the remaining v1 work as a count of briefs under D-2 and settles
+with the owner which rows carry it.
 
 ## Phase overview
 

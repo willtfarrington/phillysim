@@ -144,7 +144,7 @@ clone is deleted whatever the outcome.
 No ADR.
 
 ## Handoff payload (filled 2026-11-27)
-- **Packet:** EP-16b, done at `HASH` (recorded in the README row by the
+- **Packet:** EP-16b, done at `149de2a` (recorded in the README row by the
   commit that follows it). Planning Baseline v1.0. No code changed.
 - **What the session did, in order.** Read first (OT-1 ticked by the
   owner; no open inbox message). Confirmed the push (the remote's `main`
@@ -294,7 +294,7 @@ No ADR.
   GitHub written only as the owner named (#12); no machine identifier or
   absolute path in a tracked file (the diff scanned); the scratch clone
   deleted with its data root, toolchain and caches.
-- **`roadmap/README.md`:** the EP-16b row `☑ HASH`.
+- **`roadmap/README.md`:** the EP-16b row `☑ 149de2a`.
 - **Exact next packet: EP-16c**, the license-label sweep with the
   data-facing documents.
 

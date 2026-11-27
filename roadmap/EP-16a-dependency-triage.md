@@ -136,8 +136,8 @@ Checkpoints table (the six rows, this one closed) and brief notes; this
 brief's payload and completion note. No ADR (no ADR's pin moves).
 
 ## Handoff payload (filled 2026-11-26)
-- **Packet:** EP-16a, done; its commit is recorded in the README row by the
-  commit that follows it. Planning Baseline v1.0. No code changed.
+- **Packet:** EP-16a, done at `0597ab5` (recorded in the README row by the
+  commit that follows it). Planning Baseline v1.0. No code changed.
 - **The split, before any work.** EP-16, "S (1 session)" with seven scope
   items, was split at this pickup (D-2; its brief note's segment "From
   IN-1"; the cut the session's call) into six M parts along its own items:
@@ -252,8 +252,8 @@ brief's payload and completion note. No ADR (no ADR's pin moves).
   read only, except the smoke route's own run directory
   (`runs/routing/20261127T041523Z-smoke/`); no machine identifier or
   absolute path in a tracked file (the diff scanned).
-- **`roadmap/README.md`:** the EP-16a row `☑` with its commit (by the commit
-  that follows); EP-16b to EP-16f `☐`.
+- **`roadmap/README.md`:** the EP-16a row `☑ 0597ab5`; EP-16b to EP-16f
+  `☐`.
 - **Exact next packet: EP-16b**, the fresh-clone re-run, once the owner has
   pushed `main` (OT-1).
 

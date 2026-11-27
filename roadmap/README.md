@@ -179,7 +179,7 @@ packets after EP-16 (EP-16e re-reads that cadence under D-2).
 |---|---|---|---|---|---|
 | EP-9 | [Checkpoint 1: fixture re-run, docs sync, license sweep, budgets, estimate accuracy](EP-9-checkpoint-1.md) | S | EP-4b | core | ☑ `84c9ec1` |
 | EP-10 | [Checkpoint 2: fresh-clone re-run with real data, docs sync, license sweep on published output, budgets, dependency triage, estimate accuracy, M3 gate pre-read](EP-10-checkpoint-2.md) | S | EP-8b | core | ☑ `a1d22fd` |
-| EP-16a | [Dependency triage with the owner (certifi first), the lock checked, the pins noted](EP-16a-dependency-triage.md) | M | EP-15 (M3 done) | core | ☐ |
+| EP-16a | [Dependency triage with the owner (certifi first), the lock checked, the pins noted](EP-16a-dependency-triage.md) | M | EP-15 (M3 done) | core | ☑ `0597ab5` |
 | EP-16b | [Fresh-clone re-run, fixture and real, with the routing night; resource use against the budgets, peak RSS included](EP-16b-fresh-clone-rerun.md) | M | EP-16a | core | ☐ |
 | EP-16c | [License-label sweep on the real published output and the Bucket B zone; the dictionary, data cards and license records checked](EP-16c-license-sweep-data-docs.md) | M | EP-16b | core | ☐ |
 | EP-16d | [Documentation sync of the READMEs, method cards, claims, roadmap documents, ADR-0008 and the changelog against the code](EP-16d-docs-sync.md) | M | EP-16c | core | ☐ |

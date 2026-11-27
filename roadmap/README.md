@@ -202,23 +202,25 @@ acceptance evidence. The note's segments moved to the parts they concern:
 the sweep's push (42 alerts, 11 pull requests, certifi critical) into EP-16a's
 brief, the rest to the bullets below.
 
-- **EP-16b.** The fresh clone reads the pushed `main`: the split and
-  EP-16a's lock reach it only once the owner pushes them (OT-1, gated before
-  this brief). Whether the seven providers still serve the pinned files is
-  unchecked since the last fresh acquisitions (EP-10 and EP-12, 2026-09-03);
-  a failed or changed fetch is the brief's own stop and owner decision.
-  `phillysim run` has no `--keep-awake`, so the machine is kept awake by
-  hand for the night. **From EP-16a (2026-11-26):** after the push, check
-  that Dependabot has closed the six pull requests EP-16a's lock and CI pin
-  supersede (#10 to #15) and that the 35 alerts on `phillysim/uv.lock` read
-  fixed; any left open is put to the owner. The three runtime version
-  updates (#6 to #8) stay out of the clone's lock by the owner's decision.
 - **EP-16c.** It sweeps the working clone's installed real public zone,
   which EP-16b shows byte-equal to the fresh clone's (the scratch clone is
   deleted by then), and the working clone's two nights for the Bucket B
-  records.
+  records. **From EP-16b (2026-11-26):** three archived pages changed while
+  every phrase the download path checks held: Geofabrik's region page, the
+  `osm_network` terms archive, now redirects (301) to
+  `…/us/pennsylvania/index.html`; the SNAP data page came back at 43,072 B
+  (44,082 B, byte-identical, at EP-10), its as-of sentence unchanged; the
+  Census terms page at about 325 KB (311,057 B before). The license records
+  that cite those pages are read against that.
 - **EP-16d.** EP-16a's upgrades and EP-16b's baselines are in view when the
-  CHANGELOG and the READMEs are checked.
+  CHANGELOG and the READMEs are checked. **From EP-16b (2026-11-26):** the
+  owner's decision: the package README, where the routing verbs are
+  documented, gains a note that their output, redirected to a file or a
+  pipe on Windows, needs `PYTHONUTF8=1`. `route verdict` prints `≤`, which
+  Python encodes as cp1252 when its output is not a console, and it crashed
+  with `UnicodeEncodeError` at EP-16b until rerun with the variable (no
+  document said so; CI never runs the routing verbs). The code fix, the CLI
+  writing UTF-8 itself, goes to EP-17's inputs (EP-16f's note).
 - **EP-16e.** **From IN-2 (2026-11-25):** the estimate review also restates
   the remaining v1 work, M4 to M7 with their gates and checkpoints, as a
   count of briefs under D-2, from milestones.md's high bounds and the M3
@@ -233,7 +235,16 @@ brief, the rest to the bullets below.
   hand on to prime so that its IN-5 drops the floor, and a count under 57
   is said at once. At the split the tables went to 24 rows, 62 by the same
   sum, and restating the older sessions as S or M briefs only raises it, so
-  nothing was said at once (EP-16a).
+  nothing was said at once (EP-16a). **From EP-16b (2026-11-26):** for the
+  re-plan trigger "checkpoint finds drift": the fresh-clone re-run found
+  refresh drift on one of the seven providers, Geofabrik no longer serving
+  the pinned OpenStreetMap extract (404), which was the brief's stop; the
+  owner chose to finish the re-run on the working clone's verified copy and
+  to plan a controlled refresh in EP-17. The re-run then reproduced every
+  provider data file, curated table, public file and matrix digest, and
+  the code showed no drift beyond two findings carried to EP-16d and EP-17
+  (the redirected-output crash, the plan digest's line endings). EP-16e
+  records that reading in its trigger evaluation.
 - **EP-16f.** It opens the "M4 — Full ingest" heading with EP-17's row,
   trims the M5 carry-in's first item once EP-16b has confirmed the
   cross-clone repeat, and completes EP-16's row in "Estimate accuracy".
@@ -242,7 +253,41 @@ brief, the rest to the bullets below.
   3.7.2 → 3.8.0, #8 duckdb 1.5.5 → 1.5.6, duckdb 2.0.1 also out) into
   EP-17's inputs: a deliberate upgrade after EP-16b has confirmed the
   reference digests, with the references re-recorded (these libraries
-  compute the ingest and conflation M4 adds).
+  compute the ingest and conflation M4 adds). **From EP-16b (2026-11-26):**
+  (1) the owner's decision: EP-17 also plans a **controlled refresh of
+  `osm_network`** beside those upgrades, so the references are re-recorded
+  once for both. Geofabrik no longer serves the pinned
+  `pennsylvania-260831.osm.pbf`: its URL redirects (301) into a per-region
+  folder, `download.geofabrik.de/north-america/us/pennsylvania/`, where the
+  file is 404 (checked 2026-11-27). That folder then held the 1 January
+  extract of every year since 2014, the first-of-month extracts for
+  September to November 2026 and the last seven daily ones (observed; no
+  documented policy was read), so a 1 January extract is the durable pin
+  by observation. The region page, the snapshot's terms archive, moved the
+  same way (`…/pennsylvania/index.html`) and still carries both checked
+  phrases. The refresh needs a new dated file and MD5 pin (an ADR-0008
+  amendment), the adapter's URLs and its `SNAPSHOT_IDS` entry, the clip, a
+  new night and the matrix references re-recorded; until it lands no fresh
+  clone can run the real pipeline (EP-16b finished on the working clone's
+  verified copy, on the owner's word). (2) Dependabot replaced #8 with
+  **#20, duckdb 1.5.5 → 2.0.1** (a major version), which joins #6 and #7
+  among the deferred upgrades; #17 to #19 (`setup-uv` 10.4.0, ruff 0.17.6,
+  playwright 1.65.2), opened after the push, wait for the next
+  checkpoint's dependency triage (the owner's decision: no change now).
+  (3) The cross-clone repeat is confirmed for the M5 carry-in: the fresh
+  clone's night `20261127T044506Z-travel-times` has both core runs'
+  canonicalized-value and byte digests equal to both recorded nights'
+  (`100625cd…`, `e35b466d…`), and its curated matrix equals theirs
+  (`fc50873d…`, `f2ed818a…`). (4) The owner's decision: EP-17's inputs
+  gain the **plan digest's line endings**: the `travel_times` stage
+  records the plan's SHA-256 over the file's raw bytes, so the fresh
+  Windows clone's CRLF checkout of `plans/travel-times.json` (1,913 B)
+  recorded `e5761e61…` against the LF copy's `9ba23f68…` (1,849 B), and
+  the digest is part of the key by which the stage re-uses a night; make
+  it independent of line endings (digest the parsed plan, or pin LF for
+  the plan files in `.gitattributes`) before the refresh re-records the
+  references. (5) Also the code fix for the redirected-output crash of the
+  routing verbs (EP-16d's note): the CLI writes UTF-8 itself, with a test.
 
 ### M2 — Spine + first source end-to-end · ☑ `5cb5092`
 

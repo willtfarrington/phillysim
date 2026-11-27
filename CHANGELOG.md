@@ -35,6 +35,21 @@ recorded separately in manifests once the pipeline exists.
 
 ### Changed
 
+- **EP-16b — fresh-clone re-run** (checkpoint 3, part b; 2026-11-27). A
+  fresh clone of `main` at `fa423e0` re-run green, fixture and real, the
+  routing night included: 664 tests with the routing group; the fixture
+  verbs; the real pipeline's ten stages in 1,218 s (the night 964 s of
+  core wall, peak RSS 5.32 GB per run and 5.73 GB for the whole run), then
+  0 ran / 10 skipped, 7 of 7 snapshots, the gate green, the site built.
+  **Every provider data file, curated table, public file and matrix digest
+  equals the references, and the new night repeats both recorded nights'
+  core-run digests across clones.** Refresh drift on one source: Geofabrik
+  no longer serves the pinned OpenStreetMap extract (404 after a move into
+  per-region folders), so on the owner's word that snapshot was copied
+  from the working clone (verified against its manifest and its MD5 pin),
+  and a controlled refresh goes to the M4 gate (EP-17). Baselines appended
+  to `phillysim/README.md`; Dependabot's superseded pull requests closed
+  (#12 by hand). No code changed.
 - **EP-16 split at its pickup** (2026-11-26; D-2). Checkpoint 3, written as
   "S (1 session)" with seven scope items, is now six M parts, each a
   complete packet from the template: EP-16a the dependency triage (first,

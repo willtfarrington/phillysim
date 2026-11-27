@@ -922,6 +922,42 @@ its descendants.
 | test suite (EP-15) | 663 passed, 3 skipped in about 2 min (the routing group installed: the OSMnx-side tests run; the sample pipeline routes its `travel_times` stage on a scripted child) | — |
 | **The second unattended night** (EP-15's closing session, launched 2026-09-04 19:16Z by the procedure above; `phillysim run --stage travel_times` detached, night `20260904T191646Z-travel-times`): the two core runs of `travel-times.json`, 408 origins × 1,609 retailers | finished 19:31Z after 15 min: `walk-48-wed` 80.8 s (first night 54.2 s), `transit-48-wed` 804.8 s (first night 775.7 s); core wall 885.6 s = 0.25 h of 8 h; peak process-tree RSS 5.26 GB (walk 5.26 GB, transit 3.32 GB) against the 20 GB budget; 656,472 rows per run; finite pairs walk 46.95%, walk+transit 99.95%; both runs' canonicalized-value digests **equal to the first night's** (`100625cd…` walk, `e35b466d…` transit), byte digests equal too; `curated/travel_times.parquet` 1,312,944 rows, 4.1 MB; the stage's own overhead (points, the plan, the concatenation) seconds; `phillysim status` afterwards ten stages fresh | 8 h core wall, 20 GB budget, 22 GB kill: 3.1% and 26% |
 
+**EP-16b checkpoint (2026-11-27 UTC, same machine): the whole real
+pipeline from a fresh clone of `main` at `fa423e0`, the routing night
+included.** The reference for later checkpoints, and the first with peak
+RSS. Geofabrik no longer serves the pinned extract
+(`pennsylvania-260831.osm.pbf`: its URL now redirects into a per-region
+folder, `…/us/pennsylvania/`, where the file is 404), so the first
+`phillysim run` stopped in `acquire` after 95 s (a 60 s read timeout, then
+the 404; staging discarded, nothing installed). On the owner's word the
+working clone's snapshot of that file was copied into the empty raw zone,
+where `acquire` verified it against its manifest and re-used it (MD5
+`a779d2ef…`, ADR-0008's pin), and the six other providers were fetched
+fresh. Every provider data file, curated table and public file, and both
+core runs' matrix digests, came back byte-identical to the references;
+every number is within the architecture.md budgets. The controlled refresh
+of the extract goes to the M4 gate (EP-17).
+
+| Measure | Baseline | Budget (architecture.md) |
+|---|---|---|
+| `git clone -c core.longpaths=true` | 1.6 s; `.git` 6.2 MB | — |
+| `uv sync --locked --group routing` | 16.1 s (uv's cache warm); `.venv` 762 MB | — |
+| `phillysim toolchain install`, then `toolchain check` | 9.4 s: the JDK zip 205,073,461 B in 3.6 s (490 members, `.jdk/` 344 MB) and the jar 64,437,972 B in 1.4 s (`.r5/` 64 MB), both digests equal to ADR-0008's pins; `check` 1.4 s | — |
+| `uv run pytest`, the routing group installed (664 passed, 3 skipped) | 187 s (207 s in the working clone at EP-16a) | — |
+| fixture verbs | `run --fixture` 2.3 s (11 ran), 1.5 s (0 ran, 11 skipped); `status` 1.4 s (11 fresh); `verify` 1.3 s (8 of 8 snapshots, 11 of 11 stages); `gate` 1.3 s (5 files Bucket B, 8 sources); `site build` 1.6 s | — |
+| `phillysim run`, real, from an empty data root but the seeded OSM snapshot | 1,218 s wall: `acquire` 9.6 s, `validate` 4.9 s, `spine` 0.3 s, `demographics` 1.0 s, `snap_retailers` 2.8 s, `basemap` 0.3 s, `network` 214.2 s, `travel_times` 983.0 s (the night), `metrics` 0.1 s, `publish` 0.6 s (10 ran); **peak process-tree RSS of the whole run 5.73 GB** (in the transit run; the `network` clip 3.57 GB, sampled from 76 s into the stage; a psutil sampler at 2 Hz over the `run` process tree, kept in the session's scratchpad) | routine peak RAM ≤ 24 GB |
+| fresh acquisition, per source (every fetch one attempt) | ACS 18,313,708 B in 0.57 s + 65,043,091 B in 1.30 s; CenPop 144,662 B in 0.18 s; SEPTA GTFS 21,555,258 B in 0.77 s (its SHA-256 pin checked); SNAP 24,036,753 B in 1.47 s and its data page 43,072 B; roads 1,352,071 B in 0.26 s; tracts 13,109,450 B in 0.46 s; the terms pages 324,943 to 325,095 B (Census) and 17,557 B (SEPTA); 144.9 MB in all; `osm_network` re-used in 0.35 s | network: the six files of EP-10 and EP-12 |
+| the night `20261127T044506Z-travel-times`: the stage's two core runs, 408 origins × 1,609 retailers | `walk-48-wed` 115.6 s (r5py's network built cold, 45 s at 4.57 GB), peak RSS 5.05 GB; `transit-48-wed` 848.2 s (the network from cache), peak RSS 5.32 GB; core wall 963.8 s = 0.27 h, 3.3 % of 8 h; peak 5.32 GB = 26.6 % of the budget, 24.2 % of the kill line; no interruption; 656,472 rows per run; finite pairs walk 46.95 %, walk+transit 99.95 %; both runs' canonicalized-value and byte digests **equal to both recorded nights'** (`100625cd…` walk, `e35b466d…` transit); `curated/travel_times.parquet` value digest `fc50873d…`, recomputed from the file | 8 h core wall, 20 GB budget, 22 GB kill |
+| second `run` (0 ran, 10 skipped) | 6.1 s (the inputs' digests, the 346 MB extract among them) | — |
+| `status` (10 fresh), `verify` (7 of 7 snapshots, 10 of 10 stages), `gate` (5 files Bucket A, 4 sources), `site build` (`county_boundary (1), roads (426)`) | 2.2 s, 1.8 s, 1.2 s, 1.8 s | — |
+| `route status`, `route verdict --night` (mechanical criteria only: wall, RSS and walk+transit finite pairs pass, walk the owner's reading, determinism, hand check and concordance pending by design) | 1.2 s, 1.3 s (redirected output needs `PYTHONUTF8=1`: the verdict prints `≤`) | — |
+| real data root | 1.16 GB: raw 490.9 MB, `cache/r5py` 526.3 MB (the transport network 416 MB, `.mapdb.p` 106 MB, `.mapdb` 4 MB, the three inputs linked), intermediate 71.6 MB (`network/` 71.5 MB), `runs/routing` 68.6 MB (the night), curated 5.0 MB, public 1.56 MB, state file 12 KB, the fixture root 110 KB, quarantine and staging empty | workspace ≤ 50 GB |
+| public zone | 1,555,668 B raw, 331,050 B gzipped (level 9, per file), as at EP-10 | sub-MB gzipped site payload |
+| built site (`site/dist/`) | 2.77 MB, 15 files | — |
+| fresh clone in all | 2.36 GB (`.venv` 762 MB, `.jdk/` 344 MB, `.r5/` 64 MB, data root 1.16 GB, site 2.8 MB, checkout 13 MB, `.git` 6 MB), deleted afterwards | — |
+| CI (run 45939483634 on `fa423e0`) | ubuntu job 92 s (`uv sync` 2 s, pytest 78 s); windows job 149 s (`uv sync` 13 s, pytest 113 s); `run --fixture` about 1 s on both | — |
+| preflight report (real thresholds) | 305.9 GB free disk (need ≥ 150 GB), 68.1 GB physical RAM (need ≥ 25.8 GB), Python 3.13.18, geopandas 1.1.4 / pyogrio 0.13.0 / shapely 2.1.2 / pyproj 3.7.2 / duckdb 1.5.5 / pyarrow 25.0.1 / osmium 4.3.1 / psutil 7.2.2, root writable | ≥ 150 GB free, 24 GB RAM |
+
 ## Decisions this package honors
 
 - [ADR-0001](../roadmap/adr/0001-language-and-stack.md): Python 3.12+/uv on
